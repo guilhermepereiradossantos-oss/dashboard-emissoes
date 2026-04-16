@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Emissoes — Abr/2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* HEADER */
+.header{background:#161b22;border-bottom:1px solid #21262d;padding:16px 32px;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:20px;font-weight:700;color:#58a6ff;letter-spacing:-.3px}
+.header-meta{font-size:12px;color:#8b949e;margin-top:3px}
+.header-badge{background:#21262d;border:1px solid #30363d;border-radius:20px;padding:5px 14px;font-size:12px;color:#8b949e}
+.header-badge span{color:#58a6ff;font-weight:600}
+
+/* CONTAINER */
+.container{max-width:1400px;margin:0 auto;padding:20px 24px 48px}
+
+/* SECTION */
+.section-hdr{display:flex;align-items:center;gap:10px;margin:28px 0 12px}
+.section-hdr h2{font-size:16px;font-weight:700;color:#e6edf3}
+.section-tag{font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:.6px}
+.tag-full{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3)}
+.tag-micro{background:rgba(61,255,145,.12);color:#3DFF91;border:1px solid rgba(61,255,145,.3)}
+
+/* KPI ROW */
+.kpi-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.kpi-card{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:14px 18px;flex:1;min-width:140px;border-top:3px solid}
+.kpi-card.blue  {border-top-color:#58a6ff}
+.kpi-card.cyan  {border-top-color:#00D4FF}
+.kpi-card.orange{border-top-color:#FF7F11}
+.kpi-card.orange2{border-top-color:#FFB347}
+.kpi-card.green {border-top-color:#3DFF91}
+.kpi-card.comp  {border-top-color:#9B59B6}
+.kpi-label{font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:24px;font-weight:800;margin-top:4px;line-height:1}
+.kpi-card.blue   .kpi-value{color:#58a6ff}
+.kpi-card.cyan   .kpi-value{color:#00D4FF}
+.kpi-card.orange .kpi-value{color:#FF7F11}
+.kpi-card.orange2 .kpi-value{color:#FFB347}
+.kpi-card.green  .kpi-value{color:#3DFF91}
+.kpi-card.comp   .kpi-value{color:#C77DFF}
+.kpi-sub{font-size:11px;color:#6e7681;margin-top:4px}
+
+/* CHART + FILTER LAYOUT */
+.chart-section{display:flex;gap:12px;margin-bottom:8px}
+.chart-wrap{flex:1;background:#161b22;border:1px solid #21262d;border-radius:12px;padding:20px 20px 14px;min-width:0}
+.chart-inner{position:relative;height:370px}
+
+/* FILTER PANEL */
+.filter-panel{width:200px;flex-shrink:0;background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 14px;display:flex;flex-direction:column;gap:12px}
+.fp-title{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;padding-bottom:8px;border-bottom:1px solid #21262d}
+.fp-items{display:flex;flex-direction:column;gap:6px}
+.sg-item{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 8px;border-radius:6px;transition:background .15s;user-select:none}
+.sg-item:hover{background:#21262d}
+.sg-item input{display:none}
+.sg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:opacity .2s}
+.sg-dot.off{opacity:.2;box-shadow:none !important}
+.sg-name{font-size:12px;color:#c9d1d9;transition:color .2s}
+.sg-name.off{color:#484f58}
+.fp-btns{display:flex;gap:6px}
+.fp-btns button{flex:1;background:#21262d;border:1px solid #30363d;color:#8b949e;padding:5px 0;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s}
+.fp-btns button:hover{background:#30363d;color:#e6edf3}
+.fp-legend{padding-top:8px;border-top:1px solid #21262d;display:flex;flex-direction:column;gap:5px}
+.fp-leg-item{display:flex;align-items:center;gap:7px;font-size:11px;color:#8b949e}
+.fp-line{display:inline-block;width:22px;height:2px}
+.fp-line.solid{background:#FF7F11}
+.fp-line.dashed{background:transparent;border-top:2px dashed #A8DADC}
+
+/* GRAND TOTAL */
+.grand-total{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:20px 32px;margin-top:20px;display:flex;justify-content:space-around;align-items:center}
+.gt-item{text-align:center}
+.gt-label{font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.7px}
+.gt-value{font-size:26px;font-weight:800;margin-top:5px}
+.gt-item.act .gt-value{color:#58a6ff}
+.gt-item.pj  .gt-value{color:#FF7F11}
+.gt-item.tot .gt-value{color:#3DFF91}
+.gt-divider{width:1px;height:44px;background:#21262d}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#0d1117}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Dashboard — Projecao de Emissoes</h1>
+    <div class="header-meta">Mes vigente: Abr/2026 &nbsp;·&nbsp; Modelo: Curva de Sobrevivencia + Taxa Mar Aberto</div>
+  </div>
+  <div class="header-badge">Atualizado: <span>16/Abr/2026</span></div>
+</div>
+
+<div class="container">
+
+  <!-- ===== TC FULL ===== -->
+  <div class="section-hdr">
+    <h2>TC Full</h2>
+    <span class="section-tag tag-full">Cartao Completo</span>
+  </div>
+  
+  <div class="kpi-row" id="kpis-full">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Realizado ontem (15/Abr)</div>
+      <div class="kpi-value" id="kv-ontem-full">22.910</div>
+      <div class="kpi-sub">conversoes confirmadas</div>
+    </div>
+    <div class="kpi-card cyan">
+      <div class="kpi-label">Total realizado no mes</div>
+      <div class="kpi-value" id="kv-real-full">252.720</div>
+      <div class="kpi-sub">57.1% do mes concluido</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Projecao hoje (16/Abr)</div>
+      <div class="kpi-value" id="kv-hoje-full">16.554</div>
+      <div class="kpi-sub">estimativa do dia</div>
+    </div>
+    <div class="kpi-card orange2">
+      <div class="kpi-label">Projecao restante</div>
+      <div class="kpi-value" id="kv-proj-full">190.086</div>
+      <div class="kpi-sub">ate 30/Abr</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Total estimado do mes</div>
+      <div class="kpi-value" id="kv-total-full">442.806</div>
+      <div class="kpi-sub">realizado + projecao</div>
+    </div>
+  </div>
+  <div class="chart-section">
+    <div class="chart-wrap">
+      <div class="chart-inner"><canvas id="chartFull"></canvas></div>
+    </div>
+    
+      <div class="filter-panel">
+        <div class="fp-title">GRUPOS ENCENDIDOS</div>
+        <div class="fp-items" id="fp-full">
+        <label class="sg-item" onclick="toggleSG('TC Full', 'BAU', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="BAU">
+          <span class="sg-dot" style="background:#00D4FF;box-shadow:0 0 6px #00D4FF80"></span>
+          <span class="sg-name">BAU</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'CC', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="CC">
+          <span class="sg-dot" style="background:#FFD700;box-shadow:0 0 6px #FFD70080"></span>
+          <span class="sg-name">CC</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'Mar Aberto', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="Mar Aberto">
+          <span class="sg-dot" style="background:#3DFF91;box-shadow:0 0 6px #3DFF9180"></span>
+          <span class="sg-name">Mar Aberto</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'Only Nav', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="Only Nav">
+          <span class="sg-dot" style="background:#FF8C42;box-shadow:0 0 6px #FF8C4280"></span>
+          <span class="sg-name">Only Nav</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'Sellers', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="Sellers">
+          <span class="sg-dot" style="background:#C77DFF;box-shadow:0 0 6px #C77DFF80"></span>
+          <span class="sg-name">Sellers</span>
+        </label>
+        </div>
+        <div class="fp-btns">
+          <button onclick="selectAll('TC Full','full')">Todos</button>
+          <button onclick="selectNone('TC Full','full')">Nenhum</button>
+        </div>
+        <div class="fp-legend">
+          <div class="fp-leg-item"><span class="fp-line solid"></span> Proj. hoje</div>
+          
+        </div>
+      </div>
+  </div>
+
+  <!-- ===== MICRO TC ===== -->
+  <div class="section-hdr">
+    <h2>Micro TC</h2>
+    <span class="section-tag tag-micro">Cartao Micro</span>
+  </div>
+  
+  <div class="kpi-row" id="kpis-micro">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Realizado ontem (15/Abr)</div>
+      <div class="kpi-value" id="kv-ontem-micro">10.370</div>
+      <div class="kpi-sub">conversoes confirmadas</div>
+    </div>
+    <div class="kpi-card cyan">
+      <div class="kpi-label">Total realizado no mes</div>
+      <div class="kpi-value" id="kv-real-micro">92.853</div>
+      <div class="kpi-sub">67.6% do mes concluido</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Projecao hoje (16/Abr)</div>
+      <div class="kpi-value" id="kv-hoje-micro">4.494</div>
+      <div class="kpi-sub">estimativa do dia</div>
+    </div>
+    <div class="kpi-card orange2">
+      <div class="kpi-label">Projecao restante</div>
+      <div class="kpi-value" id="kv-proj-micro">44.461</div>
+      <div class="kpi-sub">ate 30/Abr</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Total estimado do mes</div>
+      <div class="kpi-value" id="kv-total-micro">137.314</div>
+      <div class="kpi-sub">realizado + projecao</div>
+    </div>
+  </div>
+  <div class="chart-section">
+    <div class="chart-wrap">
+      <div class="chart-inner"><canvas id="chartMicro"></canvas></div>
+    </div>
+    
+      <div class="filter-panel">
+        <div class="fp-title">GRUPOS ENCENDIDOS</div>
+        <div class="fp-items" id="fp-micro">
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'BAU', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="BAU">
+          <span class="sg-dot" style="background:#00D4FF;box-shadow:0 0 6px #00D4FF80"></span>
+          <span class="sg-name">BAU</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'CC', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="CC">
+          <span class="sg-dot" style="background:#FFD700;box-shadow:0 0 6px #FFD70080"></span>
+          <span class="sg-name">CC</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'Mar Aberto', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="Mar Aberto">
+          <span class="sg-dot" style="background:#3DFF91;box-shadow:0 0 6px #3DFF9180"></span>
+          <span class="sg-name">Mar Aberto</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'Only Nav', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="Only Nav">
+          <span class="sg-dot" style="background:#FF8C42;box-shadow:0 0 6px #FF8C4280"></span>
+          <span class="sg-name">Only Nav</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'Sellers', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="Sellers">
+          <span class="sg-dot" style="background:#C77DFF;box-shadow:0 0 6px #C77DFF80"></span>
+          <span class="sg-name">Sellers</span>
+        </label>
+        </div>
+        <div class="fp-btns">
+          <button onclick="selectAll('Micro TC','micro')">Todos</button>
+          <button onclick="selectNone('Micro TC','micro')">Nenhum</button>
+        </div>
+        <div class="fp-legend">
+          <div class="fp-leg-item"><span class="fp-line solid"></span> Proj. hoje</div>
+          
+        </div>
+      </div>
+  </div>
+
+  <!-- GRAND TOTAL -->
+  <div class="grand-total">
+    <div class="gt-item act">
+      <div class="gt-label">Total Realizado (Full + Micro)</div>
+      <div class="gt-value" id="gt-real">345.573</div>
+    </div>
+    <div class="gt-divider"></div>
+    <div class="gt-item pj">
+      <div class="gt-label">Total Projecao (Full + Micro)</div>
+      <div class="gt-value" id="gt-proj">234.547</div>
+    </div>
+    <div class="gt-divider"></div>
+    <div class="gt-item tot">
+      <div class="gt-label">Grand Total Abr/2026</div>
+      <div class="gt-value" id="gt-total">580.120</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// DADOS EMBEDADOS
+// ============================================================
+const TODAY        = '2026-04-16';
+const ALL_DAYS     = ["2026-04-01", "2026-04-02", "2026-04-03", "2026-04-04", "2026-04-05", "2026-04-06", "2026-04-07", "2026-04-08", "2026-04-09", "2026-04-10", "2026-04-11", "2026-04-12", "2026-04-13", "2026-04-14", "2026-04-15", "2026-04-16", "2026-04-17", "2026-04-18", "2026-04-19", "2026-04-20", "2026-04-21", "2026-04-22", "2026-04-23", "2026-04-24", "2026-04-25", "2026-04-26", "2026-04-27", "2026-04-28", "2026-04-29", "2026-04-30"];
+const LABELS       = ["01/Abr", "02/Abr", "03/Abr", "04/Abr", "05/Abr", "06/Abr", "07/Abr", "08/Abr", "09/Abr", "10/Abr", "11/Abr", "12/Abr", "13/Abr", "14/Abr", "15/Abr", "16/Abr", "17/Abr", "18/Abr", "19/Abr", "20/Abr", "21/Abr", "22/Abr", "23/Abr", "24/Abr", "25/Abr", "26/Abr", "27/Abr", "28/Abr", "29/Abr", "30/Abr"];
+const SG_ORDER     = ["BAU", "CC", "Mar Aberto", "Only Nav", "Sellers"];
+const SG_COLORS    = {"BAU": "#00D4FF", "CC": "#FFD700", "Mar Aberto": "#3DFF91", "Only Nav": "#FF8C42", "Sellers": "#C77DFF"};
+const HAS_PREV     = false;
+
+const ACTUAL_DATA    = {"TC Full": {"BAU": {"2026-04-01": 5809.0, "2026-04-02": 5615.0, "2026-04-03": 6264.0, "2026-04-04": 6751.0, "2026-04-05": 5064.0, "2026-04-06": 6384.0, "2026-04-07": 7693.0, "2026-04-08": 7284.0, "2026-04-09": 10781.0, "2026-04-10": 42365.0, "2026-04-11": 29624.0, "2026-04-12": 14812.0, "2026-04-13": 14497.0, "2026-04-14": 16599.0, "2026-04-15": 15317.0}, "CC": {"2026-04-01": 497.0, "2026-04-02": 524.0, "2026-04-03": 610.0, "2026-04-04": 671.0, "2026-04-05": 470.0, "2026-04-06": 561.0, "2026-04-07": 726.0, "2026-04-08": 670.0, "2026-04-09": 604.0, "2026-04-10": 556.0, "2026-04-11": 3239.0, "2026-04-12": 2041.0, "2026-04-13": 1461.0, "2026-04-14": 1621.0, "2026-04-15": 1176.0}, "Mar Aberto": {"2026-04-01": 1216.0, "2026-04-02": 1097.0, "2026-04-03": 1064.0, "2026-04-04": 968.0, "2026-04-05": 793.0, "2026-04-06": 1012.0, "2026-04-07": 1191.0, "2026-04-08": 1219.0, "2026-04-09": 1050.0, "2026-04-10": 882.0, "2026-04-11": 645.0, "2026-04-12": 633.0, "2026-04-13": 802.0, "2026-04-14": 804.0, "2026-04-15": 795.0}, "Only Nav": {"2026-04-01": 347.0, "2026-04-02": 311.0, "2026-04-03": 302.0, "2026-04-04": 341.0, "2026-04-05": 283.0, "2026-04-06": 289.0, "2026-04-07": 359.0, "2026-04-08": 333.0, "2026-04-09": 300.0, "2026-04-10": 285.0, "2026-04-11": 261.0, "2026-04-12": 242.0, "2026-04-13": 3695.0, "2026-04-14": 4484.0, "2026-04-15": 960.0}, "Sellers": {"2026-04-01": 691.0, "2026-04-02": 659.0, "2026-04-03": 550.0, "2026-04-04": 471.0, "2026-04-05": 394.0, "2026-04-06": 688.0, "2026-04-07": 740.0, "2026-04-08": 781.0, "2026-04-09": 651.0, "2026-04-10": 919.0, "2026-04-11": 823.0, "2026-04-12": 599.0, "2026-04-13": 728.0, "2026-04-14": 2115.0, "2026-04-15": 4662.0}}, "Micro TC": {"BAU": {"2026-04-01": 1564.0, "2026-04-02": 2443.0, "2026-04-03": 1790.0, "2026-04-04": 1507.0, "2026-04-05": 1182.0, "2026-04-06": 1538.0, "2026-04-07": 1778.0, "2026-04-08": 1677.0, "2026-04-09": 1549.0, "2026-04-10": 1281.0, "2026-04-11": 48308.0, "2026-04-12": 6061.0, "2026-04-13": 4173.0, "2026-04-14": 4137.0, "2026-04-15": 8331.0}, "Mar Aberto": {"2026-04-01": 56.0, "2026-04-02": 53.0, "2026-04-03": 50.0, "2026-04-04": 60.0, "2026-04-05": 47.0, "2026-04-06": 53.0, "2026-04-07": 50.0, "2026-04-08": 55.0, "2026-04-09": 43.0, "2026-04-10": 50.0, "2026-04-11": 44.0, "2026-04-12": 45.0, "2026-04-13": 61.0, "2026-04-14": 64.0, "2026-04-15": 63.0}, "Sellers": {"2026-04-01": 220.0, "2026-04-02": 217.0, "2026-04-03": 168.0, "2026-04-04": 182.0, "2026-04-05": 141.0, "2026-04-06": 210.0, "2026-04-07": 190.0, "2026-04-08": 196.0, "2026-04-09": 201.0, "2026-04-10": 164.0, "2026-04-11": 330.0, "2026-04-12": 169.0, "2026-04-13": 180.0, "2026-04-14": 196.0, "2026-04-15": 1976.0}, "CC": {}, "Only Nav": {}}};
+const PROJ_DATA      = {"TC Full": {"BAU": {"2026-04-16": 11680.0, "2026-04-17": 10773.0, "2026-04-18": 10002.0, "2026-04-19": 9973.0, "2026-04-20": 10069.0, "2026-04-21": 10880.0, "2026-04-22": 10351.0, "2026-04-23": 10339.0, "2026-04-24": 9494.0, "2026-04-25": 8657.0, "2026-04-26": 8053.0, "2026-04-27": 7750.0, "2026-04-28": 7823.0, "2026-04-29": 7717.0, "2026-04-30": 7448.0}, "CC": {"2026-04-16": 1531.0, "2026-04-17": 1335.0, "2026-04-18": 1416.0, "2026-04-19": 1152.0, "2026-04-20": 1056.0, "2026-04-21": 891.0, "2026-04-22": 1013.0, "2026-04-23": 900.0, "2026-04-24": 848.0, "2026-04-25": 727.0, "2026-04-26": 622.0, "2026-04-27": 624.0, "2026-04-28": 636.0, "2026-04-29": 604.0, "2026-04-30": 586.0}, "Mar Aberto": {"2026-04-16": 1100.0, "2026-04-17": 1100.0, "2026-04-18": 1100.0, "2026-04-19": 1100.0, "2026-04-20": 1100.0, "2026-04-21": 1100.0, "2026-04-22": 1100.0, "2026-04-23": 1100.0, "2026-04-24": 1100.0, "2026-04-25": 1100.0, "2026-04-26": 1100.0, "2026-04-27": 1100.0, "2026-04-28": 1100.0, "2026-04-29": 1100.0, "2026-04-30": 1100.0}, "Only Nav": {"2026-04-16": 525.0, "2026-04-17": 496.0, "2026-04-18": 425.0, "2026-04-19": 432.0, "2026-04-20": 482.0, "2026-04-21": 469.0, "2026-04-22": 455.0, "2026-04-23": 440.0, "2026-04-24": 495.0, "2026-04-25": 469.0, "2026-04-26": 419.0, "2026-04-27": 401.0, "2026-04-28": 357.0, "2026-04-29": 344.0, "2026-04-30": 334.0}, "Sellers": {"2026-04-16": 1718.0, "2026-04-17": 1254.0, "2026-04-18": 1058.0, "2026-04-19": 870.0, "2026-04-20": 747.0, "2026-04-21": 671.0, "2026-04-22": 632.0, "2026-04-23": 702.0, "2026-04-24": 736.0, "2026-04-25": 705.0, "2026-04-26": 703.0, "2026-04-27": 593.0, "2026-04-28": 559.0, "2026-04-29": 579.0, "2026-04-30": 566.0}}, "Micro TC": {"BAU": {"2026-04-16": 4035.0, "2026-04-17": 3364.0, "2026-04-18": 3094.0, "2026-04-19": 2806.0, "2026-04-20": 2525.0, "2026-04-21": 3134.0, "2026-04-22": 2689.0, "2026-04-23": 2697.0, "2026-04-24": 2399.0, "2026-04-25": 2407.0, "2026-04-26": 2739.0, "2026-04-27": 2241.0, "2026-04-28": 2672.0, "2026-04-29": 2357.0, "2026-04-30": 2212.0}, "Mar Aberto": {"2026-04-16": 53.0, "2026-04-17": 53.0, "2026-04-18": 53.0, "2026-04-19": 53.0, "2026-04-20": 53.0, "2026-04-21": 53.0, "2026-04-22": 53.0, "2026-04-23": 53.0, "2026-04-24": 53.0, "2026-04-25": 53.0, "2026-04-26": 53.0, "2026-04-27": 53.0, "2026-04-28": 53.0, "2026-04-29": 53.0, "2026-04-30": 53.0}, "Sellers": {"2026-04-16": 406.0, "2026-04-17": 260.0, "2026-04-18": 180.0, "2026-04-19": 147.0, "2026-04-20": 160.0, "2026-04-21": 122.0, "2026-04-22": 124.0, "2026-04-23": 122.0, "2026-04-24": 131.0, "2026-04-25": 105.0, "2026-04-26": 100.0, "2026-04-27": 122.0, "2026-04-28": 104.0, "2026-04-29": 96.0, "2026-04-30": 116.0}, "CC": {}, "Only Nav": {}}};
+const PREV_PROJ_DATA = {};
+
+// mapeamento tc -> slug
+const TC_SLUG = {'TC Full':'full', 'Micro TC':'micro'};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmt(n) {
+  return Math.round(n).toLocaleString('pt-BR');
+}
+
+function aggDays(dataObj, tc, sgs, days) {
+  return days.map(day => {
+    const v = sgs.reduce((s, sg) => s + (dataObj?.[tc]?.[sg]?.[day] || 0), 0);
+    return v > 0 ? v : null;
+  });
+}
+
+function getSelectedSGs(tc) {
+  return SG_ORDER.filter(sg => {
+    const el = document.querySelector(`input[data-tc="${tc}"][data-sg="${sg}"]`);
+    return el && el.checked;
+  });
+}
+
+// ============================================================
+// PLUGIN: linha vertical "Hoje"
+// ============================================================
+const todayPlugin = {
+  id: 'todayLine',
+  afterDraw(chart) {
+    const { ctx, scales: {x, y} } = chart;
+    if (!x || !y) return;
+    const todayIdx  = ALL_DAYS.indexOf(TODAY);
+    if (todayIdx < 0) return;
+    const prevIdx   = todayIdx - 1;
+    const x0 = prevIdx >= 0 ? x.getPixelForValue(prevIdx) : x.left;
+    const x1 = x.getPixelForValue(todayIdx);
+    const xLine = (x0 + x1) / 2;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(xLine, y.top);
+    ctx.lineTo(xLine, y.bottom);
+    ctx.strokeStyle = 'rgba(248, 81, 73, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(248, 81, 73, 0.85)';
+    ctx.font = 'bold 10px Segoe UI, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('HOJE', xLine, y.top - 5);
+    ctx.restore();
+  }
+};
+
+// ============================================================
+// OPCOES BASE DO CHART
+// ============================================================
+const baseOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 300 },
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#1c2128',
+      borderColor: '#30363d',
+      borderWidth: 1,
+      titleColor: '#e6edf3',
+      bodyColor: '#8b949e',
+      padding: 10,
+      cornerRadius: 8,
+      callbacks: {
+        label(ctx) {
+          if (ctx.raw === null || ctx.raw === undefined) return null;
+          return `  ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      stacked: true,
+      grid: { color: 'rgba(255,255,255,0.03)', lineWidth: 1 },
+      ticks: { color: '#6e7681', font: { size: 10 }, maxRotation: 45 },
+      border: { color: '#21262d' }
+    },
+    y: {
+      stacked: false,
+      beginAtZero: true,
+      grid: { color: 'rgba(255,255,255,0.05)', lineWidth: 1 },
+      ticks: {
+        color: '#6e7681',
+        font: { size: 10 },
+        callback: v => v >= 1000 ? (v/1000).toFixed(0) + 'k' : v
+      },
+      border: { color: '#21262d', dash: [3, 3] }
+    }
+  }
+};
+
+// ============================================================
+// CONSTRUIR DATASETS
+// ============================================================
+function buildDatasets(tc, selectedSGs) {
+  const actualDays = ALL_DAYS.map(d => d < TODAY ? d : null);
+  const projDays   = ALL_DAYS.map(d => d >= TODAY ? d : null);
+
+  // Uma barra por super_grupo (empilhada), so para dias passados
+  const barDatasets = SG_ORDER.map(sg => {
+    const data = ALL_DAYS.map((d, i) => {
+      if (d >= TODAY) return null;
+      return ACTUAL_DATA?.[tc]?.[sg]?.[d] || null;
+    });
+    return {
+      type: 'bar',
+      label: sg,
+      data,
+      backgroundColor: SG_COLORS[sg] + 'BB',
+      borderColor:     SG_COLORS[sg],
+      borderWidth: 0,
+      borderRadius: 2,
+      stack: 'actual',
+      hidden: !selectedSGs.includes(sg),
+      order: 3
+    };
+  });
+
+  // Linha: projecao de hoje (hoje em diante)
+  const projLine = ALL_DAYS.map(d => {
+    if (d < TODAY) return null;
+    const v = selectedSGs.reduce((s, sg) => s + (PROJ_DATA?.[tc]?.[sg]?.[d] || 0), 0);
+    return v > 0 ? v : null;
+  });
+  barDatasets.push({
+    type: 'line',
+    label: 'Proj. Hoje',
+    data: projLine,
+    borderColor: '#FF7F11',
+    backgroundColor: 'rgba(255,127,17,0.08)',
+    borderWidth: 2.5,
+    borderDash: [],
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    pointBackgroundColor: '#FF7F11',
+    pointBorderColor: '#0d1117',
+    fill: 'origin',
+    tension: 0.35,
+    spanGaps: false,
+    order: 1
+  });
+
+  // Linha: projecao de ontem (se disponivel)
+  if (HAS_PREV) {
+    const prevLine = ALL_DAYS.map(d => {
+      if (d < TODAY) return null;
+      const v = selectedSGs.reduce((s, sg) => s + (PREV_PROJ_DATA?.[tc]?.[sg]?.[d] || 0), 0);
+      return v > 0 ? v : null;
+    });
+    barDatasets.push({
+      type: 'line',
+      label: 'Proj. Ontem',
+      data: prevLine,
+      borderColor: '#A8DADC',
+      backgroundColor: 'transparent',
+      borderWidth: 1.8,
+      borderDash: [6, 4],
+      pointRadius: 2,
+      pointHoverRadius: 4,
+      pointBackgroundColor: '#A8DADC',
+      pointBorderColor: '#0d1117',
+      fill: false,
+      tension: 0.35,
+      spanGaps: false,
+      order: 2
+    });
+  }
+
+  return barDatasets;
+}
+
+// ============================================================
+// INSTANCIAR CHARTS
+// ============================================================
+const charts = {};
+
+function makeChart(canvasId, tc) {
+  const selectedSGs = SG_ORDER.slice(); // todos
+  const datasets    = buildDatasets(tc, selectedSGs);
+  const cfg = {
+    data: { labels: LABELS, datasets },
+    options: JSON.parse(JSON.stringify(baseOptions)),
+    plugins: [todayPlugin]
+  };
+  // y nao empilhada para nao empilhar linhas
+  cfg.options.scales.y.stacked = false;
+  charts[tc] = new Chart(document.getElementById(canvasId), cfg);
+}
+
+makeChart('chartFull',  'TC Full');
+makeChart('chartMicro', 'Micro TC');
+
+// ============================================================
+// FILTROS
+// ============================================================
+function toggleSG(tc, sg, slug, labelEl) {
+  const cb = labelEl.querySelector('input');
+  cb.checked = !cb.checked;
+  const dot  = labelEl.querySelector('.sg-dot');
+  const name = labelEl.querySelector('.sg-name');
+  if (cb.checked) { dot.classList.remove('off'); name.classList.remove('off'); }
+  else            { dot.classList.add('off');    name.classList.add('off');    }
+
+  rebuildLines(tc);
+  updateKPIs(tc, slug);
+}
+
+function rebuildLines(tc) {
+  const chart      = charts[tc];
+  const selectedSGs = getSelectedSGs(tc);
+
+  // Barras: mostrar/ocultar
+  SG_ORDER.forEach((sg, i) => {
+    chart.data.datasets[i].hidden = !selectedSGs.includes(sg);
+  });
+
+  // Linha proj hoje (indice n)
+  const projIdx = SG_ORDER.length;
+  chart.data.datasets[projIdx].data = ALL_DAYS.map(d => {
+    if (d < TODAY) return null;
+    const v = selectedSGs.reduce((s, sg) => s + (PROJ_DATA?.[tc]?.[sg]?.[d] || 0), 0);
+    return v > 0 ? v : null;
+  });
+
+  // Linha proj ontem (indice n+1)
+  if (HAS_PREV && chart.data.datasets.length > projIdx + 1) {
+    chart.data.datasets[projIdx + 1].data = ALL_DAYS.map(d => {
+      if (d < TODAY) return null;
+      const v = selectedSGs.reduce((s, sg) => s + (PREV_PROJ_DATA?.[tc]?.[sg]?.[d] || 0), 0);
+      return v > 0 ? v : null;
+    });
+  }
+
+  chart.update('none');
+}
+
+function updateKPIs(tc, slug) {
+  const sgs = getSelectedSGs(tc);
+  const actualDays = ALL_DAYS.filter(d => d < TODAY);
+  const projDays   = ALL_DAYS.filter(d => d >= TODAY);
+
+  const realTotal  = actualDays.reduce((s, d) => s + sgs.reduce((ss, sg) => ss + (ACTUAL_DATA?.[tc]?.[sg]?.[d] || 0), 0), 0);
+  const projTotal  = projDays.reduce((s, d)   => s + sgs.reduce((ss, sg) => ss + (PROJ_DATA?.[tc]?.[sg]?.[d]   || 0), 0), 0);
+  const ontemVal   = actualDays.length ? sgs.reduce((s, sg) => s + (ACTUAL_DATA?.[tc]?.[sg]?.[actualDays.at(-1)] || 0), 0) : 0;
+  const hojeProjV  = sgs.reduce((s, sg) => s + (PROJ_DATA?.[tc]?.[sg]?.[TODAY] || 0), 0);
+
+  const el = id => document.getElementById(id);
+  if (el(`kv-ontem-${slug}`))  el(`kv-ontem-${slug}`).textContent  = fmt(ontemVal);
+  if (el(`kv-real-${slug}`))   el(`kv-real-${slug}`).textContent   = fmt(realTotal);
+  if (el(`kv-hoje-${slug}`))   el(`kv-hoje-${slug}`).textContent   = fmt(hojeProjV);
+  if (el(`kv-proj-${slug}`))   el(`kv-proj-${slug}`).textContent   = fmt(projTotal);
+  if (el(`kv-total-${slug}`))  el(`kv-total-${slug}`).textContent  = fmt(realTotal + projTotal);
+
+  // atualiza grand total somando os dois TCs
+  const slugOther = slug === 'full' ? 'micro' : 'full';
+  const tcOther   = slug === 'full' ? 'Micro TC' : 'TC Full';
+  const sgsOther  = getSelectedSGs(tcOther);
+  const realO = ALL_DAYS.filter(d => d < TODAY).reduce(
+    (s, d) => s + sgsOther.reduce((ss, sg) => ss + (ACTUAL_DATA?.[tcOther]?.[sg]?.[d] || 0), 0), 0);
+  const projO = ALL_DAYS.filter(d => d >= TODAY).reduce(
+    (s, d) => s + sgsOther.reduce((ss, sg) => ss + (PROJ_DATA?.[tcOther]?.[sg]?.[d] || 0), 0), 0);
+
+  if (el('gt-real'))  el('gt-real').textContent  = fmt(realTotal + realO);
+  if (el('gt-proj'))  el('gt-proj').textContent  = fmt(projTotal + projO);
+  if (el('gt-total')) el('gt-total').textContent = fmt(realTotal + projTotal + realO + projO);
+}
+
+function selectAll(tc, slug) {
+  document.querySelectorAll(`input[data-tc="${tc}"]`).forEach(cb => {
+    cb.checked = true;
+    const item = cb.closest('.sg-item');
+    item.querySelector('.sg-dot').classList.remove('off');
+    item.querySelector('.sg-name').classList.remove('off');
+  });
+  rebuildLines(tc);
+  updateKPIs(tc, slug);
+}
+
+function selectNone(tc, slug) {
+  document.querySelectorAll(`input[data-tc="${tc}"]`).forEach(cb => {
+    cb.checked = false;
+    const item = cb.closest('.sg-item');
+    item.querySelector('.sg-dot').classList.add('off');
+    item.querySelector('.sg-name').classList.add('off');
+  });
+  rebuildLines(tc);
+  updateKPIs(tc, slug);
+}
+</script>
+</body>
+</html>
