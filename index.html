@@ -80,6 +80,23 @@ a{color:inherit;text-decoration:none}
 .gt-item.tot .gt-value{color:#3DFF91}
 .gt-divider{width:1px;height:44px;background:#21262d}
 
+/* ADOPTION */
+.adoption-sub{font-size:12px;color:#8b949e;margin:-8px 0 16px}
+.adoption-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.adoption-card{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:18px 20px}
+.adoption-card-title{font-size:14px;font-weight:700;color:#e6edf3;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.adoption-card-title .ac-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px}
+.ac-full{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3)}
+.ac-micro{background:rgba(61,255,145,.12);color:#3DFF91;border:1px solid rgba(61,255,145,.3)}
+.adoption-table{width:100%;border-collapse:collapse;font-size:12px}
+.adoption-table th{color:#8b949e;font-weight:600;text-align:right;padding:6px 10px;border-bottom:1px solid #21262d;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.adoption-table th:first-child{text-align:left}
+.adoption-table td{padding:7px 10px;text-align:right;color:#c9d1d9;border-bottom:1px solid #161b22}
+.adoption-table td:first-child{text-align:left;color:#8b949e}
+.adoption-table tr.total-row td{font-weight:700;color:#e6edf3;border-top:1px solid #30363d;border-bottom:none}
+.adoption-table .proj-val{color:#FF7F11;font-weight:700;font-size:14px}
+.mul-up{color:#3DFF91}.mul-down{color:#FF5A5A}.mul-flat{color:#8b949e}
+
 /* SCROLLBAR */
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:#0d1117}
@@ -139,30 +156,35 @@ a{color:inherit;text-decoration:none}
       <div class="filter-panel">
         <div class="fp-title">GRUPOS ENCENDIDOS</div>
         <div class="fp-items" id="fp-full">
-        <label class="sg-item" onclick="toggleSG('TC Full', 'BAU', 'full', this)">
-          <input type="checkbox" checked data-tc="TC Full" data-sg="BAU">
-          <span class="sg-dot" style="background:#00D4FF;box-shadow:0 0 6px #00D4FF80"></span>
-          <span class="sg-name">BAU</span>
-        </label>
-        <label class="sg-item" onclick="toggleSG('TC Full', 'CC', 'full', this)">
-          <input type="checkbox" checked data-tc="TC Full" data-sg="CC">
-          <span class="sg-dot" style="background:#FFD700;box-shadow:0 0 6px #FFD70080"></span>
-          <span class="sg-name">CC</span>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'Only Nav', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="Only Nav">
+          <span class="sg-dot" style="background:#FF1744;box-shadow:0 0 6px #FF174480"></span>
+          <span class="sg-name">Only Nav</span>
         </label>
         <label class="sg-item" onclick="toggleSG('TC Full', 'Mar Aberto', 'full', this)">
           <input type="checkbox" checked data-tc="TC Full" data-sg="Mar Aberto">
-          <span class="sg-dot" style="background:#3DFF91;box-shadow:0 0 6px #3DFF9180"></span>
+          <span class="sg-dot" style="background:#69FF47;box-shadow:0 0 6px #69FF4780"></span>
           <span class="sg-name">Mar Aberto</span>
-        </label>
-        <label class="sg-item" onclick="toggleSG('TC Full', 'Only Nav', 'full', this)">
-          <input type="checkbox" checked data-tc="TC Full" data-sg="Only Nav">
-          <span class="sg-dot" style="background:#FF8C42;box-shadow:0 0 6px #FF8C4280"></span>
-          <span class="sg-name">Only Nav</span>
         </label>
         <label class="sg-item" onclick="toggleSG('TC Full', 'Sellers', 'full', this)">
           <input type="checkbox" checked data-tc="TC Full" data-sg="Sellers">
-          <span class="sg-dot" style="background:#C77DFF;box-shadow:0 0 6px #C77DFF80"></span>
+          <span class="sg-dot" style="background:#D500F9;box-shadow:0 0 6px #D500F980"></span>
           <span class="sg-name">Sellers</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'CC', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="CC">
+          <span class="sg-dot" style="background:#FFD740;box-shadow:0 0 6px #FFD74080"></span>
+          <span class="sg-name">CC</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'EA', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="EA">
+          <span class="sg-dot" style="background:#FFFFFF;box-shadow:0 0 6px #FFFFFF80"></span>
+          <span class="sg-name">EA</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'BAU', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="BAU">
+          <span class="sg-dot" style="background:#2979FF;box-shadow:0 0 6px #2979FF80"></span>
+          <span class="sg-name">BAU</span>
         </label>
         </div>
         <div class="fp-btns">
@@ -217,30 +239,35 @@ a{color:inherit;text-decoration:none}
       <div class="filter-panel">
         <div class="fp-title">GRUPOS ENCENDIDOS</div>
         <div class="fp-items" id="fp-micro">
-        <label class="sg-item" onclick="toggleSG('Micro TC', 'BAU', 'micro', this)">
-          <input type="checkbox" checked data-tc="Micro TC" data-sg="BAU">
-          <span class="sg-dot" style="background:#00D4FF;box-shadow:0 0 6px #00D4FF80"></span>
-          <span class="sg-name">BAU</span>
-        </label>
-        <label class="sg-item" onclick="toggleSG('Micro TC', 'CC', 'micro', this)">
-          <input type="checkbox" checked data-tc="Micro TC" data-sg="CC">
-          <span class="sg-dot" style="background:#FFD700;box-shadow:0 0 6px #FFD70080"></span>
-          <span class="sg-name">CC</span>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'Only Nav', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="Only Nav">
+          <span class="sg-dot" style="background:#FF1744;box-shadow:0 0 6px #FF174480"></span>
+          <span class="sg-name">Only Nav</span>
         </label>
         <label class="sg-item" onclick="toggleSG('Micro TC', 'Mar Aberto', 'micro', this)">
           <input type="checkbox" checked data-tc="Micro TC" data-sg="Mar Aberto">
-          <span class="sg-dot" style="background:#3DFF91;box-shadow:0 0 6px #3DFF9180"></span>
+          <span class="sg-dot" style="background:#69FF47;box-shadow:0 0 6px #69FF4780"></span>
           <span class="sg-name">Mar Aberto</span>
-        </label>
-        <label class="sg-item" onclick="toggleSG('Micro TC', 'Only Nav', 'micro', this)">
-          <input type="checkbox" checked data-tc="Micro TC" data-sg="Only Nav">
-          <span class="sg-dot" style="background:#FF8C42;box-shadow:0 0 6px #FF8C4280"></span>
-          <span class="sg-name">Only Nav</span>
         </label>
         <label class="sg-item" onclick="toggleSG('Micro TC', 'Sellers', 'micro', this)">
           <input type="checkbox" checked data-tc="Micro TC" data-sg="Sellers">
-          <span class="sg-dot" style="background:#C77DFF;box-shadow:0 0 6px #C77DFF80"></span>
+          <span class="sg-dot" style="background:#D500F9;box-shadow:0 0 6px #D500F980"></span>
           <span class="sg-name">Sellers</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'CC', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="CC">
+          <span class="sg-dot" style="background:#FFD740;box-shadow:0 0 6px #FFD74080"></span>
+          <span class="sg-name">CC</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'EA', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="EA">
+          <span class="sg-dot" style="background:#FFFFFF;box-shadow:0 0 6px #FFFFFF80"></span>
+          <span class="sg-name">EA</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'BAU', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="BAU">
+          <span class="sg-dot" style="background:#2979FF;box-shadow:0 0 6px #2979FF80"></span>
+          <span class="sg-name">BAU</span>
         </label>
         </div>
         <div class="fp-btns">
@@ -252,6 +279,107 @@ a{color:inherit;text-decoration:none}
           
         </div>
       </div>
+  </div>
+
+  <!-- ADOPTION -->
+  <div class="section-hdr" style="margin-top:32px">
+    <h2>Adoption — Projecao 30d</h2>
+    <span class="section-tag" style="background:rgba(255,127,17,.15);color:#FF7F11;border:1px solid rgba(255,127,17,.3)">COHORT Abr/2026</span>
+  </div>
+  <p class="adoption-sub">Comparativo: Mar/2026 &nbsp;·&nbsp; Janela: 5 dias pos-encendimento &nbsp;·&nbsp; Formula: adoption_30d_prev × (taxa_5d_atual / taxa_5d_prev)</p>
+  <div class="adoption-grid">
+    
+    <div class="adoption-card">
+      <div class="adoption-card-title"><span class="ac-badge ac-full">TC Full</span></div>
+      <table class="adoption-table">
+        <thead>
+          <tr>
+            <th>Grupo</th>
+            <th>Enc. Abr</th>
+            <th>Taxa 5d atual</th>
+            <th>Taxa 5d Mar/2026</th>
+            <th>Adoption 30d Mar/2026</th>
+            <th>Multiplicador</th>
+            <th>Proj. Adoption 30d</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>Primeiro Enc.</td>
+          <td>449.270</td>
+          <td>17.17%</td>
+          <td>18.88%</td>
+          <td>25.18%</td>
+          <td class="mul-down">0.91x</td>
+          <td class="proj-val">22.90%</td>
+        </tr>
+        <tr>
+          <td>Reencendido</td>
+          <td>10.989.784</td>
+          <td>0.82%</td>
+          <td>1.09%</td>
+          <td>3.03%</td>
+          <td class="mul-down">0.76x</td>
+          <td class="proj-val">2.29%</td>
+        </tr>
+        <tr class="total-row">
+          <td>Total</td>
+          <td>11.439.054</td>
+          <td>1.47%</td>
+          <td>1.77%</td>
+          <td>3.87%</td>
+          <td class="mul-down">0.83x</td>
+          <td class="proj-val">3.22%</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="adoption-card">
+      <div class="adoption-card-title"><span class="ac-badge ac-micro">Micro TC</span></div>
+      <table class="adoption-table">
+        <thead>
+          <tr>
+            <th>Grupo</th>
+            <th>Enc. Abr</th>
+            <th>Taxa 5d atual</th>
+            <th>Taxa 5d Mar/2026</th>
+            <th>Adoption 30d Mar/2026</th>
+            <th>Multiplicador</th>
+            <th>Proj. Adoption 30d</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>Primeiro Enc.</td>
+          <td>202.385</td>
+          <td>27.19%</td>
+          <td>26.70%</td>
+          <td>36.05%</td>
+          <td class="mul-up">1.02x</td>
+          <td class="proj-val">36.71%</td>
+        </tr>
+        <tr>
+          <td>Reencendido</td>
+          <td>1.124.964</td>
+          <td>1.74%</td>
+          <td>2.21%</td>
+          <td>5.83%</td>
+          <td class="mul-down">0.79x</td>
+          <td class="proj-val">4.60%</td>
+        </tr>
+        <tr class="total-row">
+          <td>Total</td>
+          <td>1.327.349</td>
+          <td>5.62%</td>
+          <td>6.92%</td>
+          <td>11.65%</td>
+          <td class="mul-down">0.81x</td>
+          <td class="proj-val">9.46%</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <!-- GRAND TOTAL -->
@@ -281,12 +409,15 @@ a{color:inherit;text-decoration:none}
 const TODAY        = '2026-04-16';
 const ALL_DAYS     = ["2026-04-01", "2026-04-02", "2026-04-03", "2026-04-04", "2026-04-05", "2026-04-06", "2026-04-07", "2026-04-08", "2026-04-09", "2026-04-10", "2026-04-11", "2026-04-12", "2026-04-13", "2026-04-14", "2026-04-15", "2026-04-16", "2026-04-17", "2026-04-18", "2026-04-19", "2026-04-20", "2026-04-21", "2026-04-22", "2026-04-23", "2026-04-24", "2026-04-25", "2026-04-26", "2026-04-27", "2026-04-28", "2026-04-29", "2026-04-30"];
 const LABELS       = ["01/Abr", "02/Abr", "03/Abr", "04/Abr", "05/Abr", "06/Abr", "07/Abr", "08/Abr", "09/Abr", "10/Abr", "11/Abr", "12/Abr", "13/Abr", "14/Abr", "15/Abr", "16/Abr", "17/Abr", "18/Abr", "19/Abr", "20/Abr", "21/Abr", "22/Abr", "23/Abr", "24/Abr", "25/Abr", "26/Abr", "27/Abr", "28/Abr", "29/Abr", "30/Abr"];
-const SG_ORDER     = ["BAU", "CC", "Mar Aberto", "Only Nav", "Sellers"];
-const SG_COLORS    = {"BAU": "#00D4FF", "CC": "#FFD700", "Mar Aberto": "#3DFF91", "Only Nav": "#FF8C42", "Sellers": "#C77DFF"};
+// Legenda: menor (topo) → maior (base); BAR_ORDER invertido = Chart.js coloca dataset[0] na BASE
+const SG_ORDER     = ["Only Nav", "Mar Aberto", "Sellers", "CC", "EA", "BAU"];
+const SG_COLORS    = {"BAU": "#2979FF", "CC": "#FFD740", "Mar Aberto": "#69FF47", "Only Nav": "#FF1744", "Sellers": "#D500F9", "EA": "#FFFFFF"};
+// Dataset[0] = BASE da barra → BAU primeiro = BAU na base
+const BAR_ORDER    = [...SG_ORDER].reverse();
 const HAS_PREV     = false;
 
-const ACTUAL_DATA    = {"TC Full": {"BAU": {"2026-04-01": 5809.0, "2026-04-02": 5615.0, "2026-04-03": 6264.0, "2026-04-04": 6751.0, "2026-04-05": 5064.0, "2026-04-06": 6384.0, "2026-04-07": 7693.0, "2026-04-08": 7284.0, "2026-04-09": 10781.0, "2026-04-10": 42365.0, "2026-04-11": 29624.0, "2026-04-12": 14812.0, "2026-04-13": 14497.0, "2026-04-14": 16599.0, "2026-04-15": 15317.0}, "CC": {"2026-04-01": 497.0, "2026-04-02": 524.0, "2026-04-03": 610.0, "2026-04-04": 671.0, "2026-04-05": 470.0, "2026-04-06": 561.0, "2026-04-07": 726.0, "2026-04-08": 670.0, "2026-04-09": 604.0, "2026-04-10": 556.0, "2026-04-11": 3239.0, "2026-04-12": 2041.0, "2026-04-13": 1461.0, "2026-04-14": 1621.0, "2026-04-15": 1176.0}, "Mar Aberto": {"2026-04-01": 1216.0, "2026-04-02": 1097.0, "2026-04-03": 1064.0, "2026-04-04": 968.0, "2026-04-05": 793.0, "2026-04-06": 1012.0, "2026-04-07": 1191.0, "2026-04-08": 1219.0, "2026-04-09": 1050.0, "2026-04-10": 882.0, "2026-04-11": 645.0, "2026-04-12": 633.0, "2026-04-13": 802.0, "2026-04-14": 804.0, "2026-04-15": 795.0}, "Only Nav": {"2026-04-01": 347.0, "2026-04-02": 311.0, "2026-04-03": 302.0, "2026-04-04": 341.0, "2026-04-05": 283.0, "2026-04-06": 289.0, "2026-04-07": 359.0, "2026-04-08": 333.0, "2026-04-09": 300.0, "2026-04-10": 285.0, "2026-04-11": 261.0, "2026-04-12": 242.0, "2026-04-13": 3695.0, "2026-04-14": 4484.0, "2026-04-15": 960.0}, "Sellers": {"2026-04-01": 691.0, "2026-04-02": 659.0, "2026-04-03": 550.0, "2026-04-04": 471.0, "2026-04-05": 394.0, "2026-04-06": 688.0, "2026-04-07": 740.0, "2026-04-08": 781.0, "2026-04-09": 651.0, "2026-04-10": 919.0, "2026-04-11": 823.0, "2026-04-12": 599.0, "2026-04-13": 728.0, "2026-04-14": 2115.0, "2026-04-15": 4662.0}}, "Micro TC": {"BAU": {"2026-04-01": 1564.0, "2026-04-02": 2443.0, "2026-04-03": 1790.0, "2026-04-04": 1507.0, "2026-04-05": 1182.0, "2026-04-06": 1538.0, "2026-04-07": 1778.0, "2026-04-08": 1677.0, "2026-04-09": 1549.0, "2026-04-10": 1281.0, "2026-04-11": 48308.0, "2026-04-12": 6061.0, "2026-04-13": 4173.0, "2026-04-14": 4137.0, "2026-04-15": 8331.0}, "Mar Aberto": {"2026-04-01": 56.0, "2026-04-02": 53.0, "2026-04-03": 50.0, "2026-04-04": 60.0, "2026-04-05": 47.0, "2026-04-06": 53.0, "2026-04-07": 50.0, "2026-04-08": 55.0, "2026-04-09": 43.0, "2026-04-10": 50.0, "2026-04-11": 44.0, "2026-04-12": 45.0, "2026-04-13": 61.0, "2026-04-14": 64.0, "2026-04-15": 63.0}, "Sellers": {"2026-04-01": 220.0, "2026-04-02": 217.0, "2026-04-03": 168.0, "2026-04-04": 182.0, "2026-04-05": 141.0, "2026-04-06": 210.0, "2026-04-07": 190.0, "2026-04-08": 196.0, "2026-04-09": 201.0, "2026-04-10": 164.0, "2026-04-11": 330.0, "2026-04-12": 169.0, "2026-04-13": 180.0, "2026-04-14": 196.0, "2026-04-15": 1976.0}, "CC": {}, "Only Nav": {}}};
-const PROJ_DATA      = {"TC Full": {"BAU": {"2026-04-16": 11680.0, "2026-04-17": 10773.0, "2026-04-18": 10002.0, "2026-04-19": 9973.0, "2026-04-20": 10069.0, "2026-04-21": 10880.0, "2026-04-22": 10351.0, "2026-04-23": 10339.0, "2026-04-24": 9494.0, "2026-04-25": 8657.0, "2026-04-26": 8053.0, "2026-04-27": 7750.0, "2026-04-28": 7823.0, "2026-04-29": 7717.0, "2026-04-30": 7448.0}, "CC": {"2026-04-16": 1531.0, "2026-04-17": 1335.0, "2026-04-18": 1416.0, "2026-04-19": 1152.0, "2026-04-20": 1056.0, "2026-04-21": 891.0, "2026-04-22": 1013.0, "2026-04-23": 900.0, "2026-04-24": 848.0, "2026-04-25": 727.0, "2026-04-26": 622.0, "2026-04-27": 624.0, "2026-04-28": 636.0, "2026-04-29": 604.0, "2026-04-30": 586.0}, "Mar Aberto": {"2026-04-16": 1100.0, "2026-04-17": 1100.0, "2026-04-18": 1100.0, "2026-04-19": 1100.0, "2026-04-20": 1100.0, "2026-04-21": 1100.0, "2026-04-22": 1100.0, "2026-04-23": 1100.0, "2026-04-24": 1100.0, "2026-04-25": 1100.0, "2026-04-26": 1100.0, "2026-04-27": 1100.0, "2026-04-28": 1100.0, "2026-04-29": 1100.0, "2026-04-30": 1100.0}, "Only Nav": {"2026-04-16": 525.0, "2026-04-17": 496.0, "2026-04-18": 425.0, "2026-04-19": 432.0, "2026-04-20": 482.0, "2026-04-21": 469.0, "2026-04-22": 455.0, "2026-04-23": 440.0, "2026-04-24": 495.0, "2026-04-25": 469.0, "2026-04-26": 419.0, "2026-04-27": 401.0, "2026-04-28": 357.0, "2026-04-29": 344.0, "2026-04-30": 334.0}, "Sellers": {"2026-04-16": 1718.0, "2026-04-17": 1254.0, "2026-04-18": 1058.0, "2026-04-19": 870.0, "2026-04-20": 747.0, "2026-04-21": 671.0, "2026-04-22": 632.0, "2026-04-23": 702.0, "2026-04-24": 736.0, "2026-04-25": 705.0, "2026-04-26": 703.0, "2026-04-27": 593.0, "2026-04-28": 559.0, "2026-04-29": 579.0, "2026-04-30": 566.0}}, "Micro TC": {"BAU": {"2026-04-16": 4035.0, "2026-04-17": 3364.0, "2026-04-18": 3094.0, "2026-04-19": 2806.0, "2026-04-20": 2525.0, "2026-04-21": 3134.0, "2026-04-22": 2689.0, "2026-04-23": 2697.0, "2026-04-24": 2399.0, "2026-04-25": 2407.0, "2026-04-26": 2739.0, "2026-04-27": 2241.0, "2026-04-28": 2672.0, "2026-04-29": 2357.0, "2026-04-30": 2212.0}, "Mar Aberto": {"2026-04-16": 53.0, "2026-04-17": 53.0, "2026-04-18": 53.0, "2026-04-19": 53.0, "2026-04-20": 53.0, "2026-04-21": 53.0, "2026-04-22": 53.0, "2026-04-23": 53.0, "2026-04-24": 53.0, "2026-04-25": 53.0, "2026-04-26": 53.0, "2026-04-27": 53.0, "2026-04-28": 53.0, "2026-04-29": 53.0, "2026-04-30": 53.0}, "Sellers": {"2026-04-16": 406.0, "2026-04-17": 260.0, "2026-04-18": 180.0, "2026-04-19": 147.0, "2026-04-20": 160.0, "2026-04-21": 122.0, "2026-04-22": 124.0, "2026-04-23": 122.0, "2026-04-24": 131.0, "2026-04-25": 105.0, "2026-04-26": 100.0, "2026-04-27": 122.0, "2026-04-28": 104.0, "2026-04-29": 96.0, "2026-04-30": 116.0}, "CC": {}, "Only Nav": {}}};
+const ACTUAL_DATA    = {"TC Full": {"BAU": {"2026-04-01": 5809.0, "2026-04-02": 5522.0, "2026-04-03": 6264.0, "2026-04-04": 6751.0, "2026-04-05": 5064.0, "2026-04-06": 6384.0, "2026-04-07": 7692.0, "2026-04-08": 7284.0, "2026-04-09": 6988.0, "2026-04-10": 16661.0, "2026-04-11": 20606.0, "2026-04-12": 14812.0, "2026-04-13": 14497.0, "2026-04-14": 14465.0, "2026-04-15": 14498.0}, "CC": {"2026-04-01": 497.0, "2026-04-02": 524.0, "2026-04-03": 610.0, "2026-04-04": 671.0, "2026-04-05": 470.0, "2026-04-06": 561.0, "2026-04-07": 726.0, "2026-04-08": 670.0, "2026-04-09": 604.0, "2026-04-10": 556.0, "2026-04-11": 3239.0, "2026-04-12": 2041.0, "2026-04-13": 1461.0, "2026-04-14": 1621.0, "2026-04-15": 1176.0}, "EA": {"2026-04-01": 590.0, "2026-04-02": 612.0, "2026-04-03": 520.0, "2026-04-04": 448.0, "2026-04-05": 350.0, "2026-04-06": 489.0, "2026-04-07": 521.0, "2026-04-08": 514.0, "2026-04-09": 4292.0, "2026-04-10": 26280.0, "2026-04-11": 9415.0, "2026-04-12": 284.0, "2026-04-13": 3720.0, "2026-04-14": 7084.0, "2026-04-15": 2180.0}, "Mar Aberto": {"2026-04-01": 638.0, "2026-04-02": 598.0, "2026-04-03": 560.0, "2026-04-04": 529.0, "2026-04-05": 446.0, "2026-04-06": 533.0, "2026-04-07": 680.0, "2026-04-08": 715.0, "2026-04-09": 593.0, "2026-04-10": 498.0, "2026-04-11": 350.0, "2026-04-12": 355.0, "2026-04-13": 457.0, "2026-04-14": 468.0, "2026-04-15": 738.0}, "Only Nav": {"2026-04-01": 347.0, "2026-04-02": 311.0, "2026-04-03": 302.0, "2026-04-04": 341.0, "2026-04-05": 283.0, "2026-04-06": 289.0, "2026-04-07": 359.0, "2026-04-08": 333.0, "2026-04-09": 300.0, "2026-04-10": 285.0, "2026-04-11": 261.0, "2026-04-12": 242.0, "2026-04-13": 331.0, "2026-04-14": 1204.0, "2026-04-15": 960.0}, "Sellers": {"2026-04-01": 679.0, "2026-04-02": 639.0, "2026-04-03": 534.0, "2026-04-04": 462.0, "2026-04-05": 391.0, "2026-04-06": 678.0, "2026-04-07": 731.0, "2026-04-08": 771.0, "2026-04-09": 609.0, "2026-04-10": 727.0, "2026-04-11": 721.0, "2026-04-12": 593.0, "2026-04-13": 717.0, "2026-04-14": 781.0, "2026-04-15": 3358.0}}, "Micro TC": {"BAU": {"2026-04-01": 1564.0, "2026-04-02": 1591.0, "2026-04-03": 1790.0, "2026-04-04": 1507.0, "2026-04-05": 1182.0, "2026-04-06": 1538.0, "2026-04-07": 1778.0, "2026-04-08": 1677.0, "2026-04-09": 1549.0, "2026-04-10": 1281.0, "2026-04-11": 5850.0, "2026-04-12": 6061.0, "2026-04-13": 4173.0, "2026-04-14": 4137.0, "2026-04-15": 8331.0}, "EA": {"2026-04-01": 36.0, "2026-04-02": 903.0, "2026-04-03": 39.0, "2026-04-04": 40.0, "2026-04-05": 38.0, "2026-04-06": 41.0, "2026-04-07": 33.0, "2026-04-08": 41.0, "2026-04-09": 31.0, "2026-04-10": 38.0, "2026-04-11": 42653.0, "2026-04-12": 33.0, "2026-04-13": 42.0, "2026-04-14": 50.0, "2026-04-15": 7.0}, "Mar Aberto": {"2026-04-01": 22.0, "2026-04-02": 11.0, "2026-04-03": 11.0, "2026-04-04": 20.0, "2026-04-05": 10.0, "2026-04-06": 12.0, "2026-04-07": 17.0, "2026-04-08": 16.0, "2026-04-09": 12.0, "2026-04-10": 13.0, "2026-04-11": 10.0, "2026-04-12": 12.0, "2026-04-13": 20.0, "2026-04-14": 14.0, "2026-04-15": 56.0}, "Sellers": {"2026-04-01": 218.0, "2026-04-02": 208.0, "2026-04-03": 168.0, "2026-04-04": 182.0, "2026-04-05": 140.0, "2026-04-06": 210.0, "2026-04-07": 190.0, "2026-04-08": 194.0, "2026-04-09": 201.0, "2026-04-10": 163.0, "2026-04-11": 169.0, "2026-04-12": 169.0, "2026-04-13": 179.0, "2026-04-14": 196.0, "2026-04-15": 1976.0}, "CC": {}, "Only Nav": {}}};
+const PROJ_DATA      = {"TC Full": {"BAU": {"2026-04-16": 11680.0, "2026-04-17": 10773.0, "2026-04-18": 10002.0, "2026-04-19": 9973.0, "2026-04-20": 10069.0, "2026-04-21": 10880.0, "2026-04-22": 10351.0, "2026-04-23": 10339.0, "2026-04-24": 9494.0, "2026-04-25": 8657.0, "2026-04-26": 8053.0, "2026-04-27": 7750.0, "2026-04-28": 7823.0, "2026-04-29": 7717.0, "2026-04-30": 7448.0}, "CC": {"2026-04-16": 1531.0, "2026-04-17": 1335.0, "2026-04-18": 1416.0, "2026-04-19": 1152.0, "2026-04-20": 1056.0, "2026-04-21": 891.0, "2026-04-22": 1013.0, "2026-04-23": 900.0, "2026-04-24": 848.0, "2026-04-25": 727.0, "2026-04-26": 622.0, "2026-04-27": 624.0, "2026-04-28": 636.0, "2026-04-29": 604.0, "2026-04-30": 586.0}, "Mar Aberto": {"2026-04-16": 1100.0, "2026-04-17": 1100.0, "2026-04-18": 1100.0, "2026-04-19": 1100.0, "2026-04-20": 1100.0, "2026-04-21": 1100.0, "2026-04-22": 1100.0, "2026-04-23": 1100.0, "2026-04-24": 1100.0, "2026-04-25": 1100.0, "2026-04-26": 1100.0, "2026-04-27": 1100.0, "2026-04-28": 1100.0, "2026-04-29": 1100.0, "2026-04-30": 1100.0}, "Only Nav": {"2026-04-16": 525.0, "2026-04-17": 496.0, "2026-04-18": 425.0, "2026-04-19": 432.0, "2026-04-20": 482.0, "2026-04-21": 469.0, "2026-04-22": 455.0, "2026-04-23": 440.0, "2026-04-24": 495.0, "2026-04-25": 469.0, "2026-04-26": 419.0, "2026-04-27": 401.0, "2026-04-28": 357.0, "2026-04-29": 344.0, "2026-04-30": 334.0}, "Sellers": {"2026-04-16": 1718.0, "2026-04-17": 1254.0, "2026-04-18": 1058.0, "2026-04-19": 870.0, "2026-04-20": 747.0, "2026-04-21": 671.0, "2026-04-22": 632.0, "2026-04-23": 702.0, "2026-04-24": 736.0, "2026-04-25": 705.0, "2026-04-26": 703.0, "2026-04-27": 593.0, "2026-04-28": 559.0, "2026-04-29": 579.0, "2026-04-30": 566.0}, "EA": {}}, "Micro TC": {"BAU": {"2026-04-16": 4035.0, "2026-04-17": 3364.0, "2026-04-18": 3094.0, "2026-04-19": 2806.0, "2026-04-20": 2525.0, "2026-04-21": 3134.0, "2026-04-22": 2689.0, "2026-04-23": 2697.0, "2026-04-24": 2399.0, "2026-04-25": 2407.0, "2026-04-26": 2739.0, "2026-04-27": 2241.0, "2026-04-28": 2672.0, "2026-04-29": 2357.0, "2026-04-30": 2212.0}, "Mar Aberto": {"2026-04-16": 53.0, "2026-04-17": 53.0, "2026-04-18": 53.0, "2026-04-19": 53.0, "2026-04-20": 53.0, "2026-04-21": 53.0, "2026-04-22": 53.0, "2026-04-23": 53.0, "2026-04-24": 53.0, "2026-04-25": 53.0, "2026-04-26": 53.0, "2026-04-27": 53.0, "2026-04-28": 53.0, "2026-04-29": 53.0, "2026-04-30": 53.0}, "Sellers": {"2026-04-16": 406.0, "2026-04-17": 260.0, "2026-04-18": 180.0, "2026-04-19": 147.0, "2026-04-20": 160.0, "2026-04-21": 122.0, "2026-04-22": 124.0, "2026-04-23": 122.0, "2026-04-24": 131.0, "2026-04-25": 105.0, "2026-04-26": 100.0, "2026-04-27": 122.0, "2026-04-28": 104.0, "2026-04-29": 96.0, "2026-04-30": 116.0}, "CC": {}, "Only Nav": {}, "EA": {}}};
 const PREV_PROJ_DATA = {};
 
 // mapeamento tc -> slug
@@ -312,6 +443,41 @@ function getSelectedSGs(tc) {
     return el && el.checked;
   });
 }
+
+// ============================================================
+// PLUGIN: rotulo com total acima de cada barra
+// ============================================================
+const dataLabelPlugin = {
+  id: 'dataLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx, scales: { x, y } } = chart;
+    if (!x || !y) return;
+    let prevOverflow = false;
+    ALL_DAYS.forEach((day, i) => {
+      if (day >= TODAY) return;
+      let total = 0;
+      chart.data.datasets.forEach(ds => {
+        if (ds.type !== 'bar' || ds.hidden) return;
+        const val = ds.data[i];
+        if (val != null && val > 0) total += val;
+      });
+      if (total <= 0) return;
+      const xPos = x.getPixelForValue(i);
+      const rawY = y.getPixelForValue(total);
+      const overflows = rawY < y.top;
+      // Escalonar labels de barras adjacentes que ultrapassam o eixo
+      const yPos = overflows ? (prevOverflow ? y.top + 24 : y.top + 12) : rawY;
+      prevOverflow = overflows;
+      ctx.save();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px Segoe UI, Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(fmt(total), xPos, yPos);
+      ctx.restore();
+    });
+  }
+};
 
 // ============================================================
 // PLUGIN: linha vertical "Hoje"
@@ -365,9 +531,17 @@ const baseOptions = {
       bodyColor: '#8b949e',
       padding: 10,
       cornerRadius: 8,
+      filter: function(item) {
+        // Acessa o valor original do dataset (antes da normalizacao do Chart.js)
+        const originalVal = item.dataset.data[item.dataIndex];
+        if (originalVal === null || originalVal === undefined || originalVal === 0) return false;
+        const day = ALL_DAYS[item.dataIndex];
+        // Dias futuros: exibe apenas linhas de projecao (type === 'line')
+        if (day >= TODAY) return item.dataset.type === 'line';
+        return true;
+      },
       callbacks: {
         label(ctx) {
-          if (ctx.raw === null || ctx.raw === undefined) return null;
           return `  ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
         }
       }
@@ -402,18 +576,20 @@ function buildDatasets(tc, selectedSGs) {
   const projDays   = ALL_DAYS.map(d => d >= TODAY ? d : null);
 
   // Uma barra por super_grupo (empilhada), so para dias passados
-  const barDatasets = SG_ORDER.map(sg => {
+  // BAR_ORDER = SG_ORDER invertido: menor impacto na base, BAU por cima
+  const barDatasets = BAR_ORDER.map(sg => {
     const data = ALL_DAYS.map((d, i) => {
       if (d >= TODAY) return null;
       return ACTUAL_DATA?.[tc]?.[sg]?.[d] || null;
     });
+    const isEA = sg === 'EA';
     return {
       type: 'bar',
       label: sg,
       data,
-      backgroundColor: SG_COLORS[sg] + 'BB',
-      borderColor:     SG_COLORS[sg],
-      borderWidth: 0,
+      backgroundColor: isEA ? 'rgba(255,255,255,0.22)' : SG_COLORS[sg] + 'BB',
+      borderColor:     isEA ? 'rgba(255,255,255,0.55)' : SG_COLORS[sg],
+      borderWidth: isEA ? 1 : 0,
       borderRadius: 2,
       stack: 'actual',
       hidden: !selectedSGs.includes(sg),
@@ -482,14 +658,17 @@ const charts = {};
 function makeChart(canvasId, tc) {
   const selectedSGs = SG_ORDER.slice(); // todos
   const datasets    = buildDatasets(tc, selectedSGs);
-  const cfg = {
+  // JSON.parse/stringify elimina funcoes — copiar estrutura e re-anexar funcoes manualmente
+  const opts = JSON.parse(JSON.stringify(baseOptions));
+  opts.plugins.tooltip.filter    = baseOptions.plugins.tooltip.filter;
+  opts.plugins.tooltip.callbacks = baseOptions.plugins.tooltip.callbacks;
+  opts.scales.y.ticks.callback   = baseOptions.scales.y.ticks.callback;
+  opts.scales.y.stacked = false;
+  charts[tc] = new Chart(document.getElementById(canvasId), {
     data: { labels: LABELS, datasets },
-    options: JSON.parse(JSON.stringify(baseOptions)),
-    plugins: [todayPlugin]
-  };
-  // y nao empilhada para nao empilhar linhas
-  cfg.options.scales.y.stacked = false;
-  charts[tc] = new Chart(document.getElementById(canvasId), cfg);
+    options: opts,
+    plugins: [todayPlugin, dataLabelPlugin]
+  });
 }
 
 makeChart('chartFull',  'TC Full');
@@ -514,13 +693,13 @@ function rebuildLines(tc) {
   const chart      = charts[tc];
   const selectedSGs = getSelectedSGs(tc);
 
-  // Barras: mostrar/ocultar
-  SG_ORDER.forEach((sg, i) => {
+  // Barras: mostrar/ocultar (usa BAR_ORDER para bater com os indices dos datasets)
+  BAR_ORDER.forEach((sg, i) => {
     chart.data.datasets[i].hidden = !selectedSGs.includes(sg);
   });
 
   // Linha proj hoje (indice n)
-  const projIdx = SG_ORDER.length;
+  const projIdx = BAR_ORDER.length;
   chart.data.datasets[projIdx].data = ALL_DAYS.map(d => {
     if (d < TODAY) return null;
     const v = selectedSGs.reduce((s, sg) => s + (PROJ_DATA?.[tc]?.[sg]?.[d] || 0), 0);
