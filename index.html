@@ -288,98 +288,8 @@ a{color:inherit;text-decoration:none}
   </div>
   <p class="adoption-sub">Comparativo: Mar/2026 &nbsp;·&nbsp; Janela: 5 dias pos-encendimento &nbsp;·&nbsp; Formula: adoption_30d_prev × (taxa_5d_atual / taxa_5d_prev)</p>
   <div class="adoption-grid">
-    
-    <div class="adoption-card">
-      <div class="adoption-card-title"><span class="ac-badge ac-full">TC Full</span></div>
-      <table class="adoption-table">
-        <thead>
-          <tr>
-            <th>Grupo</th>
-            <th>Enc. Abr</th>
-            <th>Taxa 5d atual</th>
-            <th>Taxa 5d Mar/2026</th>
-            <th>Adoption 30d Mar/2026</th>
-            <th>Multiplicador</th>
-            <th>Proj. Adoption 30d</th>
-          </tr>
-        </thead>
-        <tbody>
-        <tr>
-          <td>Primeiro Enc.</td>
-          <td>452.865</td>
-          <td>18.51%</td>
-          <td>18.88%</td>
-          <td>25.20%</td>
-          <td class="mul-down">0.98x</td>
-          <td class="proj-val">24.71%</td>
-        </tr>
-        <tr>
-          <td>Reencendido</td>
-          <td>10.992.382</td>
-          <td>0.90%</td>
-          <td>1.09%</td>
-          <td>3.03%</td>
-          <td class="mul-down">0.82x</td>
-          <td class="proj-val">2.50%</td>
-        </tr>
-        <tr class="total-row">
-          <td>Total</td>
-          <td>11.445.247</td>
-          <td>1.59%</td>
-          <td>1.77%</td>
-          <td>3.87%</td>
-          <td class="mul-down">0.90x</td>
-          <td class="proj-val">3.50%</td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
-    
-    <div class="adoption-card">
-      <div class="adoption-card-title"><span class="ac-badge ac-micro">Micro TC</span></div>
-      <table class="adoption-table">
-        <thead>
-          <tr>
-            <th>Grupo</th>
-            <th>Enc. Abr</th>
-            <th>Taxa 5d atual</th>
-            <th>Taxa 5d Mar/2026</th>
-            <th>Adoption 30d Mar/2026</th>
-            <th>Multiplicador</th>
-            <th>Proj. Adoption 30d</th>
-          </tr>
-        </thead>
-        <tbody>
-        <tr>
-          <td>Primeiro Enc.</td>
-          <td>203.383</td>
-          <td>29.48%</td>
-          <td>26.70%</td>
-          <td>36.05%</td>
-          <td class="mul-up">1.10x</td>
-          <td class="proj-val">39.82%</td>
-        </tr>
-        <tr>
-          <td>Reencendido</td>
-          <td>1.128.316</td>
-          <td>1.97%</td>
-          <td>2.21%</td>
-          <td>5.83%</td>
-          <td class="mul-down">0.89x</td>
-          <td class="proj-val">5.19%</td>
-        </tr>
-        <tr class="total-row">
-          <td>Total</td>
-          <td>1.331.699</td>
-          <td>6.17%</td>
-          <td>6.92%</td>
-          <td>11.65%</td>
-          <td class="mul-down">0.89x</td>
-          <td class="proj-val">10.38%</td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
+    <div class="adoption-card"><div class="adoption-card-title"><span class="ac-badge ac-full">TC Full</span></div><p style="color:#8b949e;font-size:12px">Sem dados</p></div>
+    <div class="adoption-card"><div class="adoption-card-title"><span class="ac-badge ac-micro">Micro TC</span></div><p style="color:#8b949e;font-size:12px">Sem dados</p></div>
   </div>
 
   <!-- GRAND TOTAL -->
@@ -591,7 +501,7 @@ function buildDatasets(tc, selectedSGs) {
       type: 'bar',
       label: sg,
       data,
-      backgroundColor: isEA ? 'rgba(255,255,255,0.22)' : SG_COLORS[sg] + 'BB',
+      backgroundColor: isEA ? 'rgba(255,255,255,0.22)' : SG_COLORS[sg],
       borderColor:     isEA ? 'rgba(255,255,255,0.55)' : SG_COLORS[sg],
       borderWidth: isEA ? 1 : 0,
       borderRadius: 2,
