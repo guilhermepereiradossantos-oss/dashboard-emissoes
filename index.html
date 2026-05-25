@@ -45,6 +45,23 @@ a{color:inherit;text-decoration:none}
 .kpi-card.comp   .kpi-value{color:#C77DFF}
 .kpi-sub{font-size:11px;color:#6e7681;margin-top:4px}
 
+/* COMPARATIVO MoM/PLANO */
+.cmp-row{display:flex;align-items:baseline;gap:6px;margin-top:7px;flex-wrap:wrap}
+.cmp-label{font-size:10px;color:#8b949e;min-width:90px;flex-shrink:0}
+.cmp-ref{font-size:11px;color:#c9d1d9;font-weight:600}
+.cmp-delta{font-size:12px;font-weight:700;margin-left:auto}
+.cmp-pos{color:#3DFF91}
+.cmp-neg{color:#FF5A5A}
+
+/* INSIGHTS PANEL */
+.insights-panel{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:14px 18px;margin-top:8px;margin-bottom:4px}
+.ins-title{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.ins-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.ins-item{font-size:12px;color:#c9d1d9;line-height:1.5;padding-left:4px}
+.ins-pos{border-left:3px solid #3DFF91;padding-left:10px}
+.ins-neg{border-left:3px solid #FF5A5A;padding-left:10px}
+.ins-pos b,.ins-neg b{color:#e6edf3}
+
 /* CHART + FILTER LAYOUT */
 .chart-section{display:flex;gap:12px;margin-bottom:8px}
 .chart-wrap{flex:1;background:#161b22;border:1px solid #21262d;border-radius:12px;padding:20px 20px 14px;min-width:0}
@@ -134,11 +151,6 @@ a{color:inherit;text-decoration:none}
   </div>
   
   <div class="kpi-row" id="kpis-full">
-    <div class="kpi-card blue">
-      <div class="kpi-label">Realizado ontem (24/Mai)</div>
-      <div class="kpi-value" id="kv-ontem-full">8.507</div>
-      <div class="kpi-sub">conversoes confirmadas</div>
-    </div>
     <div class="kpi-card cyan">
       <div class="kpi-label">Total realizado no mes</div>
       <div class="kpi-value" id="kv-real-full">340.244</div>
@@ -159,6 +171,7 @@ a{color:inherit;text-decoration:none}
       <div class="kpi-value" id="kv-total-full">410.022</div>
       <div class="kpi-sub">realizado + projecao</div>
     </div>
+    <div class="kpi-card comp" style="min-width:210px"><div class="kpi-label">Proj. Final vs Plano / MoM</div><div style="margin-top:8px"><div class="cmp-row"><span class="cmp-label">Plano Mai/2026</span><span class="cmp-ref">452.000</span><span class="cmp-delta cmp-neg">&#9660; -41.978 (-9.3%)</span></div><div class="cmp-row"><span class="cmp-label">Abr/2026 Real</span><span class="cmp-ref">421.918</span><span class="cmp-delta cmp-neg">&#9660; -11.896 (-2.8%)</span></div></div></div>
   </div>
   <div class="chart-section">
     <div class="chart-wrap">
@@ -208,6 +221,7 @@ a{color:inherit;text-decoration:none}
         </div>
       </div>
   </div>
+  <div class="insights-panel"><div class="ins-title">Fatores de Projecao</div><ul class="ins-list"><li class="ins-item ins-neg">&#9660; <b>11.896</b> (2.8%) abaixo de Abr/2026 &mdash; real de 421.918</li><li class="ins-item ins-neg">&#9660; <b>41.978</b> (9.3%) abaixo do Plano Mai/2026 &mdash; meta de 452.000</li><li class="ins-item ins-pos">&#9650; Grupo <b>BAU</b>: impulso positivo vs Abr (5.968)</li><li class="ins-item ins-neg">&#9660; Grupo <b>Only Nav</b>: pressao negativa vs Abr (5.595)</li><li class="ins-item ins-neg">&#9660; Grupo <b>EA</b>: pressao negativa vs Abr (5.569)</li><li class="ins-item ins-neg">&#9660; 832k propostas pendentes canceladas em 19/Mai — ajuste de -15k aplicado na projecao</li><li class="ins-item ins-pos">&#9650; Sellers encendido neste mes — projecao agora via curva organica (substituiu estimativa manual)</li></ul></div>
 
   <!-- ===== MICRO TC ===== -->
   <div class="section-hdr">
@@ -216,11 +230,6 @@ a{color:inherit;text-decoration:none}
   </div>
   
   <div class="kpi-row" id="kpis-micro">
-    <div class="kpi-card blue">
-      <div class="kpi-label">Realizado ontem (24/Mai)</div>
-      <div class="kpi-value" id="kv-ontem-micro">3.051</div>
-      <div class="kpi-sub">conversoes confirmadas</div>
-    </div>
     <div class="kpi-card cyan">
       <div class="kpi-label">Total realizado no mes</div>
       <div class="kpi-value" id="kv-real-micro">146.110</div>
@@ -241,6 +250,7 @@ a{color:inherit;text-decoration:none}
       <div class="kpi-value" id="kv-total-micro">168.509</div>
       <div class="kpi-sub">realizado + projecao</div>
     </div>
+    <div class="kpi-card comp" style="min-width:210px"><div class="kpi-label">Proj. Final vs Plano / MoM</div><div style="margin-top:8px"><div class="cmp-row"><span class="cmp-label">Plano Mai/2026</span><span class="cmp-ref">98.000</span><span class="cmp-delta cmp-pos">&#9650; +70.509 (+71.9%)</span></div><div class="cmp-row"><span class="cmp-label">Abr/2026 Real</span><span class="cmp-ref">138.444</span><span class="cmp-delta cmp-pos">&#9650; +30.065 (+21.7%)</span></div></div></div>
   </div>
   <div class="chart-section">
     <div class="chart-wrap">
@@ -290,6 +300,7 @@ a{color:inherit;text-decoration:none}
         </div>
       </div>
   </div>
+  <div class="insights-panel"><div class="ins-title">Fatores de Projecao</div><ul class="ins-list"><li class="ins-item ins-pos">&#9650; <b>30.065</b> (21.7%) acima de Abr/2026 &mdash; real de 138.444</li><li class="ins-item ins-pos">&#9650; <b>70.509</b> (71.9%) acima do Plano Mai/2026 &mdash; meta de 98.000</li><li class="ins-item ins-pos">&#9650; Grupo <b>EA</b>: impulso positivo vs Abr (15.606)</li><li class="ins-item ins-pos">&#9650; Grupo <b>BAU</b>: impulso positivo vs Abr (13.916)</li><li class="ins-item ins-pos">&#9650; Grupo <b>Mar Aberto</b>: impulso positivo vs Abr (1.995)</li></ul></div>
 
   <!-- ADOPTION -->
   <div class="section-hdr" style="margin-top:32px">
@@ -722,7 +733,6 @@ function updateKPIs(tc, slug) {
   const hojeProjV  = sgs.reduce((s, sg) => s + (PROJ_DATA?.[tc]?.[sg]?.[TODAY] || 0), 0);
 
   const el = id => document.getElementById(id);
-  if (el(`kv-ontem-${slug}`))  el(`kv-ontem-${slug}`).textContent  = fmt(ontemVal);
   if (el(`kv-real-${slug}`))   el(`kv-real-${slug}`).textContent   = fmt(realTotal);
   if (el(`kv-hoje-${slug}`))   el(`kv-hoje-${slug}`).textContent   = fmt(hojeProjV);
   if (el(`kv-proj-${slug}`))   el(`kv-proj-${slug}`).textContent   = fmt(projTotal);
