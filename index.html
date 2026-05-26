@@ -124,13 +124,53 @@ a{color:inherit;text-decoration:none}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:#0d1117}
 ::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+.tabs-bar{background:#161b22;border-bottom:1px solid #21262d;padding:0 32px;display:flex;gap:0}
+.tab-nav-btn{background:none;border:none;color:#8b949e;font-size:14px;font-weight:600;padding:14px 24px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.3px}
+.tab-nav-btn:hover{color:#e6edf3}
+.tab-nav-btn.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+.tc-filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:12px 16px;background:#161b22;border:1px solid #21262d;border-radius:10px}
+.tc-filter-label{font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.6px;margin-right:6px}
+.tc-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:6px 20px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.tc-btn:hover{background:#30363d;color:#e6edf3}
+.tc-btn.tc-full.active{background:#58a6ff;border-color:#58a6ff;color:#0d1117}
+.tc-btn.tc-micro.active{background:#3DFF91;border-color:#3DFF91;color:#0d1117}
+.share-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.share-card{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 18px}
+.share-card-title{font-size:12px;font-weight:700;color:#e6edf3;margin-bottom:12px}
+.data-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:0}
+.data-table th{color:#8b949e;font-weight:600;padding:8px 12px;border-bottom:1px solid #21262d;font-size:10px;text-transform:uppercase;letter-spacing:.4px;text-align:right}
+.data-table th:first-child{text-align:left}
+.data-table td{padding:7px 12px;text-align:right;color:#c9d1d9;border-bottom:1px solid #0d1117}
+.data-table td:first-child{text-align:left;color:#8b949e}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr.hl-row td{color:#e6edf3;font-weight:700;border-top:1px solid #21262d}
+.adopt-pct{font-weight:700}
+.adopt-hi{color:#3DFF91}.adopt-md{color:#F5C500}.adopt-lo{color:#FF5A5A}
+.grupos-table-wrap{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 18px;overflow-x:auto}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#0d1117}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+.kpi-panels{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.kpi-panel{flex:1;min-width:520px;background:rgba(88,166,255,0.04);border:1.5px solid rgba(88,166,255,0.4);border-radius:14px;padding:12px 16px}
+.kpi-panel.prev{border-color:rgba(139,148,158,0.4);background:rgba(139,148,158,0.04)}
+.kpi-panel-title{font-size:11px;font-weight:700;color:#58a6ff;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px}
+.kpi-panel.prev .kpi-panel-title{color:#8b949e}
+.kpi-panel-row{display:flex;gap:8px}
+.kpi-panel-row .kpi-card{flex:1;min-width:0;padding:10px 12px}
+.kpi-panel-row .kpi-value{font-size:20px}
+.kpi-card.yellow{border-top-color:#F5C500}
+.kpi-card.yellow .kpi-value{color:#F5C500}
+.kpi-card.neutral{border-top-color:#c9d1d9}
+.kpi-card.neutral .kpi-value{color:#e6edf3}
+.kpi-sub.delta-pos{color:#3DFF91}
+.kpi-sub.delta-neg{color:#FF5A5A}
 </style>
 </head>
 <body>
 
 <div class="header">
   <div>
-    <h1>Dashboard — Projecao de Emissoes</h1>
+    <h1>Dashboard — Projecao de Emissoes &amp; Encendidos</h1>
     <div class="header-meta">Mes vigente: Mai/2026 &nbsp;·&nbsp; Modelo: Curva de Sobrevivencia + Taxa Mar Aberto</div>
   </div>
   <div style="display:flex;align-items:center;gap:16px">
@@ -141,7 +181,11 @@ a{color:inherit;text-decoration:none}
     <div class="header-badge">Atualizado: <span>26/Mai/2026</span></div>
   </div>
 </div>
-
+<div class="tabs-bar">
+  <button class="tab-nav-btn active" onclick="showTab('emissoes')">Emissoes</button>
+  <button class="tab-nav-btn" onclick="showTab('encendidos')">Encendidos</button>
+</div>
+<div id="tab-emissoes" class="tab-pane active">
 <div class="container">
 
   <!-- ===== TC FULL ===== -->
@@ -421,6 +465,59 @@ a{color:inherit;text-decoration:none}
     </div>
   </div>
 
+</div>
+</div>
+<div id="tab-encendidos" class="tab-pane">
+<div class="container">
+  <div class="tc-filter-bar">
+    <span class="tc-filter-label">Produto:</span>
+    <button class="tc-btn tc-full active" id="tcbtn-full" onclick="switchEncTC('1. TC Full')">TC Full</button>
+    <button class="tc-btn tc-micro" id="tcbtn-micro" onclick="switchEncTC('2. Micro TC')">Micro TC</button>
+  </div>
+  <div class="kpi-panels">
+    <div class="kpi-panel">
+      <div class="kpi-panel-title">Mes Atual &middot; <span id="kpi-cur-label">Mai/26</span></div>
+      <div class="kpi-panel-row">
+        <div class="kpi-card blue"><div class="kpi-label">Encendidos</div><div class="kpi-value" id="enc-kpi-enc">&mdash;</div><div class="kpi-sub" id="enc-kpi-enc-sub"></div></div>
+        <div class="kpi-card yellow"><div class="kpi-label">1&ordm; Encendido</div><div class="kpi-value" id="enc-kpi-primo">&mdash;</div><div class="kpi-sub" id="enc-kpi-primo-sub"></div></div>
+        <div class="kpi-card neutral"><div class="kpi-label">Reencendidos</div><div class="kpi-value" id="enc-kpi-reenc">&mdash;</div><div class="kpi-sub" id="enc-kpi-reenc-sub"></div></div>
+        <div class="kpi-card orange"><div class="kpi-label">% Adoption</div><div class="kpi-value" id="enc-kpi-adopt">&mdash;</div><div class="kpi-sub" id="enc-kpi-adopt-sub"></div></div>
+      </div>
+    </div>
+    <div class="kpi-panel prev">
+      <div class="kpi-panel-title">Mes Anterior &middot; <span id="kpi-prev-label">Abr/26</span></div>
+      <div class="kpi-panel-row">
+        <div class="kpi-card blue"><div class="kpi-label">Encendidos</div><div class="kpi-value" id="enc-prev-enc">&mdash;</div><div class="kpi-sub" id="enc-prev-enc-sub"></div></div>
+        <div class="kpi-card yellow"><div class="kpi-label">1&ordm; Encendido</div><div class="kpi-value" id="enc-prev-primo">&mdash;</div><div class="kpi-sub" id="enc-prev-primo-sub"></div></div>
+        <div class="kpi-card neutral"><div class="kpi-label">Reencendidos</div><div class="kpi-value" id="enc-prev-reenc">&mdash;</div><div class="kpi-sub" id="enc-prev-reenc-sub"></div></div>
+        <div class="kpi-card orange"><div class="kpi-label">% Adoption</div><div class="kpi-value" id="enc-prev-adopt">&mdash;</div><div class="kpi-sub" id="enc-prev-adopt-sub"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="section-hdr"><h2>Evolucao por Safra</h2><span class="section-tag tag-full" id="enc-section-tag">TC Full</span></div>
+  <div class="chart-wrap" style="margin-bottom:0;border-radius:12px 12px 0 0;border-bottom:none">
+    <div class="chart-inner"><canvas id="encEvolChart"></canvas></div>
+  </div>
+  <div style="background:#161b22;border:1px solid #21262d;border-top:none;border-radius:0 0 12px 12px;margin-bottom:20px;overflow-x:auto">
+    <table class="data-table" id="enc-evol-table" style="margin:0">
+      <thead><tr><th style="text-align:left;padding-left:16px">Safra</th><th>Encendidos</th><th>1° Encendido</th><th>Reencendidos</th><th>Convertidos</th><th style="padding-right:16px">% Adoption</th></tr></thead>
+      <tbody id="enc-evol-tbody"></tbody>
+    </table>
+  </div>
+  <div class="section-hdr"><h2>Share por Safra</h2></div>
+  <div class="share-grid">
+    <div class="share-card"><div class="share-card-title">NISE</div><div class="chart-inner-sm"><canvas id="encNiseChart"></canvas></div></div>
+    <div class="share-card"><div class="share-card-title">App Ativo</div><div class="chart-inner-sm"><canvas id="encAppChart"></canvas></div></div>
+    <div class="share-card"><div class="share-card-title">Rating TC</div><div class="chart-inner-sm"><canvas id="encRatingChart"></canvas></div></div>
+    <div class="share-card"><div class="share-card-title">Rating Externo (Bureau)</div><div class="chart-inner-sm"><canvas id="encBureauChart"></canvas></div></div>
+  </div>
+  <div class="section-hdr"><h2>Grupo Especial</h2><span class="section-tag" style="background:rgba(245,197,0,.12);color:#F5C500;border:1px solid rgba(245,197,0,.3)">Mai/26</span></div>
+  <div class="grupos-table-wrap">
+    <table class="data-table" style="margin:0"><thead><tr><th style="text-align:left">Grupo</th><th>Encendidos</th><th>Convertidos</th><th>% Adoption</th></tr></thead><tbody id="enc-grupos-tbody"></tbody></table>
+  </div>
+  <div class="section-hdr" style="margin-top:28px"><h2>Analise</h2></div>
+  <div class="insights-panel" id="enc-analise"><div class="ins-title">Insights — Mai/26 vs Abr/26</div><ul class="ins-list" id="enc-analise-list"></ul></div>
+</div>
 </div>
 
 <script>
@@ -802,6 +899,37 @@ function setMonth(monthKey) {
     btn.classList.toggle('active', btn.dataset.month === monthKey);
   });
 }
+// ── ENCENDIDOS DATA ──────────────────────────────────────────
+const ENC = {"months":["2025-05","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05"],"labels":["Mai/25 (YoY)","Nov/25","Dez/25","Jan/26","Fev/26","Mar/26","Abr/26","Mai/26"],"monthly":{"1. TC Full":{"2025-05":{"enc":10340843,"primo":443482,"reenc":9897361,"conv":325078},"2025-11":{"enc":10485195,"primo":329525,"reenc":10155670,"conv":457414},"2025-12":{"enc":9915327,"primo":275196,"reenc":9640131,"conv":288737},"2026-01":{"enc":10407903,"primo":303181,"reenc":10104722,"conv":347760},"2026-02":{"enc":11821274,"primo":682864,"reenc":11138410,"conv":395851},"2026-03":{"enc":11935885,"primo":452820,"reenc":11483065,"conv":480317},"2026-04":{"enc":11461481,"primo":462109,"reenc":10999372,"conv":421918},"2026-05":{"enc":11496005,"primo":368223,"reenc":11127782,"conv":340516}},"2. Micro TC":{"2025-05":{"enc":545257,"primo":180349,"reenc":364908,"conv":75380},"2025-11":{"enc":1201252,"primo":330513,"reenc":870739,"conv":166918},"2025-12":{"enc":1059604,"primo":215870,"reenc":843734,"conv":105880},"2026-01":{"enc":996688,"primo":286732,"reenc":709956,"conv":150513},"2026-02":{"enc":1228690,"primo":517760,"reenc":710930,"conv":118797},"2026-03":{"enc":1209136,"primo":232825,"reenc":976311,"conv":145240},"2026-04":{"enc":1341790,"primo":207197,"reenc":1134593,"conv":138444},"2026-05":{"enc":1506664,"primo":297978,"reenc":1208686,"conv":146198}}},"nise":{"1. TC Full":{"2025-05":{"BRONZE":508658,"SELLER":362373,"OUTROS":138,"PLATINUM":2011885,"SILVER":2720966,"GOLD":4736823},"2025-11":{"SELLER":409672,"SILVER":2957682,"BRONZE":682448,"PLATINUM":2115368,"OUTROS":20994,"GOLD":4299031},"2025-12":{"SELLER":357062,"GOLD":4066873,"SILVER":2819690,"BRONZE":674971,"OUTROS":4573,"PLATINUM":1992158},"2026-01":{"PLATINUM":2024503,"SILVER":3041749,"BRONZE":789135,"OUTROS":672,"SELLER":375315,"GOLD":4176529},"2026-02":{"GOLD":4692034,"OUTROS":846,"BRONZE":914539,"PLATINUM":2114392,"SELLER":380470,"SILVER":3718993},"2026-03":{"SILVER":3731541,"SELLER":391267,"GOLD":4712943,"BRONZE":981913,"PLATINUM":2117606,"OUTROS":615},"2026-04":{"OUTROS":104742,"GOLD":4443804,"BRONZE":977946,"SELLER":242456,"PLATINUM":1946946,"SILVER":3745587},"2026-05":{"OUTROS":963,"SELLER":246203,"BRONZE":962302,"SILVER":3696304,"GOLD":4559161,"PLATINUM":2031072}},"2. Micro TC":{"2025-05":{"OUTROS":1,"PLATINUM":38,"BRONZE":317522,"GOLD":503,"SILVER":218999,"SELLER":8194},"2025-11":{"PLATINUM":75,"GOLD":1830,"SILVER":579700,"OUTROS":2,"BRONZE":540716,"SELLER":78929},"2025-12":{"PLATINUM":127,"SELLER":71260,"SILVER":519901,"OUTROS":2,"GOLD":2330,"BRONZE":465984},"2026-01":{"SILVER":447040,"SELLER":79264,"GOLD":1566,"BRONZE":468738,"PLATINUM":80},"2026-02":{"SILVER":591643,"BRONZE":572028,"GOLD":1077,"SELLER":63873,"PLATINUM":68,"OUTROS":1},"2026-03":{"SELLER":74819,"GOLD":2287,"SILVER":532796,"PLATINUM":149,"OUTROS":1,"BRONZE":599084},"2026-04":{"OUTROS":19287,"PLATINUM":502,"BRONZE":677938,"SILVER":614103,"SELLER":22921,"GOLD":7039},"2026-05":{"BRONZE":798634,"SILVER":663809,"SELLER":33627,"PLATINUM":729,"OUTROS":101,"GOLD":9764}}},"app":{"1. TC Full":{"2025-05":{"1. MP":283462,"4. Sem App Ativo":1570079,"3. ML":5212280,"2. MP y ML":3275022},"2025-11":{"4. Sem App Ativo":1368370,"3. ML":5800856,"2. MP y ML":3011038,"1. MP":304931},"2025-12":{"3. ML":5694523,"2. MP y ML":2649452,"1. MP":277252,"4. Sem App Ativo":1294100},"2026-01":{"3. ML":6029804,"2. MP y ML":2772279,"1. MP":302183,"4. Sem App Ativo":1303637},"2026-02":{"2. MP y ML":2933010,"4. Sem App Ativo":1785598,"1. MP":335123,"3. ML":6767543},"2026-03":{"4. Sem App Ativo":1729309,"1. MP":354329,"2. MP y ML":3010564,"3. ML":6841683},"2026-04":{"2. MP y ML":2889222,"3. ML":6913325,"4. Sem App Ativo":1284432,"1. MP":374502},"2026-05":{"1. MP":377154,"2. MP y ML":2785751,"4. Sem App Ativo":1387532,"3. ML":6945568}},"2. Micro TC":{"2025-05":{"4. Sem App Ativo":73624,"3. ML":143733,"1. MP":35723,"2. MP y ML":292177},"2025-11":{"2. MP y ML":572239,"1. MP":91547,"3. ML":369112,"4. Sem App Ativo":168354},"2025-12":{"4. Sem App Ativo":148900,"1. MP":81071,"3. ML":358250,"2. MP y ML":471383},"2026-01":{"2. MP y ML":475517,"3. ML":318440,"1. MP":83163,"4. Sem App Ativo":119568},"2026-02":{"4. Sem App Ativo":212768,"3. ML":685160,"1. MP":48881,"2. MP y ML":281881},"2026-03":{"3. ML":586451,"4. Sem App Ativo":112226,"2. MP y ML":431962,"1. MP":78497},"2026-04":{"2. MP y ML":414651,"1. MP":80593,"3. ML":666558,"4. Sem App Ativo":179988},"2026-05":{"1. MP":107162,"4. Sem App Ativo":178308,"2. MP y ML":470974,"3. ML":750220}}},"rating":{"1. TC Full":{"2025-05":{"Sem Rating":7175,"AB":8944506,"D/J":13903,"C":1375259},"2025-11":{"AB":10013446,"D/J":21593,"C":405233,"Sem Rating":44923},"2025-12":{"Sem Rating":20114,"C":224890,"D/J":12070,"AB":9658253},"2026-01":{"D/J":15638,"AB":10021011,"C":355700,"Sem Rating":15554},"2026-02":{"C":972524,"Sem Rating":780959,"D/J":24504,"AB":10043287},"2026-03":{"C":933124,"AB":10205806,"D/J":30625,"Sem Rating":766330},"2026-04":{"AB":10015543,"D/J":28250,"C":854199,"Sem Rating":563489},"2026-05":{"AB":10070639,"D/J":25579,"Sem Rating":621385,"C":778402}},"2. Micro TC":{"2025-05":{"AB":1794,"Sem Rating":1264,"C":130147,"D/J":412052},"2025-11":{"D/J":854335,"AB":1142,"C":343685,"Sem Rating":2090},"2025-12":{"D/J":534558,"C":515852,"Sem Rating":1767,"AB":7427},"2026-01":{"Sem Rating":3561,"D/J":700431,"C":289841,"AB":2855},"2026-02":{"Sem Rating":2748,"AB":1330,"C":399083,"D/J":825529},"2026-03":{"C":410537,"AB":8349,"Sem Rating":3281,"D/J":786969},"2026-04":{"AB":8365,"C":472913,"Sem Rating":3100,"D/J":857412},"2026-05":{"Sem Rating":4531,"AB":14961,"D/J":977354,"C":509818}}},"bureau":{"1. TC Full":{"2025-05":{"A":2298184,"D":610743,"B":5267312,"Sem Score":75730,"E-G":292794,"C":1796080},"2025-11":{"D":426722,"A":2425450,"C":1683652,"E-G":165419,"Sem Score":188233,"B":5595719},"2025-12":{"C":1627763,"A":2162301,"E-G":39512,"Sem Score":138308,"D":441340,"B":5506103},"2026-01":{"D":599109,"Sem Score":111374,"A":1973085,"E-G":228222,"B":5599247,"C":1896866},"2026-02":{"Sem Score":111203,"E-G":274936,"B":6172963,"C":2245658,"D":696636,"A":2319878},"2026-03":{"B":6277545,"D":659499,"C":2247447,"A":2334452,"Sem Score":117254,"E-G":299688},"2026-04":{"C":2320872,"B":6149644,"E-G":307954,"A":1778701,"D":787639,"Sem Score":116671},"2026-05":{"B":6169377,"E-G":275214,"C":2082574,"Sem Score":130642,"D":642467,"A":2195731}},"2. Micro TC":{"2025-05":{"C":103874,"A":429,"D":105460,"E-G":317963,"B":17141,"Sem Score":390},"2025-11":{"D":230484,"A":1149,"B":44435,"C":243423,"E-G":669218,"Sem Score":12543},"2025-12":{"B":69528,"D":212109,"C":273529,"E-G":501739,"Sem Score":798,"A":1901},"2026-01":{"D":179465,"A":676,"C":169098,"E-G":621011,"B":25885,"Sem Score":553},"2026-02":{"A":1118,"Sem Score":155,"E-G":637102,"D":263732,"C":274530,"B":52053},"2026-03":{"C":257581,"B":45254,"E-G":662288,"A":1205,"Sem Score":234,"D":242574},"2026-04":{"B":55358,"C":289522,"D":272273,"Sem Score":354,"A":1269,"E-G":723014},"2026-05":{"A":1610,"D":290990,"E-G":844661,"B":61821,"Sem Score":357,"C":307225}}},"top_groups":{"1. TC Full":["BAU-BAU GRUPO 1 y 2 - SIN CAMBIOS","BAU-BAU GRUPO 1 y 2 - UP","BAU-HEAVY USERS","BAU-BAU GRUPO 1 y 2 - DW","BAU-USUARIOS MARKETPLACE VIP","TEST REACH-TEST NO ECOSISTEMATICOS","TEST REACH-C1 THIN","BAU-BAU G1","TEST EXPOSICION-KILLER LIMITE MINIMO","BAU-CUENTAS CANCELADAS","BAU-CARD TO CARD CON INFO OPF","TEST REACH-C2 THICK COMPRAS LM","TEST REACH-B2 REPEATS RE A,B,C,D","TEST REACH-TEST RTG EXTERNO MALO - RATING A/B","Mar Aberto RTS"],"2. Micro TC":["BAU-","BAU-11A POL�TICA MTC SELLERS � BAU + TESTE| ACTIVATION Y SIN OFERTA CC/CF/DE | CHA SELLERS V1 D/F/G | RAT EXT A/F | PF LOLO Y MILO","TEST REACH-","Mar Aberto RTS","Mar Aberto Async","BAU-BAU G1","TEST REACH-TEST RTG EXTERNO MALO - RATING A/B","Outros","TEST COMBINADO-INFO EXTERNA TC OPF - G1","TEST REACH-TEST LIMIT INSIGNIFICANTE PF","BAU-BAU TEST","BAU-BAU G2","TEST REACH-TEST RCI TC PF"]},"grupos":{"1. TC Full":{"2025-05":{},"2025-11":{},"2025-12":{},"2026-01":{},"2026-02":{},"2026-03":{},"2026-04":{},"2026-05":{"BAU-BAU GRUPO 1 y 2 - SIN CAMBIOS":3225529,"BAU-BAU GRUPO 1 y 2 - UP":2674064,"BAU-HEAVY USERS":1544615,"BAU-BAU GRUPO 1 y 2 - DW":1028687,"BAU-USUARIOS MARKETPLACE VIP":892749,"TEST REACH-TEST NO ECOSISTEMATICOS":663665,"TEST REACH-C1 THIN":384073,"BAU-BAU G1":381671,"TEST EXPOSICION-KILLER LIMITE MINIMO":239580,"BAU-CUENTAS CANCELADAS":145728,"BAU-CARD TO CARD CON INFO OPF":81681,"TEST REACH-C2 THICK COMPRAS LM":65238,"TEST REACH-B2 REPEATS RE A,B,C,D":58353,"TEST REACH-TEST RTG EXTERNO MALO - RATING A/B":32591,"Mar Aberto RTS":20086}},"2. Micro TC":{"2025-05":{},"2025-11":{},"2025-12":{},"2026-01":{},"2026-02":{},"2026-03":{},"2026-04":{},"2026-05":{"BAU-":1266839,"BAU-11A POL�TICA MTC SELLERS � BAU + TESTE| ACTIVATION Y SIN OFERTA CC/CF/DE | CHA SELLERS V1 D/F/G | RAT EXT A/F | PF LOLO Y MILO":143237,"TEST REACH-":92238,"Mar Aberto RTS":2716,"Mar Aberto Async":691,"BAU-BAU G1":657,"TEST REACH-TEST RTG EXTERNO MALO - RATING A/B":115,"Outros":61,"TEST COMBINADO-INFO EXTERNA TC OPF - G1":59,"TEST REACH-TEST LIMIT INSIGNIFICANTE PF":43,"BAU-BAU TEST":5,"BAU-BAU G2":2,"TEST REACH-TEST RCI TC PF":1}}},"grupos_conv":{"1. TC Full":{"2025-05":{},"2025-11":{},"2025-12":{},"2026-01":{},"2026-02":{},"2026-03":{},"2026-04":{},"2026-05":{"BAU-BAU GRUPO 1 y 2 - SIN CAMBIOS":77444,"BAU-BAU GRUPO 1 y 2 - UP":65010,"BAU-HEAVY USERS":31206,"BAU-BAU GRUPO 1 y 2 - DW":24950,"BAU-USUARIOS MARKETPLACE VIP":19235,"TEST REACH-TEST NO ECOSISTEMATICOS":9273,"TEST REACH-C1 THIN":8470,"BAU-BAU G1":18887,"TEST EXPOSICION-KILLER LIMITE MINIMO":3339,"BAU-CUENTAS CANCELADAS":17217,"BAU-CARD TO CARD CON INFO OPF":21913,"TEST REACH-C2 THICK COMPRAS LM":3135,"TEST REACH-B2 REPEATS RE A,B,C,D":8037,"TEST REACH-TEST RTG EXTERNO MALO - RATING A/B":3780,"Mar Aberto RTS":13825}},"2. Micro TC":{"2025-05":{},"2025-11":{},"2025-12":{},"2026-01":{},"2026-02":{},"2026-03":{},"2026-04":{},"2026-05":{"BAU-":120940,"BAU-11A POL�TICA MTC SELLERS � BAU + TESTE| ACTIVATION Y SIN OFERTA CC/CF/DE | CHA SELLERS V1 D/F/G | RAT EXT A/F | PF LOLO Y MILO":15081,"TEST REACH-":3501,"Mar Aberto RTS":1957,"Mar Aberto Async":634,"BAU-BAU G1":3,"TEST REACH-TEST RTG EXTERNO MALO - RATING A/B":1,"Outros":47,"TEST COMBINADO-INFO EXTERNA TC OPF - G1":1,"TEST REACH-TEST LIMIT INSIGNIFICANTE PF":1,"BAU-BAU TEST":0,"BAU-BAU G2":0,"TEST REACH-TEST RCI TC PF":0}}}};
+const ENC_MONTHS=ENC.months, ENC_LABELS=ENC.labels;
+const NISE_KEYS=['BRONZE','SILVER','GOLD','PLATINUM','SELLER','OUTROS'];
+const NISE_COLORS={BRONZE:'#CD7F32',SILVER:'#A8B2C1',GOLD:'#F5C500',PLATINUM:'#B8C6DB',SELLER:'#58a6ff',OUTROS:'#484f58'};
+const APP_KEYS=['1. MP','2. MP y ML','3. ML','4. Sem App Ativo'];
+const APP_LABELS=['MP','MP+ML','ML','Sem App'];
+const APP_COLORS={'1. MP':'#FF6B35','2. MP y ML':'#58a6ff','3. ML':'#3DFF91','4. Sem App Ativo':'#484f58'};
+const RTG_KEYS=['AB','C','D/J','Sem Rating'];
+const RTG_COLORS={'AB':'#3DFF91','C':'#F5C500','D/J':'#FF5A5A','Sem Rating':'#484f58'};
+const BUR_KEYS=['A','B','C','D','E-G','Sem Score'];
+const BUR_COLORS={A:'#3DFF91',B:'#58a6ff',C:'#F5C500',D:'#FF7F11','E-G':'#FF5A5A','Sem Score':'#484f58'};
+let encTC='1. TC Full';
+const encCharts={};
+function fmtM(n){if(n>=1e6)return(n/1e6).toFixed(1).replace('.',',')+' M';if(n>=1e3)return Math.round(n/1e3).toLocaleString('pt-BR')+'k';return n.toLocaleString('pt-BR');}
+function adoptClass(p){return p>=10?'adopt-hi':p>=5?'adopt-md':'adopt-lo';}
+function pctShareDatasets(src,keys,colors,keyLabels){return keys.map(k=>{const nominal=ENC_MONTHS.map(m=>(src?.[encTC]?.[m]||{})[k]||0);const data=ENC_MONTHS.map(m=>{const obj=src?.[encTC]?.[m]||{};const tot=keys.reduce((s,kk)=>s+(obj[kk]||0),0);if(!tot)return 0;return+((obj[k]||0)/tot*100).toFixed(1);});return{label:keyLabels?keyLabels[keys.indexOf(k)]:k,data,nominal,backgroundColor:colors[k],borderColor:colors[k],borderWidth:0,stack:'pct'};});}
+const evolLabelsPlugin={id:'evolLabels',afterDatasetsDraw(chart){const {ctx,scales:{x,y},data}=chart;if(!x||!y)return;const ds=data.datasets.filter(d=>!d.hidden);const n=data.labels.length;for(let i=0;i<n;i++){let total=0;const segs=[];ds.forEach(d=>{const v=d.data[i]||0;if(v>0){segs.push({v});total+=v;}});if(total<=0)continue;const xP=x.getPixelForValue(i);const yT=y.getPixelForValue(total);ctx.save();ctx.font='bold 11px Segoe UI,Arial';ctx.fillStyle='#e6edf3';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fmtM(total),xP,yT-4);ctx.restore();let cum=0;segs.forEach(s=>{const yTop=y.getPixelForValue(total-cum);cum+=s.v;const yBot=y.getPixelForValue(total-cum);if(yBot-yTop>=18){const pct=(s.v/total*100).toFixed(1).replace('.',',')+'%';ctx.save();ctx.font='bold 10px Segoe UI,Arial';ctx.fillStyle='#0d1117';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pct,xP,(yTop+yBot)/2);ctx.restore();}});}}};
+const shareLabelsPlugin={id:'shareLabels',afterDatasetsDraw(chart){const {ctx,scales:{x,y},data}=chart;if(!x||!y)return;const totals=chart.options.plugins.shareLabels?.totals||[];const ds=data.datasets.filter(d=>!d.hidden);const n=data.labels.length;for(let i=0;i<n;i++){const tot=totals[i]||0;const xP=x.getPixelForValue(i);if(tot>0){const yT=y.getPixelForValue(100);ctx.save();ctx.font='bold 10px Segoe UI,Arial';ctx.fillStyle='#e6edf3';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fmtM(tot),xP,yT-3);ctx.restore();}let cum=0;ds.forEach(d=>{const v=d.data[i]||0;if(v<=0)return;const yTop=y.getPixelForValue(100-cum);cum+=v;const yBot=y.getPixelForValue(100-cum);const h=yBot-yTop;if(h<3)return;const fs=h>=14?10:h>=9?8:7;const txt=v.toFixed(1).replace('.',',')+'%';ctx.save();ctx.font='bold '+fs+'px Segoe UI,Arial';ctx.fillStyle='#0d1117';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,xP,(yTop+yBot)/2);ctx.restore();});}}};
+function makeShareChart(cid,src,keys,colors,kl){const ex=encCharts[cid];if(ex){ex.destroy();delete encCharts[cid];}const datasets=pctShareDatasets(src,keys,colors,kl);const totals=ENC_MONTHS.map(m=>{const obj=src?.[encTC]?.[m]||{};return keys.reduce((s,k)=>s+(obj[k]||0),0);});encCharts[cid]=new Chart(document.getElementById(cid),{type:'bar',data:{labels:ENC_LABELS,datasets},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},interaction:{mode:'index',intersect:false},layout:{padding:{top:18}},plugins:{shareLabels:{totals},legend:{display:true,position:'bottom',labels:{color:'#8b949e',font:{size:10},padding:8,boxWidth:10,boxHeight:10}},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',padding:8,cornerRadius:6,callbacks:{label(ctx){const nom=ctx.dataset.nominal?.[ctx.dataIndex]||0;return`  ${ctx.dataset.label}: ${String(ctx.raw).replace('.',',')}%   ·   ${fmt(nom)}`;}}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6e7681',font:{size:9},maxRotation:40},border:{color:'#21262d'}},y:{stacked:true,min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6e7681',font:{size:9},callback:v=>v+'%'},border:{color:'#21262d',dash:[3,3]}}}},plugins:[shareLabelsPlugin]});}
+function makeEvolChart(){const ex=encCharts.encEvolChart;if(ex){ex.destroy();delete encCharts.encEvolChart;}const pd=ENC_MONTHS.map(m=>ENC.monthly?.[encTC]?.[m]?.primo||0);const rd=ENC_MONTHS.map(m=>ENC.monthly?.[encTC]?.[m]?.reenc||0);encCharts.encEvolChart=new Chart(document.getElementById('encEvolChart'),{type:'bar',data:{labels:ENC_LABELS,datasets:[{label:'1° Encendido',data:pd,backgroundColor:'#58a6ff',borderWidth:0,borderRadius:2,stack:'s'},{label:'Reencendido',data:rd,backgroundColor:'rgba(61,255,145,0.55)',borderWidth:0,borderRadius:2,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},interaction:{mode:'index',intersect:false},layout:{padding:{top:24}},plugins:{legend:{display:true,position:'top',labels:{color:'#8b949e',font:{size:11},padding:14,boxWidth:12,boxHeight:12}},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',padding:10,cornerRadius:8,callbacks:{label(ctx){return`  ${ctx.dataset.label}: ${fmt(ctx.raw)}`;},footer(items){return`  Total: ${fmt(items.reduce((s,i)=>s+i.raw,0))}`;}}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6e7681',font:{size:10},maxRotation:30},border:{color:'#21262d'}},y:{stacked:true,beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#6e7681',font:{size:10},callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':v},border:{color:'#21262d',dash:[3,3]}}}},plugins:[evolLabelsPlugin]});}
+function renderEvolTable(){const tbody=document.getElementById('enc-evol-tbody');tbody.innerHTML='';ENC_MONTHS.forEach((m,i)=>{const row=ENC.monthly?.[encTC]?.[m]||{};const enc=row.enc||0,primo=row.primo||0,reenc=row.reenc||0,conv=row.conv||0;const pct=enc?conv/enc*100:0;const pcl=adoptClass(pct);const isLast=i===ENC_MONTHS.length-1;tbody.insertAdjacentHTML('beforeend',`<tr${isLast?' class="hl-row"':''}><td>${ENC_LABELS[i]}</td><td>${fmt(enc)}</td><td>${fmt(primo)}</td><td>${fmt(reenc)}</td><td>${fmt(conv)}</td><td><span class="adopt-pct ${pcl}">${pct.toFixed(1)}%</span></td></tr>`);});}
+function renderGruposTable(){const tbody=document.getElementById('enc-grupos-tbody');tbody.innerHTML='';const lm=ENC_MONTHS[ENC_MONTHS.length-1];const gE=ENC.grupos?.[encTC]?.[lm]||{};const gC=ENC.grupos_conv?.[encTC]?.[lm]||{};const rows=Object.entries(gE).sort((a,b)=>b[1]-a[1]);rows.forEach(([g,enc])=>{const conv=gC[g]||0;const pct=enc?conv/enc*100:0;const pcl=adoptClass(pct);const label=g.length>55?g.slice(0,52)+'…':g;tbody.insertAdjacentHTML('beforeend',`<tr><td title="${g}">${label}</td><td>${fmt(enc)}</td><td>${fmt(conv)}</td><td><span class="adopt-pct ${pcl}">${pct.toFixed(1)}%</span></td></tr>`);});}
+function renderKPIs(){const lm=ENC_MONTHS[ENC_MONTHS.length-1],pm=ENC_MONTHS[ENC_MONTHS.length-2];const cur=ENC.monthly?.[encTC]?.[lm]||{},prev=ENC.monthly?.[encTC]?.[pm]||{};const labCur=ENC_LABELS[ENC_LABELS.length-1],labPrev=ENC_LABELS[ENC_LABELS.length-2];const enc=cur.enc||0,primo=cur.primo||0,reenc=cur.reenc||0,conv=cur.conv||0;const eP=prev.enc||0,pP=prev.primo||0,rP=prev.reenc||0,cP=prev.conv||0;const pct=enc?conv/enc*100:0,pctP=eP?cP/eP*100:0;const fmtNum=n=>n.toLocaleString('pt-BR');const fmtPct1=v=>v.toFixed(1).replace('.',',')+'%';const setDelta=(id,d,unit)=>{const el=document.getElementById(id);if(!el)return;const cls=d>=0?'delta-pos':'delta-neg';const arr=d>=0?'▲':'▼';const sign=unit==='pp'?(d>=0?'+':''):'';el.className='kpi-sub '+cls;el.textContent=arr+' '+sign+(unit==='pp'?d.toFixed(1).replace('.',','):Math.abs(d).toFixed(1).replace('.',','))+(unit==='pp'? ' pp':'%')+' vs '+labPrev;};document.getElementById('kpi-cur-label').textContent=labCur;document.getElementById('kpi-prev-label').textContent=labPrev;document.getElementById('enc-kpi-enc').textContent=fmtNum(enc);document.getElementById('enc-kpi-primo').textContent=fmtNum(primo);document.getElementById('enc-kpi-reenc').textContent=fmtNum(reenc);document.getElementById('enc-kpi-adopt').textContent=fmtPct1(pct);setDelta('enc-kpi-enc-sub',eP?(enc-eP)/eP*100:0);setDelta('enc-kpi-primo-sub',pP?(primo-pP)/pP*100:0);setDelta('enc-kpi-reenc-sub',rP?(reenc-rP)/rP*100:0);setDelta('enc-kpi-adopt-sub',pct-pctP,'pp');document.getElementById('enc-prev-enc').textContent=fmtNum(eP);document.getElementById('enc-prev-primo').textContent=fmtNum(pP);document.getElementById('enc-prev-reenc').textContent=fmtNum(rP);document.getElementById('enc-prev-adopt').textContent=fmtPct1(pctP);document.getElementById('enc-prev-enc-sub').textContent='';document.getElementById('enc-prev-primo-sub').textContent='';document.getElementById('enc-prev-reenc-sub').textContent='';document.getElementById('enc-prev-adopt-sub').textContent='Conv / Enc · '+labPrev;}
+function renderAnalise(){const ml=ENC_MONTHS.length-1,pi=ml-1;const lm=ENC_MONTHS[ml],pm=ENC_MONTHS[pi];const cur=ENC.monthly?.[encTC]?.[lm]||{},prev=ENC.monthly?.[encTC]?.[pm]||{};const enc=cur.enc||0,encP=prev.enc||0;const pct=enc?(cur.conv||0)/enc*100:0,pctP=encP?(prev.conv||0)/encP*100:0;const encD=(enc-encP)/encP*100,pctD=pct-pctP;const nc=ENC.nise?.[encTC]?.[lm]||{},np=ENC.nise?.[encTC]?.[pm]||{};const ntC=NISE_KEYS.reduce((s,k)=>s+(nc[k]||0),0),ntP=NISE_KEYS.reduce((s,k)=>s+(np[k]||0),0);let bN={k:'',d:0,pC:0,pP:0};NISE_KEYS.filter(k=>k!=='OUTROS').forEach(k=>{const pC=ntC?(nc[k]||0)/ntC*100:0,pP=ntP?(np[k]||0)/ntP*100:0;if(Math.abs(pC-pP)>Math.abs(bN.d))bN={k,d:pC-pP,pC,pP};});const items=[];const es=encD>=0?'pos':'neg',ei=encD>=0?'▲':'▼';items.push({cls:'ins-'+es,html:`${ei} Encendidos <b>${fmtM(enc)}</b> (${encD>=0?'+':''}${encD.toFixed(1)}% vs ${ENC_LABELS[pi]}) &mdash; de ${fmtM(encP)} para ${fmtM(enc)}`});const ps=pctD>=0?'pos':'neg',pi2=pctD>=0?'▲':'▼';items.push({cls:'ins-'+ps,html:`${pi2} % Adoption <b>${pct.toFixed(1)}%</b> (${pctD>=0?'+':''}${pctD.toFixed(1)}pp vs ${ENC_LABELS[pi]}) &mdash; de ${pctP.toFixed(1)}% para ${pct.toFixed(1)}%`});const priD=enc?(cur.primo||0)/enc*100:0,priDp=encP?(prev.primo||0)/encP*100:0,prDiff=priD-priDp;items.push({cls:'ins-neu',html:`&#9654; 1° Encendido: <b>${priD.toFixed(1)}%</b> do total (${prDiff>=0?'+':''}${prDiff.toFixed(1)}pp vs ${ENC_LABELS[pi]})`});if(bN.k){const ns=bN.d>=0?'pos':'neg',ni=bN.d>=0?'▲':'▼';items.push({cls:'ins-'+ns,html:`${ni} NISE <b>${bN.k}</b>: maior variacao de share (${bN.pP.toFixed(1)}% → ${bN.pC.toFixed(1)}%)`});}document.getElementById('enc-analise-list').innerHTML=items.map(it=>`<li class="ins-item ${it.cls}">${it.html}</li>`).join('');document.querySelector('#enc-analise .ins-title').textContent=`Insights — ${ENC_LABELS[ml]} vs ${ENC_LABELS[pi]}`;}
+function updateSectionTag(){const el=document.getElementById('enc-section-tag');if(encTC==='1. TC Full'){el.className='section-tag tag-full';el.textContent='TC Full';}else{el.className='section-tag tag-micro';el.textContent='Micro TC';}}
+function initEncendidos(){renderKPIs();makeEvolChart();renderEvolTable();makeShareChart('encNiseChart',ENC.nise,NISE_KEYS,NISE_COLORS);makeShareChart('encAppChart',ENC.app,APP_KEYS,APP_COLORS,APP_LABELS);makeShareChart('encRatingChart',ENC.rating,RTG_KEYS,RTG_COLORS);makeShareChart('encBureauChart',ENC.bureau,BUR_KEYS,BUR_COLORS);renderGruposTable();renderAnalise();}
+function switchEncTC(tc){encTC=tc;document.getElementById('tcbtn-full').classList.toggle('active',tc==='1. TC Full');document.getElementById('tcbtn-micro').classList.toggle('active',tc==='2. Micro TC');updateSectionTag();renderKPIs();makeEvolChart();renderEvolTable();makeShareChart('encNiseChart',ENC.nise,NISE_KEYS,NISE_COLORS);makeShareChart('encAppChart',ENC.app,APP_KEYS,APP_COLORS,APP_LABELS);makeShareChart('encRatingChart',ENC.rating,RTG_KEYS,RTG_COLORS);makeShareChart('encBureauChart',ENC.bureau,BUR_KEYS,BUR_COLORS);renderGruposTable();renderAnalise();}
+// ── TABS ──────────────────────────────────────────────────────
+let encInitialized=false;
+function showTab(tab){document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+tab).classList.add('active');document.querySelector(`.tab-nav-btn[onclick="showTab('${tab}')"]`).classList.add('active');document.getElementById('emissoes-month-sel').style.display=tab==='emissoes'?'flex':'none';if(tab==='encendidos'&&!encInitialized){initEncendidos();encInitialized=true;}}
 </script>
 </body>
 </html>
