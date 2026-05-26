@@ -2,53 +2,72 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard Emissoes &amp; Encendidos — Mai/2026</title>
+<title>Dashboard Emissoes — Mai/2026</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
 a{color:inherit;text-decoration:none}
+
+/* HEADER */
 .header{background:#161b22;border-bottom:1px solid #21262d;padding:16px 32px;display:flex;justify-content:space-between;align-items:center}
 .header h1{font-size:20px;font-weight:700;color:#58a6ff;letter-spacing:-.3px}
 .header-meta{font-size:12px;color:#8b949e;margin-top:3px}
 .header-badge{background:#21262d;border:1px solid #30363d;border-radius:20px;padding:5px 14px;font-size:12px;color:#8b949e}
 .header-badge span{color:#58a6ff;font-weight:600}
+
+/* CONTAINER */
 .container{max-width:1400px;margin:0 auto;padding:20px 24px 48px}
+
+/* SECTION */
 .section-hdr{display:flex;align-items:center;gap:10px;margin:28px 0 12px}
 .section-hdr h2{font-size:16px;font-weight:700;color:#e6edf3}
 .section-tag{font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:.6px}
 .tag-full{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3)}
 .tag-micro{background:rgba(61,255,145,.12);color:#3DFF91;border:1px solid rgba(61,255,145,.3)}
+
+/* KPI ROW */
 .kpi-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .kpi-card{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:14px 18px;flex:1;min-width:140px;border-top:3px solid}
-.kpi-card.blue{border-top-color:#58a6ff}.kpi-card.cyan{border-top-color:#00D4FF}
-.kpi-card.orange{border-top-color:#FF7F11}.kpi-card.orange2{border-top-color:#FFB347}
-.kpi-card.green{border-top-color:#3DFF91}.kpi-card.comp{border-top-color:#9B59B6}
-.kpi-card.teal{border-top-color:#00C9B1}
+.kpi-card.blue  {border-top-color:#58a6ff}
+.kpi-card.cyan  {border-top-color:#00D4FF}
+.kpi-card.orange{border-top-color:#FF7F11}
+.kpi-card.orange2{border-top-color:#FFB347}
+.kpi-card.green {border-top-color:#3DFF91}
+.kpi-card.comp  {border-top-color:#9B59B6}
 .kpi-label{font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px}
 .kpi-value{font-size:24px;font-weight:800;margin-top:4px;line-height:1}
-.kpi-card.blue .kpi-value{color:#58a6ff}.kpi-card.cyan .kpi-value{color:#00D4FF}
-.kpi-card.orange .kpi-value{color:#FF7F11}.kpi-card.orange2 .kpi-value{color:#FFB347}
-.kpi-card.green .kpi-value{color:#3DFF91}.kpi-card.comp .kpi-value{color:#C77DFF}
-.kpi-card.teal .kpi-value{color:#00C9B1}
+.kpi-card.blue   .kpi-value{color:#58a6ff}
+.kpi-card.cyan   .kpi-value{color:#00D4FF}
+.kpi-card.orange .kpi-value{color:#FF7F11}
+.kpi-card.orange2 .kpi-value{color:#FFB347}
+.kpi-card.green  .kpi-value{color:#3DFF91}
+.kpi-card.comp   .kpi-value{color:#C77DFF}
 .kpi-sub{font-size:11px;color:#6e7681;margin-top:4px}
+
+/* COMPARATIVO MoM/PLANO */
 .cmp-row{display:flex;align-items:baseline;gap:6px;margin-top:7px;flex-wrap:wrap}
 .cmp-label{font-size:10px;color:#8b949e;min-width:90px;flex-shrink:0}
 .cmp-ref{font-size:11px;color:#c9d1d9;font-weight:600}
 .cmp-delta{font-size:12px;font-weight:700;margin-left:auto}
-.cmp-pos{color:#3DFF91}.cmp-neg{color:#FF5A5A}
+.cmp-pos{color:#3DFF91}
+.cmp-neg{color:#FF5A5A}
+
+/* INSIGHTS PANEL */
 .insights-panel{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:14px 18px;margin-top:8px;margin-bottom:4px}
 .ins-title{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
 .ins-list{list-style:none;display:flex;flex-direction:column;gap:6px}
 .ins-item{font-size:12px;color:#c9d1d9;line-height:1.5;padding-left:4px}
 .ins-pos{border-left:3px solid #3DFF91;padding-left:10px}
 .ins-neg{border-left:3px solid #FF5A5A;padding-left:10px}
-.ins-neu{border-left:3px solid #8b949e;padding-left:10px}
-.ins-pos b,.ins-neg b,.ins-neu b{color:#e6edf3}
+.ins-pos b,.ins-neg b{color:#e6edf3}
+
+/* CHART + FILTER LAYOUT */
 .chart-section{display:flex;gap:12px;margin-bottom:8px}
 .chart-wrap{flex:1;background:#161b22;border:1px solid #21262d;border-radius:12px;padding:20px 20px 14px;min-width:0}
 .chart-inner{position:relative;height:370px}
-.chart-inner-sm{position:relative;height:340px}
+
+/* FILTER PANEL */
 .filter-panel{width:200px;flex-shrink:0;background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 14px;display:flex;flex-direction:column;gap:12px}
 .fp-title{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;padding-bottom:8px;border-bottom:1px solid #21262d}
 .fp-items{display:flex;flex-direction:column;gap:6px}
@@ -66,12 +85,19 @@ a{color:inherit;text-decoration:none}
 .fp-leg-item{display:flex;align-items:center;gap:7px;font-size:11px;color:#8b949e}
 .fp-line{display:inline-block;width:22px;height:2px}
 .fp-line.solid{background:#FF7F11}
+.fp-line.dashed{background:transparent;border-top:2px dashed #A8DADC}
+
+/* GRAND TOTAL */
 .grand-total{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:20px 32px;margin-top:20px;display:flex;justify-content:space-around;align-items:center}
 .gt-item{text-align:center}
 .gt-label{font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.7px}
 .gt-value{font-size:26px;font-weight:800;margin-top:5px}
-.gt-item.act .gt-value{color:#58a6ff}.gt-item.pj .gt-value{color:#FF7F11}.gt-item.tot .gt-value{color:#3DFF91}
+.gt-item.act .gt-value{color:#58a6ff}
+.gt-item.pj  .gt-value{color:#FF7F11}
+.gt-item.tot .gt-value{color:#3DFF91}
 .gt-divider{width:1px;height:44px;background:#21262d}
+
+/* ADOPTION */
 .adoption-sub{font-size:12px;color:#8b949e;margin:-8px 0 16px}
 .adoption-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
 .adoption-card{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:18px 20px}
@@ -87,253 +113,695 @@ a{color:inherit;text-decoration:none}
 .adoption-table tr.total-row td{font-weight:700;color:#e6edf3;border-top:1px solid #30363d;border-bottom:none}
 .adoption-table .proj-val{color:#FF7F11;font-weight:700;font-size:14px}
 .mul-up{color:#3DFF91}.mul-down{color:#FF5A5A}.mul-flat{color:#8b949e}
+
+/* MONTH SELECTOR */
 .month-selector{display:flex;gap:6px;align-items:center}
 .month-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.3px}
 .month-btn:hover{background:#30363d;color:#e6edf3}
 .month-btn.active{background:#58a6ff;border-color:#58a6ff;color:#0d1117}
-.tabs-bar{background:#161b22;border-bottom:1px solid #21262d;padding:0 32px;display:flex;gap:0}
-.tab-nav-btn{background:none;border:none;color:#8b949e;font-size:14px;font-weight:600;padding:14px 24px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.3px}
-.tab-nav-btn:hover{color:#e6edf3}
-.tab-nav-btn.active{color:#58a6ff;border-bottom-color:#58a6ff}
-.tab-pane{display:none}
-.tab-pane.active{display:block}
-.tc-filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:12px 16px;background:#161b22;border:1px solid #21262d;border-radius:10px}
-.tc-filter-label{font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.6px;margin-right:6px}
-.tc-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:6px 20px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
-.tc-btn:hover{background:#30363d;color:#e6edf3}
-.tc-btn.tc-full.active{background:#58a6ff;border-color:#58a6ff;color:#0d1117}
-.tc-btn.tc-micro.active{background:#3DFF91;border-color:#3DFF91;color:#0d1117}
-.share-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.share-card{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 18px}
-.share-card-title{font-size:12px;font-weight:700;color:#e6edf3;margin-bottom:12px}
-.data-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:0}
-.data-table th{color:#8b949e;font-weight:600;padding:8px 12px;border-bottom:1px solid #21262d;font-size:10px;text-transform:uppercase;letter-spacing:.4px;text-align:right}
-.data-table th:first-child{text-align:left}
-.data-table td{padding:7px 12px;text-align:right;color:#c9d1d9;border-bottom:1px solid #0d1117}
-.data-table td:first-child{text-align:left;color:#8b949e}
-.data-table tr:last-child td{border-bottom:none}
-.data-table tr.hl-row td{color:#e6edf3;font-weight:700;border-top:1px solid #21262d}
-.adopt-pct{font-weight:700}
-.adopt-hi{color:#3DFF91}.adopt-md{color:#F5C500}.adopt-lo{color:#FF5A5A}
-.grupos-table-wrap{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 18px;overflow-x:auto}
-::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#0d1117}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
-.kpi-panels{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap}
-.kpi-panel{flex:1;min-width:520px;background:rgba(88,166,255,0.04);border:1.5px solid rgba(88,166,255,0.4);border-radius:14px;padding:12px 16px}
-.kpi-panel.prev{border-color:rgba(139,148,158,0.4);background:rgba(139,148,158,0.04)}
-.kpi-panel-title{font-size:11px;font-weight:700;color:#58a6ff;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px}
-.kpi-panel.prev .kpi-panel-title{color:#8b949e}
-.kpi-panel-row{display:flex;gap:8px}
-.kpi-panel-row .kpi-card{flex:1;min-width:0;padding:10px 12px}
-.kpi-panel-row .kpi-value{font-size:20px}
-.kpi-card.yellow{border-top-color:#F5C500}
-.kpi-card.yellow .kpi-value{color:#F5C500}
-.kpi-card.neutral{border-top-color:#c9d1d9}
-.kpi-card.neutral .kpi-value{color:#e6edf3}
-.kpi-sub.delta-pos{color:#3DFF91}
-.kpi-sub.delta-neg{color:#FF5A5A}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#0d1117}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
 </style>
 </head>
 <body>
+
 <div class="header">
   <div>
-    <h1>Dashboard — Projecao de Emissoes &amp; Encendidos</h1>
-    <div class="header-meta">Mes vigente: Mai/2026 &nbsp;&middot;&nbsp; Modelo: Curva de Sobrevivencia + Taxa Mar Aberto</div>
+    <h1>Dashboard — Projecao de Emissoes</h1>
+    <div class="header-meta">Mes vigente: Mai/2026 &nbsp;·&nbsp; Modelo: Curva de Sobrevivencia + Taxa Mar Aberto</div>
   </div>
   <div style="display:flex;align-items:center;gap:16px">
-    <div class="month-selector" id="emissoes-month-sel">
+    <div class="month-selector">
       <button class="month-btn" data-month="2026-04" onclick="setMonth('2026-04')">Abr/2026</button>
       <button class="month-btn active" data-month="2026-05" onclick="setMonth('2026-05')">Mai/2026</button>
     </div>
-    <div class="header-badge">Atualizado: <span>25/Mai/2026</span></div>
+    <div class="header-badge">Atualizado: <span>26/Mai/2026</span></div>
   </div>
 </div>
-<div class="tabs-bar">
-  <button class="tab-nav-btn active" onclick="showTab('emissoes')">Emissoes</button>
-  <button class="tab-nav-btn" onclick="showTab('encendidos')">Encendidos</button>
-</div>
-<div id="tab-emissoes" class="tab-pane active">
+
 <div class="container">
-  <div class="section-hdr"><h2>TC Full</h2><span class="section-tag tag-full">Cartao Completo</span></div>
+
+  <!-- ===== TC FULL ===== -->
+  <div class="section-hdr">
+    <h2>TC Full</h2>
+    <span class="section-tag tag-full">Cartao Completo</span>
+  </div>
+  
   <div class="kpi-row" id="kpis-full">
-    <div class="kpi-card cyan"><div class="kpi-label">Total realizado no mes</div><div class="kpi-value" id="kv-real-full">340.244</div><div class="kpi-sub">83.0% do mes concluido</div></div>
-    <div class="kpi-card orange"><div class="kpi-label">Projecao hoje (25/Mai)</div><div class="kpi-value" id="kv-hoje-full">10.022</div><div class="kpi-sub">estimativa do dia</div></div>
-    <div class="kpi-card orange2"><div class="kpi-label">Projecao restante</div><div class="kpi-value" id="kv-proj-full">69.778</div><div class="kpi-sub">ate 31/Mai</div></div>
-    <div class="kpi-card green"><div class="kpi-label">Total estimado do mes</div><div class="kpi-value" id="kv-total-full">410.022</div><div class="kpi-sub">realizado + projecao</div></div>
-    <div class="kpi-card comp" style="min-width:210px"><div class="kpi-label">Proj. Final vs Plano / MoM</div><div style="margin-top:8px"><div class="cmp-row"><span class="cmp-label">Plano Mai/2026</span><span class="cmp-ref">452.000</span><span class="cmp-delta cmp-neg">&#9660; -41.978 (-9.3%)</span></div><div class="cmp-row"><span class="cmp-label">Abr/2026 Real</span><span class="cmp-ref">421.918</span><span class="cmp-delta cmp-neg">&#9660; -11.896 (-2.8%)</span></div></div></div>
+    <div class="kpi-card cyan">
+      <div class="kpi-label">Total realizado no mes</div>
+      <div class="kpi-value" id="kv-real-full">349.719</div>
+      <div class="kpi-sub">85.8% do mes concluido</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Projecao hoje (26/Mai)</div>
+      <div class="kpi-value" id="kv-hoje-full">9.945</div>
+      <div class="kpi-sub">estimativa do dia</div>
+    </div>
+    <div class="kpi-card orange2">
+      <div class="kpi-label">Projecao restante</div>
+      <div class="kpi-value" id="kv-proj-full">57.671</div>
+      <div class="kpi-sub">ate 31/Mai</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Total estimado do mes</div>
+      <div class="kpi-value" id="kv-total-full">407.390</div>
+      <div class="kpi-sub">realizado + projecao</div>
+    </div>
+    <div class="kpi-card comp" style="min-width:210px"><div class="kpi-label">Proj. Final vs Plano / MoM</div><div style="margin-top:8px"><div class="cmp-row"><span class="cmp-label">Plano Mai/2026</span><span class="cmp-ref">452.000</span><span class="cmp-delta cmp-neg">&#9660; -44.610 (-9.9%)</span></div><div class="cmp-row"><span class="cmp-label">Abr/2026 Real</span><span class="cmp-ref">421.918</span><span class="cmp-delta cmp-neg">&#9660; -14.528 (-3.4%)</span></div></div></div>
   </div>
   <div class="chart-section">
-    <div class="chart-wrap"><div class="chart-inner"><canvas id="chartFull"></canvas></div></div>
-    <div class="filter-panel">
-      <div class="fp-title">GRUPOS ENCENDIDOS</div>
-      <div class="fp-items" id="fp-full">
-        <label class="sg-item" onclick="toggleSG('TC Full','BAU','full',this)"><input type="checkbox" checked data-tc="TC Full" data-sg="BAU"><span class="sg-dot" style="background:#2E4976;box-shadow:0 0 6px #2E497680"></span><span class="sg-name">BAU</span></label>
-        <label class="sg-item" onclick="toggleSG('TC Full','EA','full',this)"><input type="checkbox" checked data-tc="TC Full" data-sg="EA"><span class="sg-dot" style="background:#D9D9D9;box-shadow:0 0 6px #D9D9D980"></span><span class="sg-name">EA</span></label>
-        <label class="sg-item" onclick="toggleSG('TC Full','Sellers','full',this)"><input type="checkbox" checked data-tc="TC Full" data-sg="Sellers"><span class="sg-dot" style="background:#5B9BD5;box-shadow:0 0 6px #5B9BD580"></span><span class="sg-name">Sellers</span></label>
-        <label class="sg-item" onclick="toggleSG('TC Full','Cuentas Canceladas','full',this)"><input type="checkbox" checked data-tc="TC Full" data-sg="Cuentas Canceladas"><span class="sg-dot" style="background:#FFF2B3;box-shadow:0 0 6px #FFF2B380"></span><span class="sg-name">Cuentas Canceladas</span></label>
-        <label class="sg-item" onclick="toggleSG('TC Full','Only Nav','full',this)"><input type="checkbox" checked data-tc="TC Full" data-sg="Only Nav"><span class="sg-dot" style="background:#F5C500;box-shadow:0 0 6px #F5C50080"></span><span class="sg-name">Only Nav</span></label>
-        <label class="sg-item" onclick="toggleSG('TC Full','Mar Aberto','full',this)"><input type="checkbox" checked data-tc="TC Full" data-sg="Mar Aberto"><span class="sg-dot" style="background:#BF9000;box-shadow:0 0 6px #BF900080"></span><span class="sg-name">Mar Aberto</span></label>
-      </div>
-      <div class="fp-btns"><button onclick="selectAll('TC Full','full')">Todos</button><button onclick="selectNone('TC Full','full')">Nenhum</button></div>
-      <div class="fp-legend"><div class="fp-leg-item"><span class="fp-line solid"></span> Proj. hoje</div></div>
+    <div class="chart-wrap">
+      <div class="chart-inner"><canvas id="chartFull"></canvas></div>
     </div>
+    
+      <div class="filter-panel">
+        <div class="fp-title">GRUPOS ENCENDIDOS</div>
+        <div class="fp-items" id="fp-full">
+        <label class="sg-item" onclick="toggleSG('TC Full', 'BAU', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="BAU">
+          <span class="sg-dot" style="background:#2E4976;box-shadow:0 0 6px #2E497680"></span>
+          <span class="sg-name">BAU</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'EA', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="EA">
+          <span class="sg-dot" style="background:#D9D9D9;box-shadow:0 0 6px #D9D9D980"></span>
+          <span class="sg-name">EA</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'Sellers', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="Sellers">
+          <span class="sg-dot" style="background:#5B9BD5;box-shadow:0 0 6px #5B9BD580"></span>
+          <span class="sg-name">Sellers</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'Cuentas Canceladas', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="Cuentas Canceladas">
+          <span class="sg-dot" style="background:#FFF2B3;box-shadow:0 0 6px #FFF2B380"></span>
+          <span class="sg-name">Cuentas Canceladas</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'Only Nav', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="Only Nav">
+          <span class="sg-dot" style="background:#F5C500;box-shadow:0 0 6px #F5C50080"></span>
+          <span class="sg-name">Only Nav</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('TC Full', 'Mar Aberto', 'full', this)">
+          <input type="checkbox" checked data-tc="TC Full" data-sg="Mar Aberto">
+          <span class="sg-dot" style="background:#BF9000;box-shadow:0 0 6px #BF900080"></span>
+          <span class="sg-name">Mar Aberto</span>
+        </label>
+        </div>
+        <div class="fp-btns">
+          <button onclick="selectAll('TC Full','full')">Todos</button>
+          <button onclick="selectNone('TC Full','full')">Nenhum</button>
+        </div>
+        <div class="fp-legend">
+          <div class="fp-leg-item"><span class="fp-line solid"></span> Proj. hoje</div>
+        </div>
+      </div>
   </div>
-  <div class="insights-panel"><div class="ins-title">Fatores de Projecao</div><ul class="ins-list"><li class="ins-item ins-neg">&#9660; <b>11.896</b> (2.8%) abaixo de Abr/2026 &mdash; real de 421.918</li><li class="ins-item ins-neg">&#9660; <b>41.978</b> (9.3%) abaixo do Plano Mai/2026 &mdash; meta de 452.000</li><li class="ins-item ins-pos">&#9650; Grupo <b>BAU</b>: impulso positivo vs Abr (5.968)</li><li class="ins-item ins-neg">&#9660; Grupo <b>Only Nav</b>: pressao negativa vs Abr (5.595)</li><li class="ins-item ins-neg">&#9660; Grupo <b>EA</b>: pressao negativa vs Abr (5.569)</li></ul></div>
-  <div class="section-hdr"><h2>Micro TC</h2><span class="section-tag tag-micro">Cartao Micro</span></div>
+  <div class="insights-panel"><div class="ins-title">Fatores de Projecao</div><ul class="ins-list"><li class="ins-item ins-neg">&#9660; <b>14.528</b> (3.4%) abaixo de Abr/2026 &mdash; real de 421.918</li><li class="ins-item ins-neg">&#9660; <b>44.610</b> (9.9%) abaixo do Plano Mai/2026 &mdash; meta de 452.000</li><li class="ins-item ins-neg">&#9660; Grupo <b>Only Nav</b>: pressao negativa vs Abr (5.609)</li><li class="ins-item ins-neg">&#9660; Grupo <b>EA</b>: pressao negativa vs Abr (5.294)</li><li class="ins-item ins-neg">&#9660; Grupo <b>Cuentas Canceladas</b>: pressao negativa vs Abr (5.189)</li><li class="ins-item ins-neg">&#9660; 832k propostas pendentes canceladas em 19/Mai — ajuste de -15k aplicado na projecao</li><li class="ins-item ins-pos">&#9650; Sellers encendido neste mes — projecao agora via curva organica (substituiu estimativa manual)</li></ul></div>
+
+  <!-- ===== MICRO TC ===== -->
+  <div class="section-hdr">
+    <h2>Micro TC</h2>
+    <span class="section-tag tag-micro">Cartao Micro</span>
+  </div>
+  
   <div class="kpi-row" id="kpis-micro">
-    <div class="kpi-card cyan"><div class="kpi-label">Total realizado no mes</div><div class="kpi-value" id="kv-real-micro">146.110</div><div class="kpi-sub">86.7% do mes concluido</div></div>
-    <div class="kpi-card orange"><div class="kpi-label">Projecao hoje (25/Mai)</div><div class="kpi-value" id="kv-hoje-micro">3.360</div><div class="kpi-sub">estimativa do dia</div></div>
-    <div class="kpi-card orange2"><div class="kpi-label">Projecao restante</div><div class="kpi-value" id="kv-proj-micro">22.399</div><div class="kpi-sub">ate 31/Mai</div></div>
-    <div class="kpi-card green"><div class="kpi-label">Total estimado do mes</div><div class="kpi-value" id="kv-total-micro">168.509</div><div class="kpi-sub">realizado + projecao</div></div>
-    <div class="kpi-card comp" style="min-width:210px"><div class="kpi-label">Proj. Final vs Plano / MoM</div><div style="margin-top:8px"><div class="cmp-row"><span class="cmp-label">Plano Mai/2026</span><span class="cmp-ref">98.000</span><span class="cmp-delta cmp-pos">&#9650; +70.509 (+71.9%)</span></div><div class="cmp-row"><span class="cmp-label">Abr/2026 Real</span><span class="cmp-ref">138.444</span><span class="cmp-delta cmp-pos">&#9650; +30.065 (+21.7%)</span></div></div></div>
+    <div class="kpi-card cyan">
+      <div class="kpi-label">Total realizado no mes</div>
+      <div class="kpi-value" id="kv-real-micro">149.533</div>
+      <div class="kpi-sub">88.7% do mes concluido</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Projecao hoje (26/Mai)</div>
+      <div class="kpi-value" id="kv-hoje-micro">3.477</div>
+      <div class="kpi-sub">estimativa do dia</div>
+    </div>
+    <div class="kpi-card orange2">
+      <div class="kpi-label">Projecao restante</div>
+      <div class="kpi-value" id="kv-proj-micro">19.103</div>
+      <div class="kpi-sub">ate 31/Mai</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Total estimado do mes</div>
+      <div class="kpi-value" id="kv-total-micro">168.636</div>
+      <div class="kpi-sub">realizado + projecao</div>
+    </div>
+    <div class="kpi-card comp" style="min-width:210px"><div class="kpi-label">Proj. Final vs Plano / MoM</div><div style="margin-top:8px"><div class="cmp-row"><span class="cmp-label">Plano Mai/2026</span><span class="cmp-ref">98.000</span><span class="cmp-delta cmp-pos">&#9650; +70.636 (+72.1%)</span></div><div class="cmp-row"><span class="cmp-label">Abr/2026 Real</span><span class="cmp-ref">138.444</span><span class="cmp-delta cmp-pos">&#9650; +30.192 (+21.8%)</span></div></div></div>
   </div>
   <div class="chart-section">
-    <div class="chart-wrap"><div class="chart-inner"><canvas id="chartMicro"></canvas></div></div>
-    <div class="filter-panel">
-      <div class="fp-title">GRUPOS ENCENDIDOS</div>
-      <div class="fp-items" id="fp-micro">
-        <label class="sg-item" onclick="toggleSG('Micro TC','BAU','micro',this)"><input type="checkbox" checked data-tc="Micro TC" data-sg="BAU"><span class="sg-dot" style="background:#2E4976;box-shadow:0 0 6px #2E497680"></span><span class="sg-name">BAU</span></label>
-        <label class="sg-item" onclick="toggleSG('Micro TC','EA','micro',this)"><input type="checkbox" checked data-tc="Micro TC" data-sg="EA"><span class="sg-dot" style="background:#D9D9D9;box-shadow:0 0 6px #D9D9D980"></span><span class="sg-name">EA</span></label>
-        <label class="sg-item" onclick="toggleSG('Micro TC','Sellers','micro',this)"><input type="checkbox" checked data-tc="Micro TC" data-sg="Sellers"><span class="sg-dot" style="background:#5B9BD5;box-shadow:0 0 6px #5B9BD580"></span><span class="sg-name">Sellers</span></label>
-        <label class="sg-item" onclick="toggleSG('Micro TC','Cuentas Canceladas','micro',this)"><input type="checkbox" checked data-tc="Micro TC" data-sg="Cuentas Canceladas"><span class="sg-dot" style="background:#FFF2B3;box-shadow:0 0 6px #FFF2B380"></span><span class="sg-name">Cuentas Canceladas</span></label>
-        <label class="sg-item" onclick="toggleSG('Micro TC','Only Nav','micro',this)"><input type="checkbox" checked data-tc="Micro TC" data-sg="Only Nav"><span class="sg-dot" style="background:#F5C500;box-shadow:0 0 6px #F5C50080"></span><span class="sg-name">Only Nav</span></label>
-        <label class="sg-item" onclick="toggleSG('Micro TC','Mar Aberto','micro',this)"><input type="checkbox" checked data-tc="Micro TC" data-sg="Mar Aberto"><span class="sg-dot" style="background:#BF9000;box-shadow:0 0 6px #BF900080"></span><span class="sg-name">Mar Aberto</span></label>
-      </div>
-      <div class="fp-btns"><button onclick="selectAll('Micro TC','micro')">Todos</button><button onclick="selectNone('Micro TC','micro')">Nenhum</button></div>
-      <div class="fp-legend"><div class="fp-leg-item"><span class="fp-line solid"></span> Proj. hoje</div></div>
+    <div class="chart-wrap">
+      <div class="chart-inner"><canvas id="chartMicro"></canvas></div>
     </div>
+    
+      <div class="filter-panel">
+        <div class="fp-title">GRUPOS ENCENDIDOS</div>
+        <div class="fp-items" id="fp-micro">
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'BAU', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="BAU">
+          <span class="sg-dot" style="background:#2E4976;box-shadow:0 0 6px #2E497680"></span>
+          <span class="sg-name">BAU</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'EA', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="EA">
+          <span class="sg-dot" style="background:#D9D9D9;box-shadow:0 0 6px #D9D9D980"></span>
+          <span class="sg-name">EA</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'Sellers', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="Sellers">
+          <span class="sg-dot" style="background:#5B9BD5;box-shadow:0 0 6px #5B9BD580"></span>
+          <span class="sg-name">Sellers</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'Cuentas Canceladas', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="Cuentas Canceladas">
+          <span class="sg-dot" style="background:#FFF2B3;box-shadow:0 0 6px #FFF2B380"></span>
+          <span class="sg-name">Cuentas Canceladas</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'Only Nav', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="Only Nav">
+          <span class="sg-dot" style="background:#F5C500;box-shadow:0 0 6px #F5C50080"></span>
+          <span class="sg-name">Only Nav</span>
+        </label>
+        <label class="sg-item" onclick="toggleSG('Micro TC', 'Mar Aberto', 'micro', this)">
+          <input type="checkbox" checked data-tc="Micro TC" data-sg="Mar Aberto">
+          <span class="sg-dot" style="background:#BF9000;box-shadow:0 0 6px #BF900080"></span>
+          <span class="sg-name">Mar Aberto</span>
+        </label>
+        </div>
+        <div class="fp-btns">
+          <button onclick="selectAll('Micro TC','micro')">Todos</button>
+          <button onclick="selectNone('Micro TC','micro')">Nenhum</button>
+        </div>
+        <div class="fp-legend">
+          <div class="fp-leg-item"><span class="fp-line solid"></span> Proj. hoje</div>
+        </div>
+      </div>
   </div>
-  <div class="insights-panel"><div class="ins-title">Fatores de Projecao</div><ul class="ins-list"><li class="ins-item ins-pos">&#9650; <b>30.065</b> (21.7%) acima de Abr/2026 &mdash; real de 138.444</li><li class="ins-item ins-pos">&#9650; <b>70.509</b> (71.9%) acima do Plano Mai/2026 &mdash; meta de 98.000</li><li class="ins-item ins-pos">&#9650; Grupo <b>EA</b>: impulso positivo vs Abr (15.606)</li><li class="ins-item ins-pos">&#9650; Grupo <b>BAU</b>: impulso positivo vs Abr (13.916)</li></ul></div>
-  <div class="section-hdr" style="margin-top:32px"><h2>Adoption &mdash; Projecao 30d</h2><span class="section-tag" style="background:rgba(255,127,17,.15);color:#FF7F11;border:1px solid rgba(255,127,17,.3)">COHORT Mai/2026</span></div>
-  <p class="adoption-sub">Comparativo: Abr/2026 &nbsp;&middot;&nbsp; Janela: 5 dias pos-encendimento &nbsp;&middot;&nbsp; Formula: adoption_30d_prev &times; (taxa_5d_atual / taxa_5d_prev)</p>
+  <div class="insights-panel"><div class="ins-title">Fatores de Projecao</div><ul class="ins-list"><li class="ins-item ins-pos">&#9650; <b>30.192</b> (21.8%) acima de Abr/2026 &mdash; real de 138.444</li><li class="ins-item ins-pos">&#9650; <b>70.636</b> (72.1%) acima do Plano Mai/2026 &mdash; meta de 98.000</li><li class="ins-item ins-pos">&#9650; Grupo <b>EA</b>: impulso positivo vs Abr (15.665)</li><li class="ins-item ins-pos">&#9650; Grupo <b>BAU</b>: impulso positivo vs Abr (14.197)</li><li class="ins-item ins-pos">&#9650; Grupo <b>Mar Aberto</b>: impulso positivo vs Abr (1.911)</li></ul></div>
+
+  <!-- ADOPTION -->
+  <div class="section-hdr" style="margin-top:32px">
+    <h2>Adoption — Projecao 30d</h2>
+    <span class="section-tag" style="background:rgba(255,127,17,.15);color:#FF7F11;border:1px solid rgba(255,127,17,.3)">COHORT Mai/2026</span>
+  </div>
+  <p class="adoption-sub">Comparativo: Abr/2026 &nbsp;·&nbsp; Janela: 5 dias pos-encendimento &nbsp;·&nbsp; Formula: adoption_30d_prev × (taxa_5d_atual / taxa_5d_prev)</p>
   <div class="adoption-grid">
-    <div class="adoption-card"><div class="adoption-card-title"><span class="ac-badge ac-full">TC Full</span></div><table class="adoption-table"><thead><tr><th>Grupo</th><th>Enc. Mai</th><th>Taxa 5d atual</th><th>Taxa 5d Abr/2026</th><th>Adoption 30d Abr/2026</th><th>Multiplicador</th><th>Proj. Adoption 30d</th></tr></thead><tbody><tr><td>Primeiro Enc.</td><td>368.223</td><td>20.64%</td><td>19.63%</td><td>26.62%</td><td class="mul-up">1.05x</td><td class="proj-val">27.99%</td></tr><tr><td>Reencendido</td><td>11.127.782</td><td>0.78%</td><td>0.92%</td><td>2.52%</td><td class="mul-down">0.84x</td><td class="proj-val">2.13%</td></tr><tr class="total-row"><td>Total</td><td>11.496.005</td><td>1.41%</td><td>1.67%</td><td>3.49%</td><td class="mul-down">0.84x</td><td class="proj-val">2.95%</td></tr></tbody></table></div>
-    <div class="adoption-card"><div class="adoption-card-title"><span class="ac-badge ac-micro">Micro TC</span></div><table class="adoption-table"><thead><tr><th>Grupo</th><th>Enc. Mai</th><th>Taxa 5d atual</th><th>Taxa 5d Abr/2026</th><th>Adoption 30d Abr/2026</th><th>Multiplicador</th><th>Proj. Adoption 30d</th></tr></thead><tbody><tr><td>Primeiro Enc.</td><td>297.978</td><td>26.93%</td><td>30.40%</td><td>38.50%</td><td class="mul-down">0.89x</td><td class="proj-val">34.10%</td></tr><tr><td>Reencendido</td><td>1.208.686</td><td>1.82%</td><td>2.01%</td><td>4.75%</td><td class="mul-down">0.90x</td><td class="proj-val">4.30%</td></tr><tr class="total-row"><td>Total</td><td>1.506.664</td><td>6.78%</td><td>6.40%</td><td>9.96%</td><td class="mul-up">1.06x</td><td class="proj-val">10.57%</td></tr></tbody></table></div>
+    
+    <div class="adoption-card">
+      <div class="adoption-card-title"><span class="ac-badge ac-full">TC Full</span></div>
+      <table class="adoption-table">
+        <thead>
+          <tr>
+            <th>Grupo</th>
+            <th>Enc. Mai</th>
+            <th>Taxa 5d atual</th>
+            <th>Taxa 5d Abr/2026</th>
+            <th>Adoption 30d Abr/2026</th>
+            <th>Multiplicador</th>
+            <th>Proj. Adoption 30d</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>Primeiro Enc.</td>
+          <td>368.824</td>
+          <td>20.91%</td>
+          <td>19.63%</td>
+          <td>26.62%</td>
+          <td class="mul-up">1.07x</td>
+          <td class="proj-val">28.36%</td>
+        </tr>
+        <tr>
+          <td>Reencendido</td>
+          <td>11.128.139</td>
+          <td>0.79%</td>
+          <td>0.92%</td>
+          <td>2.52%</td>
+          <td class="mul-down">0.85x</td>
+          <td class="proj-val">2.15%</td>
+        </tr>
+        <tr class="total-row">
+          <td>Total</td>
+          <td>11.496.963</td>
+          <td>1.43%</td>
+          <td>1.67%</td>
+          <td>3.50%</td>
+          <td class="mul-down">0.85x</td>
+          <td class="proj-val">2.99%</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="adoption-card">
+      <div class="adoption-card-title"><span class="ac-badge ac-micro">Micro TC</span></div>
+      <table class="adoption-table">
+        <thead>
+          <tr>
+            <th>Grupo</th>
+            <th>Enc. Mai</th>
+            <th>Taxa 5d atual</th>
+            <th>Taxa 5d Abr/2026</th>
+            <th>Adoption 30d Abr/2026</th>
+            <th>Multiplicador</th>
+            <th>Proj. Adoption 30d</th>
+          </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>Primeiro Enc.</td>
+          <td>298.102</td>
+          <td>27.27%</td>
+          <td>30.40%</td>
+          <td>38.50%</td>
+          <td class="mul-down">0.90x</td>
+          <td class="proj-val">34.53%</td>
+        </tr>
+        <tr>
+          <td>Reencendido</td>
+          <td>1.208.710</td>
+          <td>1.85%</td>
+          <td>2.01%</td>
+          <td>4.75%</td>
+          <td class="mul-down">0.92x</td>
+          <td class="proj-val">4.37%</td>
+        </tr>
+        <tr class="total-row">
+          <td>Total</td>
+          <td>1.506.812</td>
+          <td>6.88%</td>
+          <td>6.40%</td>
+          <td>9.96%</td>
+          <td class="mul-up">1.08x</td>
+          <td class="proj-val">10.72%</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
+
+  <!-- GRAND TOTAL -->
   <div class="grand-total">
-    <div class="gt-item act"><div class="gt-label">Total Realizado (Full + Micro)</div><div class="gt-value" id="gt-real">486.354</div></div>
-    <div class="gt-divider"></div>
-    <div class="gt-item pj"><div class="gt-label">Total Projecao (Full + Micro)</div><div class="gt-value" id="gt-proj">92.177</div></div>
-    <div class="gt-divider"></div>
-    <div class="gt-item tot"><div class="gt-label">Grand Total Mai/2026</div><div class="gt-value" id="gt-total">578.531</div></div>
-  </div>
-</div>
-</div>
-<div id="tab-encendidos" class="tab-pane">
-<div class="container">
-  <div class="tc-filter-bar">
-    <span class="tc-filter-label">Produto:</span>
-    <button class="tc-btn tc-full active" id="tcbtn-full" onclick="switchEncTC('1. TC Full')">TC Full</button>
-    <button class="tc-btn tc-micro" id="tcbtn-micro" onclick="switchEncTC('2. Micro TC')">Micro TC</button>
-  </div>
-  <div class="kpi-panels">
-    <div class="kpi-panel">
-      <div class="kpi-panel-title">Mes Atual &middot; <span id="kpi-cur-label">Mai/26</span></div>
-      <div class="kpi-panel-row">
-        <div class="kpi-card blue"><div class="kpi-label">Encendidos</div><div class="kpi-value" id="enc-kpi-enc">&mdash;</div><div class="kpi-sub" id="enc-kpi-enc-sub"></div></div>
-        <div class="kpi-card yellow"><div class="kpi-label">1&ordm; Encendido</div><div class="kpi-value" id="enc-kpi-primo">&mdash;</div><div class="kpi-sub" id="enc-kpi-primo-sub"></div></div>
-        <div class="kpi-card neutral"><div class="kpi-label">Reencendidos</div><div class="kpi-value" id="enc-kpi-reenc">&mdash;</div><div class="kpi-sub" id="enc-kpi-reenc-sub"></div></div>
-        <div class="kpi-card orange"><div class="kpi-label">% Adoption</div><div class="kpi-value" id="enc-kpi-adopt">&mdash;</div><div class="kpi-sub" id="enc-kpi-adopt-sub"></div></div>
-      </div>
+    <div class="gt-item act">
+      <div class="gt-label">Total Realizado (Full + Micro)</div>
+      <div class="gt-value" id="gt-real">499.252</div>
     </div>
-    <div class="kpi-panel prev">
-      <div class="kpi-panel-title">Mes Anterior &middot; <span id="kpi-prev-label">Abr/26</span></div>
-      <div class="kpi-panel-row">
-        <div class="kpi-card blue"><div class="kpi-label">Encendidos</div><div class="kpi-value" id="enc-prev-enc">&mdash;</div><div class="kpi-sub" id="enc-prev-enc-sub"></div></div>
-        <div class="kpi-card yellow"><div class="kpi-label">1&ordm; Encendido</div><div class="kpi-value" id="enc-prev-primo">&mdash;</div><div class="kpi-sub" id="enc-prev-primo-sub"></div></div>
-        <div class="kpi-card neutral"><div class="kpi-label">Reencendidos</div><div class="kpi-value" id="enc-prev-reenc">&mdash;</div><div class="kpi-sub" id="enc-prev-reenc-sub"></div></div>
-        <div class="kpi-card orange"><div class="kpi-label">% Adoption</div><div class="kpi-value" id="enc-prev-adopt">&mdash;</div><div class="kpi-sub" id="enc-prev-adopt-sub"></div></div>
-      </div>
+    <div class="gt-divider"></div>
+    <div class="gt-item pj">
+      <div class="gt-label">Total Projecao (Full + Micro)</div>
+      <div class="gt-value" id="gt-proj">76.774</div>
+    </div>
+    <div class="gt-divider"></div>
+    <div class="gt-item tot">
+      <div class="gt-label">Grand Total Mai/2026</div>
+      <div class="gt-value" id="gt-total">576.026</div>
     </div>
   </div>
-  <div class="section-hdr"><h2>Evolucao por Safra</h2><span class="section-tag tag-full" id="enc-section-tag">TC Full</span></div>
-  <div class="chart-wrap" style="margin-bottom:0;border-radius:12px 12px 0 0;border-bottom:none">
-    <div class="chart-inner"><canvas id="encEvolChart"></canvas></div>
-  </div>
-  <div style="background:#161b22;border:1px solid #21262d;border-top:none;border-radius:0 0 12px 12px;margin-bottom:20px;overflow-x:auto">
-    <table class="data-table" id="enc-evol-table" style="margin:0">
-      <thead><tr><th style="text-align:left;padding-left:16px">Safra</th><th>Encendidos</th><th>1° Encendido</th><th>Reencendidos</th><th>Convertidos</th><th style="padding-right:16px">% Adoption</th></tr></thead>
-      <tbody id="enc-evol-tbody"></tbody>
-    </table>
-  </div>
-  <div class="section-hdr"><h2>Share por Safra</h2></div>
-  <div class="share-grid">
-    <div class="share-card"><div class="share-card-title">NISE</div><div class="chart-inner-sm"><canvas id="encNiseChart"></canvas></div></div>
-    <div class="share-card"><div class="share-card-title">App Ativo</div><div class="chart-inner-sm"><canvas id="encAppChart"></canvas></div></div>
-    <div class="share-card"><div class="share-card-title">Rating TC</div><div class="chart-inner-sm"><canvas id="encRatingChart"></canvas></div></div>
-    <div class="share-card"><div class="share-card-title">Rating Externo (Bureau)</div><div class="chart-inner-sm"><canvas id="encBureauChart"></canvas></div></div>
-  </div>
-  <div class="section-hdr"><h2>Grupo Especial</h2><span class="section-tag" style="background:rgba(245,197,0,.12);color:#F5C500;border:1px solid rgba(245,197,0,.3)">Mai/26</span></div>
-  <div class="grupos-table-wrap">
-    <table class="data-table" style="margin:0"><thead><tr><th style="text-align:left">Grupo</th><th>Encendidos</th><th>Convertidos</th><th>% Adoption</th></tr></thead><tbody id="enc-grupos-tbody"></tbody></table>
-  </div>
-  <div class="section-hdr" style="margin-top:28px"><h2>Analise</h2></div>
-  <div class="insights-panel" id="enc-analise"><div class="ins-title">Insights — Mai/26 vs Abr/26</div><ul class="ins-list" id="enc-analise-list"></ul></div>
+
 </div>
-</div>
+
 <script>
-
-const SG_ORDER  = ["BAU","EA","Sellers","Cuentas Canceladas","Only Nav","Mar Aberto"];
-const SG_COLORS = {"BAU":"#2E4976","EA":"#D9D9D9","Sellers":"#5B9BD5","Cuentas Canceladas":"#FFF2B3","Only Nav":"#F5C500","Mar Aberto":"#BF9000"};
+// ============================================================
+// DADOS EMBEDADOS
+// ============================================================
+const SG_ORDER  = ["BAU", "EA", "Sellers", "Cuentas Canceladas", "Only Nav", "Mar Aberto"];
+const SG_COLORS = {"BAU": "#2E4976", "EA": "#D9D9D9", "Sellers": "#5B9BD5", "Cuentas Canceladas": "#FFF2B3", "Only Nav": "#F5C500", "Mar Aberto": "#BF9000"};
 const BAR_ORDER = [...SG_ORDER].reverse();
+
+// Dados por mes (prev = Abr/2026, curr = Mai/2026)
 const MONTHS_META = {
-  '2026-04':{label:'Abr/2026',allDays:["2026-04-01","2026-04-02","2026-04-03","2026-04-04","2026-04-05","2026-04-06","2026-04-07","2026-04-08","2026-04-09","2026-04-10","2026-04-11","2026-04-12","2026-04-13","2026-04-14","2026-04-15","2026-04-16","2026-04-17","2026-04-18","2026-04-19","2026-04-20","2026-04-21","2026-04-22","2026-04-23","2026-04-24","2026-04-25","2026-04-26","2026-04-27","2026-04-28","2026-04-29","2026-04-30"],labels:["01/Abr","02/Abr","03/Abr","04/Abr","05/Abr","06/Abr","07/Abr","08/Abr","09/Abr","10/Abr","11/Abr","12/Abr","13/Abr","14/Abr","15/Abr","16/Abr","17/Abr","18/Abr","19/Abr","20/Abr","21/Abr","22/Abr","23/Abr","24/Abr","25/Abr","26/Abr","27/Abr","28/Abr","29/Abr","30/Abr"],todayStr:'2026-05-01',hasPrev:false},
-  '2026-05':{label:'Mai/2026',allDays:["2026-05-01","2026-05-02","2026-05-03","2026-05-04","2026-05-05","2026-05-06","2026-05-07","2026-05-08","2026-05-09","2026-05-10","2026-05-11","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25","2026-05-26","2026-05-27","2026-05-28","2026-05-29","2026-05-30","2026-05-31"],labels:["01/Mai","02/Mai","03/Mai","04/Mai","05/Mai","06/Mai","07/Mai","08/Mai","09/Mai","10/Mai","11/Mai","12/Mai","13/Mai","14/Mai","15/Mai","16/Mai","17/Mai","18/Mai","19/Mai","20/Mai","21/Mai","22/Mai","23/Mai","24/Mai","25/Mai","26/Mai","27/Mai","28/Mai","29/Mai","30/Mai","31/Mai"],todayStr:'2026-05-25',hasPrev:true}
+  '2026-04': { label:'Abr/2026', allDays:["2026-04-01", "2026-04-02", "2026-04-03", "2026-04-04", "2026-04-05", "2026-04-06", "2026-04-07", "2026-04-08", "2026-04-09", "2026-04-10", "2026-04-11", "2026-04-12", "2026-04-13", "2026-04-14", "2026-04-15", "2026-04-16", "2026-04-17", "2026-04-18", "2026-04-19", "2026-04-20", "2026-04-21", "2026-04-22", "2026-04-23", "2026-04-24", "2026-04-25", "2026-04-26", "2026-04-27", "2026-04-28", "2026-04-29", "2026-04-30"], labels:["01/Abr", "02/Abr", "03/Abr", "04/Abr", "05/Abr", "06/Abr", "07/Abr", "08/Abr", "09/Abr", "10/Abr", "11/Abr", "12/Abr", "13/Abr", "14/Abr", "15/Abr", "16/Abr", "17/Abr", "18/Abr", "19/Abr", "20/Abr", "21/Abr", "22/Abr", "23/Abr", "24/Abr", "25/Abr", "26/Abr", "27/Abr", "28/Abr", "29/Abr", "30/Abr"], todayStr:'2026-05-01', hasPrev:false },
+  '2026-05': { label:'Mai/2026', allDays:["2026-05-01", "2026-05-02", "2026-05-03", "2026-05-04", "2026-05-05", "2026-05-06", "2026-05-07", "2026-05-08", "2026-05-09", "2026-05-10", "2026-05-11", "2026-05-12", "2026-05-13", "2026-05-14", "2026-05-15", "2026-05-16", "2026-05-17", "2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-23", "2026-05-24", "2026-05-25", "2026-05-26", "2026-05-27", "2026-05-28", "2026-05-29", "2026-05-30", "2026-05-31"], labels:["01/Mai", "02/Mai", "03/Mai", "04/Mai", "05/Mai", "06/Mai", "07/Mai", "08/Mai", "09/Mai", "10/Mai", "11/Mai", "12/Mai", "13/Mai", "14/Mai", "15/Mai", "16/Mai", "17/Mai", "18/Mai", "19/Mai", "20/Mai", "21/Mai", "22/Mai", "23/Mai", "24/Mai", "25/Mai", "26/Mai", "27/Mai", "28/Mai", "29/Mai", "30/Mai", "31/Mai"], todayStr:'2026-05-26', hasPrev:true }
 };
-const MONTHS_ACTUAL={'2026-04':{"TC Full":{"BAU":{"2026-04-01":5820,"2026-04-02":5526,"2026-04-03":6267,"2026-04-04":6755,"2026-04-05":5066,"2026-04-06":6384,"2026-04-07":7696,"2026-04-08":7285,"2026-04-09":6988,"2026-04-10":16656,"2026-04-11":20585,"2026-04-12":14810,"2026-04-13":14491,"2026-04-14":14452,"2026-04-15":14496,"2026-04-16":11109,"2026-04-17":12697,"2026-04-18":9087,"2026-04-19":7735,"2026-04-20":8211,"2026-04-21":8373,"2026-04-22":8582,"2026-04-23":11156,"2026-04-24":8200,"2026-04-25":6600,"2026-04-26":5969,"2026-04-27":6653,"2026-04-28":8149,"2026-04-29":6877,"2026-04-30":6964},"Cuentas Canceladas":{"2026-04-01":497,"2026-04-02":524,"2026-04-03":610,"2026-04-04":671,"2026-04-05":470,"2026-04-06":561,"2026-04-07":726,"2026-04-08":670,"2026-04-09":604,"2026-04-10":556,"2026-04-11":3241,"2026-04-12":2052,"2026-04-13":1462,"2026-04-14":1622,"2026-04-15":1176,"2026-04-16":1011,"2026-04-17":1244,"2026-04-18":893,"2026-04-19":639,"2026-04-20":773,"2026-04-21":645,"2026-04-22":644,"2026-04-23":780,"2026-04-24":632,"2026-04-25":495,"2026-04-26":494,"2026-04-27":488,"2026-04-28":536,"2026-04-29":542,"2026-04-30":412},"EA":{"2026-04-01":591,"2026-04-02":612,"2026-04-03":520,"2026-04-04":448,"2026-04-05":350,"2026-04-06":489,"2026-04-07":521,"2026-04-08":514,"2026-04-09":4292,"2026-04-10":26280,"2026-04-11":9415,"2026-04-12":285,"2026-04-13":3720,"2026-04-14":7084,"2026-04-15":2435,"2026-04-16":387,"2026-04-17":442,"2026-04-18":350,"2026-04-19":296,"2026-04-20":334,"2026-04-21":306,"2026-04-22":340,"2026-04-23":372,"2026-04-24":553,"2026-04-25":407,"2026-04-26":320,"2026-04-27":352,"2026-04-28":359,"2026-04-29":344,"2026-04-30":1413},"Mar Aberto":{"2026-04-01":644,"2026-04-02":605,"2026-04-03":562,"2026-04-04":530,"2026-04-05":450,"2026-04-06":537,"2026-04-07":680,"2026-04-08":717,"2026-04-09":591,"2026-04-10":496,"2026-04-11":351,"2026-04-12":356,"2026-04-13":455,"2026-04-14":463,"2026-04-15":485,"2026-04-16":474,"2026-04-17":446,"2026-04-18":347,"2026-04-19":348,"2026-04-20":445,"2026-04-21":431,"2026-04-22":528,"2026-04-23":533,"2026-04-24":445,"2026-04-25":462,"2026-04-26":362,"2026-04-27":436,"2026-04-28":502,"2026-04-29":452,"2026-04-30":586},"Only Nav":{"2026-04-01":347,"2026-04-02":311,"2026-04-03":302,"2026-04-04":341,"2026-04-05":283,"2026-04-06":289,"2026-04-07":359,"2026-04-08":333,"2026-04-09":300,"2026-04-10":285,"2026-04-11":261,"2026-04-12":242,"2026-04-13":331,"2026-04-14":1201,"2026-04-15":956,"2026-04-16":519,"2026-04-17":646,"2026-04-18":689,"2026-04-19":658,"2026-04-20":651,"2026-04-21":586,"2026-04-22":511,"2026-04-23":546,"2026-04-24":515,"2026-04-25":383,"2026-04-26":492,"2026-04-27":475,"2026-04-28":412,"2026-04-29":420,"2026-04-30":415},"Sellers":{"2026-04-01":661,"2026-04-02":628,"2026-04-03":529,"2026-04-04":457,"2026-04-05":385,"2026-04-06":674,"2026-04-07":727,"2026-04-08":768,"2026-04-09":611,"2026-04-10":734,"2026-04-11":739,"2026-04-12":582,"2026-04-13":724,"2026-04-14":801,"2026-04-15":3362,"2026-04-16":1439,"2026-04-17":1065,"2026-04-18":811,"2026-04-19":679,"2026-04-20":883,"2026-04-21":669,"2026-04-22":757,"2026-04-23":1005,"2026-04-24":632,"2026-04-25":430,"2026-04-26":455,"2026-04-27":665,"2026-04-28":667,"2026-04-29":637,"2026-04-30":524}},"Micro TC":{"BAU":{"2026-04-01":1566,"2026-04-02":1591,"2026-04-03":1789,"2026-04-04":1507,"2026-04-05":1182,"2026-04-06":1538,"2026-04-07":1778,"2026-04-08":1678,"2026-04-09":1550,"2026-04-10":1281,"2026-04-11":5849,"2026-04-12":6054,"2026-04-13":4169,"2026-04-14":4133,"2026-04-15":3518,"2026-04-16":4702,"2026-04-17":3639,"2026-04-18":2805,"2026-04-19":2648,"2026-04-20":2493,"2026-04-21":2255,"2026-04-22":2985,"2026-04-23":2391,"2026-04-24":2173,"2026-04-25":2062,"2026-04-26":2605,"2026-04-27":2090,"2026-04-28":3397,"2026-04-29":2246,"2026-04-30":1956},"EA":{"2026-04-01":37,"2026-04-02":903,"2026-04-03":39,"2026-04-04":40,"2026-04-05":38,"2026-04-06":41,"2026-04-07":33,"2026-04-08":41,"2026-04-09":31,"2026-04-10":38,"2026-04-11":42654,"2026-04-12":33,"2026-04-13":42,"2026-04-14":50,"2026-04-15":6645,"2026-04-16":59,"2026-04-17":345,"2026-04-18":44,"2026-04-19":54,"2026-04-20":47,"2026-04-21":53,"2026-04-22":48,"2026-04-23":55,"2026-04-24":698,"2026-04-25":68,"2026-04-26":57,"2026-04-27":62,"2026-04-28":68,"2026-04-29":72,"2026-04-30":888},"Mar Aberto":{"2026-04-01":21,"2026-04-02":11,"2026-04-03":11,"2026-04-04":20,"2026-04-05":10,"2026-04-06":12,"2026-04-07":17,"2026-04-08":16,"2026-04-09":12,"2026-04-10":13,"2026-04-11":10,"2026-04-12":12,"2026-04-13":19,"2026-04-14":15,"2026-04-15":14,"2026-04-16":16,"2026-04-17":10,"2026-04-18":9,"2026-04-19":16,"2026-04-20":17,"2026-04-21":16,"2026-04-22":23,"2026-04-23":25,"2026-04-24":16,"2026-04-25":15,"2026-04-26":14,"2026-04-27":20,"2026-04-28":22,"2026-04-29":35,"2026-04-30":47},"Sellers":{"2026-04-01":216,"2026-04-02":208,"2026-04-03":169,"2026-04-04":182,"2026-04-05":140,"2026-04-06":210,"2026-04-07":190,"2026-04-08":193,"2026-04-09":200,"2026-04-10":163,"2026-04-11":169,"2026-04-12":176,"2026-04-13":184,"2026-04-14":199,"2026-04-15":193,"2026-04-16":483,"2026-04-17":185,"2026-04-18":116,"2026-04-19":161,"2026-04-20":115,"2026-04-21":111,"2026-04-22":116,"2026-04-23":125,"2026-04-24":176,"2026-04-25":94,"2026-04-26":77,"2026-04-27":123,"2026-04-28":133,"2026-04-29":92,"2026-04-30":118},"Cuentas Canceladas":{},"Only Nav":{}}},'2026-05':{"TC Full":{"BAU":{"2026-05-01":6446,"2026-05-02":6632,"2026-05-03":6271,"2026-05-04":7543,"2026-05-05":9696,"2026-05-06":8350,"2026-05-07":13662,"2026-05-08":20774,"2026-05-09":13566,"2026-05-10":10256,"2026-05-11":13207,"2026-05-12":13805,"2026-05-13":11696,"2026-05-14":10115,"2026-05-15":9553,"2026-05-16":7686,"2026-05-17":8834,"2026-05-18":9584,"2026-05-19":8246,"2026-05-20":7600,"2026-05-21":8875,"2026-05-22":6577,"2026-05-23":6320,"2026-05-24":6624},"Cuentas Canceladas":{"2026-05-01":438,"2026-05-02":509,"2026-05-03":473,"2026-05-04":575,"2026-05-05":764,"2026-05-06":630,"2026-05-07":563,"2026-05-08":2253,"2026-05-09":1134,"2026-05-10":796,"2026-05-11":924,"2026-05-12":953,"2026-05-13":821,"2026-05-14":818,"2026-05-15":623,"2026-05-16":513,"2026-05-17":538,"2026-05-18":710,"2026-05-19":574,"2026-05-20":530,"2026-05-21":575,"2026-05-22":428,"2026-05-23":497,"2026-05-24":429},"EA":{"2026-05-01":775,"2026-05-02":625,"2026-05-03":467,"2026-05-04":582,"2026-05-05":528,"2026-05-06":2848,"2026-05-07":34038,"2026-05-08":6194,"2026-05-09":293,"2026-05-10":287,"2026-05-11":1343,"2026-05-12":1369,"2026-05-13":273,"2026-05-14":542,"2026-05-15":800,"2026-05-16":258,"2026-05-17":282,"2026-05-18":272,"2026-05-19":271,"2026-05-20":2343,"2026-05-21":3348,"2026-05-22":451,"2026-05-23":321,"2026-05-24":52},"Mar Aberto":{"2026-05-01":597,"2026-05-02":582,"2026-05-03":509,"2026-05-04":630,"2026-05-05":716,"2026-05-06":606,"2026-05-07":452,"2026-05-08":338,"2026-05-09":278,"2026-05-10":284,"2026-05-11":315,"2026-05-12":322,"2026-05-13":364,"2026-05-14":299,"2026-05-15":359,"2026-05-16":283,"2026-05-17":289,"2026-05-18":324,"2026-05-19":378,"2026-05-20":399,"2026-05-21":407,"2026-05-22":364,"2026-05-23":386,"2026-05-24":315},"Only Nav":{"2026-05-01":365,"2026-05-02":339,"2026-05-03":280,"2026-05-04":319,"2026-05-05":400,"2026-05-06":345,"2026-05-07":336,"2026-05-08":298,"2026-05-09":348,"2026-05-10":268,"2026-05-11":327,"2026-05-12":585,"2026-05-13":361,"2026-05-14":231,"2026-05-15":267,"2026-05-16":244,"2026-05-17":215,"2026-05-18":256,"2026-05-19":211,"2026-05-20":215,"2026-05-21":225,"2026-05-22":230,"2026-05-23":218,"2026-05-24":224},"Sellers":{"2026-05-01":364,"2026-05-02":349,"2026-05-03":314,"2026-05-04":482,"2026-05-05":572,"2026-05-06":544,"2026-05-07":493,"2026-05-08":538,"2026-05-09":355,"2026-05-10":328,"2026-05-11":538,"2026-05-12":525,"2026-05-13":509,"2026-05-14":463,"2026-05-15":432,"2026-05-16":286,"2026-05-17":262,"2026-05-18":413,"2026-05-19":405,"2026-05-20":469,"2026-05-21":3532,"2026-05-22":1670,"2026-05-23":1087,"2026-05-24":863}},"Micro TC":{"BAU":{"2026-05-01":1967,"2026-05-02":1698,"2026-05-03":1448,"2026-05-04":1811,"2026-05-05":2061,"2026-05-06":1848,"2026-05-07":1619,"2026-05-08":7130,"2026-05-09":5466,"2026-05-10":3568,"2026-05-11":4435,"2026-05-12":4663,"2026-05-13":3360,"2026-05-14":3503,"2026-05-15":3439,"2026-05-16":2992,"2026-05-17":2245,"2026-05-18":2765,"2026-05-19":2944,"2026-05-20":2696,"2026-05-21":2837,"2026-05-22":2183,"2026-05-23":4645,"2026-05-24":2771},"EA":{"2026-05-01":117,"2026-05-02":117,"2026-05-03":71,"2026-05-04":92,"2026-05-05":81,"2026-05-06":74,"2026-05-07":86,"2026-05-08":54688,"2026-05-09":44,"2026-05-10":36,"2026-05-11":61,"2026-05-12":51,"2026-05-13":49,"2026-05-14":38,"2026-05-15":1582,"2026-05-16":54,"2026-05-17":41,"2026-05-18":71,"2026-05-19":55,"2026-05-20":67,"2026-05-21":60,"2026-05-22":469,"2026-05-23":10877,"2026-05-24":8},"Mar Aberto":{"2026-05-01":43,"2026-05-02":58,"2026-05-03":54,"2026-05-04":49,"2026-05-05":61,"2026-05-06":47,"2026-05-07":49,"2026-05-08":29,"2026-05-09":28,"2026-05-10":25,"2026-05-11":30,"2026-05-12":56,"2026-05-13":52,"2026-05-14":46,"2026-05-15":42,"2026-05-16":36,"2026-05-17":25,"2026-05-18":47,"2026-05-19":50,"2026-05-20":33,"2026-05-21":45,"2026-05-22":59,"2026-05-23":47,"2026-05-24":35},"Sellers":{"2026-05-01":91,"2026-05-02":60,"2026-05-03":57,"2026-05-04":80,"2026-05-05":66,"2026-05-06":90,"2026-05-07":52,"2026-05-08":78,"2026-05-09":68,"2026-05-10":58,"2026-05-11":64,"2026-05-12":67,"2026-05-13":75,"2026-05-14":53,"2026-05-15":52,"2026-05-16":55,"2026-05-17":37,"2026-05-18":45,"2026-05-19":60,"2026-05-20":53,"2026-05-21":58,"2026-05-22":32,"2026-05-23":493,"2026-05-24":237},"Cuentas Canceladas":{},"Only Nav":{}}}};
-const MONTHS_PROJ={'2026-04':{},'2026-05':{"TC Full":{"BAU":{"2026-05-25":7512,"2026-05-26":7927,"2026-05-27":7650,"2026-05-28":7650,"2026-05-29":7650,"2026-05-30":7650,"2026-05-31":7650},"Cuentas Canceladas":{"2026-05-25":561,"2026-05-26":542,"2026-05-27":493,"2026-05-28":441,"2026-05-29":566,"2026-05-30":460,"2026-05-31":445},"Mar Aberto":{"2026-05-25":888,"2026-05-26":888,"2026-05-27":888,"2026-05-28":888,"2026-05-29":888,"2026-05-30":888,"2026-05-31":888},"Only Nav":{"2026-05-25":228,"2026-05-26":194,"2026-05-27":198,"2026-05-28":190,"2026-05-29":190,"2026-05-30":186,"2026-05-31":171},"Sellers":{"2026-05-25":833,"2026-05-26":740,"2026-05-27":683,"2026-05-28":724,"2026-05-29":744,"2026-05-30":653,"2026-05-31":631},"EA":{}},"Micro TC":{"BAU":{"2026-05-25":2787,"2026-05-26":3025,"2026-05-27":2728,"2026-05-28":2728,"2026-05-29":2728,"2026-05-30":2728,"2026-05-31":2728},"Mar Aberto":{"2026-05-25":209,"2026-05-26":209,"2026-05-27":209,"2026-05-28":209,"2026-05-29":209,"2026-05-30":209,"2026-05-31":209},"Sellers":{"2026-05-25":364,"2026-05-26":233,"2026-05-27":203,"2026-05-28":236,"2026-05-29":153,"2026-05-30":154,"2026-05-31":141},"EA":{},"Cuentas Canceladas":{},"Only Nav":{}}}};
-const MONTHS_HIST={'2026-04':{},'2026-05':{"TC Full":{"2026-05-05":7004,"2026-05-06":10503,"2026-05-07":13069,"2026-05-08":18764,"2026-05-09":24416,"2026-05-10":82095,"2026-05-11":22300,"2026-05-12":24403,"2026-05-13":21156,"2026-05-14":18127,"2026-05-15":14549,"2026-05-16":14585,"2026-05-17":11275,"2026-05-18":11223,"2026-05-19":12254,"2026-05-20":14326,"2026-05-21":11381,"2026-05-22":9280,"2026-05-23":11423,"2026-05-24":9261},"Micro TC":{"2026-05-05":1370,"2026-05-06":1955,"2026-05-07":2241,"2026-05-08":1992,"2026-05-09":1852,"2026-05-10":1544,"2026-05-11":5553,"2026-05-12":5898,"2026-05-13":6605,"2026-05-14":4140,"2026-05-15":3345,"2026-05-16":2842,"2026-05-17":5029,"2026-05-18":2760,"2026-05-19":2734,"2026-05-20":2944,"2026-05-21":2634,"2026-05-22":2686,"2026-05-23":2430,"2026-05-24":2890}}};
-let ACTIVE_MONTH='2026-05',TODAY=MONTHS_META['2026-05'].todayStr,ALL_DAYS=MONTHS_META['2026-05'].allDays,LABELS=MONTHS_META['2026-05'].labels,ACTUAL_DATA=MONTHS_ACTUAL['2026-05'],PROJ_DATA=MONTHS_PROJ['2026-05'],HIST_PROJ_DATA=MONTHS_HIST['2026-05'];
-const TC_SLUG={'TC Full':'full','Micro TC':'micro'};
-function fmt(n){return Math.round(n).toLocaleString('pt-BR');}
-function fmtPct(v){return v.toFixed(1)+'%';}
-function getSelectedSGs(tc){return SG_ORDER.filter(sg=>{const el=document.querySelector(`input[data-tc="${tc}"][data-sg="${sg}"]`);return el&&el.checked;});}
-const todayPlugin={id:'todayLine',afterDraw(chart){const{ctx,scales:{x,y}}=chart;if(!x||!y)return;const ti=ALL_DAYS.indexOf(TODAY);if(ti<0)return;const pi=ti-1;const x0=pi>=0?x.getPixelForValue(pi):x.left;const x1=x.getPixelForValue(ti);const xL=(x0+x1)/2;ctx.save();ctx.beginPath();ctx.moveTo(xL,y.top);ctx.lineTo(xL,y.bottom);ctx.strokeStyle='rgba(248,81,73,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.stroke();ctx.restore();ctx.save();ctx.fillStyle='rgba(248,81,73,0.85)';ctx.font='bold 10px Segoe UI,Arial';ctx.textAlign='center';ctx.fillText('HOJE',xL,y.top-5);ctx.restore();}};
-const dataLabelPlugin={id:'dataLabels',afterDatasetsDraw(chart){const{ctx,scales:{x,y},data}=chart;if(!x||!y)return;const bd=data.datasets.filter(ds=>ds.type==='bar'&&!ds.hidden);const nd=ALL_DAYS.length;let po=false;for(let i=0;i<nd;i++){const day=ALL_DAYS[i];if(day>=TODAY){po=false;continue;}let tot=0;bd.forEach(ds=>{const v=ds.data[i];if(v!==null&&v!==undefined)tot+=v;});if(tot<=0){po=false;continue;}const xP=x.getPixelForValue(i);const yT=y.getPixelForValue(tot);const iO=yT<y.top+5;let yP;if(iO){yP=po?y.top+24:y.top+12;}else{yP=yT-26;}po=iO;ctx.save();ctx.font='bold 10px Segoe UI,Arial';ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fmt(tot),xP,yP);ctx.restore();}}};
-const baseOptions={responsive:true,maintainAspectRatio:false,animation:{duration:300},interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',padding:10,cornerRadius:8,filter:function(item){const ov=item.dataset.data[item.dataIndex];if(ov===null||ov===undefined||ov===0)return false;const day=ALL_DAYS[item.dataIndex];if(day>=TODAY)return item.dataset.type==='line';return true;},callbacks:{label(ctx){return`  ${ctx.dataset.label}: ${fmt(ctx.raw)}`;}}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.03)',lineWidth:1},ticks:{color:'#6e7681',font:{size:10},maxRotation:45},border:{color:'#21262d'}},y:{stacked:false,beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)',lineWidth:1},ticks:{color:'#6e7681',font:{size:10},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v},border:{color:'#21262d',dash:[3,3]}}}};
-function buildDatasets(tc,sgs){const bds=BAR_ORDER.map(sg=>{const data=ALL_DAYS.map(d=>{if(d>=TODAY)return null;return ACTUAL_DATA?.[tc]?.[sg]?.[d]||null;});return{type:'bar',label:sg,data,backgroundColor:SG_COLORS[sg],borderColor:SG_COLORS[sg],borderWidth:0,borderRadius:2,stack:'actual',hidden:!sgs.includes(sg),order:3};});const projLine=ALL_DAYS.map(d=>{if(d<TODAY){const v=HIST_PROJ_DATA?.[tc]?.[d];return(v>0)?v:null;}const v=sgs.reduce((s,sg)=>s+(PROJ_DATA?.[tc]?.[sg]?.[d]||0),0);return v>0?v:null;});bds.push({type:'line',label:'Proj. Hoje',data:projLine,borderColor:'#FF7F11',backgroundColor:'rgba(255,127,17,0.08)',borderWidth:2.5,pointRadius:3,pointHoverRadius:5,pointBackgroundColor:'#FF7F11',pointBorderColor:'#0d1117',fill:false,tension:0.35,spanGaps:true,order:1});return bds;}
-const charts={};
-function makeChart(canvasId,tc){const sgs=SG_ORDER.slice();const datasets=buildDatasets(tc,sgs);const opts=JSON.parse(JSON.stringify(baseOptions));opts.plugins.tooltip.filter=baseOptions.plugins.tooltip.filter;opts.plugins.tooltip.callbacks=baseOptions.plugins.tooltip.callbacks;opts.scales.y.ticks.callback=baseOptions.scales.y.ticks.callback;opts.scales.y.stacked=true;charts[tc]=new Chart(document.getElementById(canvasId),{data:{labels:LABELS,datasets},options:opts,plugins:[todayPlugin,dataLabelPlugin]});}
-makeChart('chartFull','TC Full');makeChart('chartMicro','Micro TC');
-function toggleSG(tc,sg,slug,labelEl){const cb=labelEl.querySelector('input');cb.checked=!cb.checked;const dot=labelEl.querySelector('.sg-dot'),name=labelEl.querySelector('.sg-name');if(cb.checked){dot.classList.remove('off');name.classList.remove('off');}else{dot.classList.add('off');name.classList.add('off');}rebuildLines(tc);updateKPIs(tc,slug);}
-function rebuildLines(tc){const chart=charts[tc],sgs=getSelectedSGs(tc);BAR_ORDER.forEach((sg,i)=>{chart.data.datasets[i].hidden=!sgs.includes(sg);});const pi=BAR_ORDER.length;chart.data.datasets[pi].data=ALL_DAYS.map(d=>{if(d<TODAY){const v=HIST_PROJ_DATA?.[tc]?.[d];return(v>0)?v:null;}const v=sgs.reduce((s,sg)=>s+(PROJ_DATA?.[tc]?.[sg]?.[d]||0),0);return v>0?v:null;});chart.update('none');}
-function updateKPIs(tc,slug){const sgs=getSelectedSGs(tc);const ad=ALL_DAYS.filter(d=>d<TODAY),pd=ALL_DAYS.filter(d=>d>=TODAY);const rt=ad.reduce((s,d)=>s+sgs.reduce((ss,sg)=>ss+(ACTUAL_DATA?.[tc]?.[sg]?.[d]||0),0),0);const pt=pd.reduce((s,d)=>s+sgs.reduce((ss,sg)=>ss+(PROJ_DATA?.[tc]?.[sg]?.[d]||0),0),0);const hv=sgs.reduce((s,sg)=>s+(PROJ_DATA?.[tc]?.[sg]?.[TODAY]||0),0);const el=id=>document.getElementById(id);if(el(`kv-real-${slug}`))el(`kv-real-${slug}`).textContent=fmt(rt);if(el(`kv-hoje-${slug}`))el(`kv-hoje-${slug}`).textContent=fmt(hv);if(el(`kv-proj-${slug}`))el(`kv-proj-${slug}`).textContent=fmt(pt);if(el(`kv-total-${slug}`))el(`kv-total-${slug}`).textContent=fmt(rt+pt);const so=slug==='full'?'micro':'full',to=slug==='full'?'Micro TC':'TC Full',so2=getSelectedSGs(to);const ro=ALL_DAYS.filter(d=>d<TODAY).reduce((s,d)=>s+so2.reduce((ss,sg)=>ss+(ACTUAL_DATA?.[to]?.[sg]?.[d]||0),0),0);const po=ALL_DAYS.filter(d=>d>=TODAY).reduce((s,d)=>s+so2.reduce((ss,sg)=>ss+(PROJ_DATA?.[to]?.[sg]?.[d]||0),0),0);if(el('gt-real'))el('gt-real').textContent=fmt(rt+ro);if(el('gt-proj'))el('gt-proj').textContent=fmt(pt+po);if(el('gt-total'))el('gt-total').textContent=fmt(rt+pt+ro+po);}
-function selectAll(tc,slug){document.querySelectorAll(`input[data-tc="${tc}"]`).forEach(cb=>{cb.checked=true;const i=cb.closest('.sg-item');i.querySelector('.sg-dot').classList.remove('off');i.querySelector('.sg-name').classList.remove('off');});rebuildLines(tc);updateKPIs(tc,slug);}
-function selectNone(tc,slug){document.querySelectorAll(`input[data-tc="${tc}"]`).forEach(cb=>{cb.checked=false;const i=cb.closest('.sg-item');i.querySelector('.sg-dot').classList.add('off');i.querySelector('.sg-name').classList.add('off');});rebuildLines(tc);updateKPIs(tc,slug);}
-function setMonth(monthKey){ACTIVE_MONTH=monthKey;const m=MONTHS_META[monthKey];TODAY=m.todayStr;ALL_DAYS=m.allDays;LABELS=m.labels;ACTUAL_DATA=MONTHS_ACTUAL[monthKey];PROJ_DATA=MONTHS_PROJ[monthKey];HIST_PROJ_DATA=MONTHS_HIST[monthKey];['TC Full','Micro TC'].forEach(tc=>{if(charts[tc]){charts[tc].destroy();delete charts[tc];}});makeChart('chartFull','TC Full');makeChart('chartMicro','Micro TC');[['TC Full','full'],['Micro TC','micro']].forEach(([tc,slug])=>updateKPIs(tc,slug));document.querySelectorAll('.month-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.month===monthKey));}
+const MONTHS_ACTUAL   = { '2026-04': {"TC Full": {"BAU": {"2026-04-01": 5820.0, "2026-04-02": 5526.0, "2026-04-03": 6267.0, "2026-04-04": 6755.0, "2026-04-05": 5066.0, "2026-04-06": 6384.0, "2026-04-07": 7696.0, "2026-04-08": 7285.0, "2026-04-09": 6988.0, "2026-04-10": 16656.0, "2026-04-11": 20585.0, "2026-04-12": 14810.0, "2026-04-13": 14491.0, "2026-04-14": 14452.0, "2026-04-15": 14496.0, "2026-04-16": 11109.0, "2026-04-17": 12697.0, "2026-04-18": 9087.0, "2026-04-19": 7735.0, "2026-04-20": 8211.0, "2026-04-21": 8373.0, "2026-04-22": 8582.0, "2026-04-23": 11156.0, "2026-04-24": 8200.0, "2026-04-25": 6600.0, "2026-04-26": 5969.0, "2026-04-27": 6653.0, "2026-04-28": 8149.0, "2026-04-29": 6877.0, "2026-04-30": 6964.0}, "Cuentas Canceladas": {"2026-04-01": 497.0, "2026-04-02": 524.0, "2026-04-03": 610.0, "2026-04-04": 671.0, "2026-04-05": 470.0, "2026-04-06": 561.0, "2026-04-07": 726.0, "2026-04-08": 670.0, "2026-04-09": 604.0, "2026-04-10": 556.0, "2026-04-11": 3241.0, "2026-04-12": 2052.0, "2026-04-13": 1462.0, "2026-04-14": 1622.0, "2026-04-15": 1176.0, "2026-04-16": 1011.0, "2026-04-17": 1244.0, "2026-04-18": 893.0, "2026-04-19": 639.0, "2026-04-20": 773.0, "2026-04-21": 645.0, "2026-04-22": 644.0, "2026-04-23": 780.0, "2026-04-24": 632.0, "2026-04-25": 495.0, "2026-04-26": 494.0, "2026-04-27": 488.0, "2026-04-28": 536.0, "2026-04-29": 542.0, "2026-04-30": 412.0}, "EA": {"2026-04-01": 591.0, "2026-04-02": 612.0, "2026-04-03": 520.0, "2026-04-04": 448.0, "2026-04-05": 350.0, "2026-04-06": 489.0, "2026-04-07": 521.0, "2026-04-08": 514.0, "2026-04-09": 4292.0, "2026-04-10": 26280.0, "2026-04-11": 9415.0, "2026-04-12": 285.0, "2026-04-13": 3720.0, "2026-04-14": 7084.0, "2026-04-15": 2435.0, "2026-04-16": 387.0, "2026-04-17": 442.0, "2026-04-18": 350.0, "2026-04-19": 296.0, "2026-04-20": 334.0, "2026-04-21": 306.0, "2026-04-22": 340.0, "2026-04-23": 372.0, "2026-04-24": 553.0, "2026-04-25": 407.0, "2026-04-26": 320.0, "2026-04-27": 352.0, "2026-04-28": 359.0, "2026-04-29": 344.0, "2026-04-30": 1413.0}, "Mar Aberto": {"2026-04-01": 644.0, "2026-04-02": 605.0, "2026-04-03": 562.0, "2026-04-04": 530.0, "2026-04-05": 450.0, "2026-04-06": 537.0, "2026-04-07": 680.0, "2026-04-08": 717.0, "2026-04-09": 591.0, "2026-04-10": 496.0, "2026-04-11": 351.0, "2026-04-12": 356.0, "2026-04-13": 455.0, "2026-04-14": 463.0, "2026-04-15": 485.0, "2026-04-16": 474.0, "2026-04-17": 446.0, "2026-04-18": 347.0, "2026-04-19": 348.0, "2026-04-20": 445.0, "2026-04-21": 431.0, "2026-04-22": 528.0, "2026-04-23": 533.0, "2026-04-24": 445.0, "2026-04-25": 462.0, "2026-04-26": 362.0, "2026-04-27": 436.0, "2026-04-28": 502.0, "2026-04-29": 452.0, "2026-04-30": 586.0}, "Only Nav": {"2026-04-01": 347.0, "2026-04-02": 311.0, "2026-04-03": 302.0, "2026-04-04": 341.0, "2026-04-05": 283.0, "2026-04-06": 289.0, "2026-04-07": 359.0, "2026-04-08": 333.0, "2026-04-09": 300.0, "2026-04-10": 285.0, "2026-04-11": 261.0, "2026-04-12": 242.0, "2026-04-13": 331.0, "2026-04-14": 1201.0, "2026-04-15": 956.0, "2026-04-16": 519.0, "2026-04-17": 646.0, "2026-04-18": 689.0, "2026-04-19": 658.0, "2026-04-20": 651.0, "2026-04-21": 586.0, "2026-04-22": 511.0, "2026-04-23": 546.0, "2026-04-24": 515.0, "2026-04-25": 383.0, "2026-04-26": 492.0, "2026-04-27": 475.0, "2026-04-28": 412.0, "2026-04-29": 420.0, "2026-04-30": 415.0}, "Sellers": {"2026-04-01": 661.0, "2026-04-02": 628.0, "2026-04-03": 529.0, "2026-04-04": 457.0, "2026-04-05": 385.0, "2026-04-06": 674.0, "2026-04-07": 727.0, "2026-04-08": 768.0, "2026-04-09": 611.0, "2026-04-10": 734.0, "2026-04-11": 739.0, "2026-04-12": 582.0, "2026-04-13": 724.0, "2026-04-14": 801.0, "2026-04-15": 3362.0, "2026-04-16": 1439.0, "2026-04-17": 1065.0, "2026-04-18": 811.0, "2026-04-19": 679.0, "2026-04-20": 883.0, "2026-04-21": 669.0, "2026-04-22": 757.0, "2026-04-23": 1005.0, "2026-04-24": 632.0, "2026-04-25": 430.0, "2026-04-26": 455.0, "2026-04-27": 665.0, "2026-04-28": 667.0, "2026-04-29": 637.0, "2026-04-30": 524.0}}, "Micro TC": {"BAU": {"2026-04-01": 1566.0, "2026-04-02": 1591.0, "2026-04-03": 1789.0, "2026-04-04": 1507.0, "2026-04-05": 1182.0, "2026-04-06": 1538.0, "2026-04-07": 1778.0, "2026-04-08": 1678.0, "2026-04-09": 1550.0, "2026-04-10": 1281.0, "2026-04-11": 5849.0, "2026-04-12": 6054.0, "2026-04-13": 4169.0, "2026-04-14": 4133.0, "2026-04-15": 3518.0, "2026-04-16": 4702.0, "2026-04-17": 3639.0, "2026-04-18": 2805.0, "2026-04-19": 2648.0, "2026-04-20": 2493.0, "2026-04-21": 2255.0, "2026-04-22": 2985.0, "2026-04-23": 2391.0, "2026-04-24": 2173.0, "2026-04-25": 2062.0, "2026-04-26": 2605.0, "2026-04-27": 2090.0, "2026-04-28": 3397.0, "2026-04-29": 2246.0, "2026-04-30": 1956.0}, "EA": {"2026-04-01": 37.0, "2026-04-02": 903.0, "2026-04-03": 39.0, "2026-04-04": 40.0, "2026-04-05": 38.0, "2026-04-06": 41.0, "2026-04-07": 33.0, "2026-04-08": 41.0, "2026-04-09": 31.0, "2026-04-10": 38.0, "2026-04-11": 42654.0, "2026-04-12": 33.0, "2026-04-13": 42.0, "2026-04-14": 50.0, "2026-04-15": 6645.0, "2026-04-16": 59.0, "2026-04-17": 345.0, "2026-04-18": 44.0, "2026-04-19": 54.0, "2026-04-20": 47.0, "2026-04-21": 53.0, "2026-04-22": 48.0, "2026-04-23": 55.0, "2026-04-24": 698.0, "2026-04-25": 68.0, "2026-04-26": 57.0, "2026-04-27": 62.0, "2026-04-28": 68.0, "2026-04-29": 72.0, "2026-04-30": 888.0}, "Mar Aberto": {"2026-04-01": 21.0, "2026-04-02": 11.0, "2026-04-03": 11.0, "2026-04-04": 20.0, "2026-04-05": 10.0, "2026-04-06": 12.0, "2026-04-07": 17.0, "2026-04-08": 16.0, "2026-04-09": 12.0, "2026-04-10": 13.0, "2026-04-11": 10.0, "2026-04-12": 12.0, "2026-04-13": 19.0, "2026-04-14": 15.0, "2026-04-15": 14.0, "2026-04-16": 16.0, "2026-04-17": 10.0, "2026-04-18": 9.0, "2026-04-19": 16.0, "2026-04-20": 17.0, "2026-04-21": 16.0, "2026-04-22": 23.0, "2026-04-23": 25.0, "2026-04-24": 16.0, "2026-04-25": 15.0, "2026-04-26": 14.0, "2026-04-27": 20.0, "2026-04-28": 22.0, "2026-04-29": 35.0, "2026-04-30": 47.0}, "Sellers": {"2026-04-01": 216.0, "2026-04-02": 208.0, "2026-04-03": 169.0, "2026-04-04": 182.0, "2026-04-05": 140.0, "2026-04-06": 210.0, "2026-04-07": 190.0, "2026-04-08": 193.0, "2026-04-09": 200.0, "2026-04-10": 163.0, "2026-04-11": 169.0, "2026-04-12": 176.0, "2026-04-13": 184.0, "2026-04-14": 199.0, "2026-04-15": 193.0, "2026-04-16": 483.0, "2026-04-17": 185.0, "2026-04-18": 116.0, "2026-04-19": 161.0, "2026-04-20": 115.0, "2026-04-21": 111.0, "2026-04-22": 116.0, "2026-04-23": 125.0, "2026-04-24": 176.0, "2026-04-25": 94.0, "2026-04-26": 77.0, "2026-04-27": 123.0, "2026-04-28": 133.0, "2026-04-29": 92.0, "2026-04-30": 118.0}}}, '2026-05': {"TC Full": {"BAU": {"2026-05-01": 6446.0, "2026-05-02": 6632.0, "2026-05-03": 6271.0, "2026-05-04": 7543.0, "2026-05-05": 9696.0, "2026-05-06": 8350.0, "2026-05-07": 13660.0, "2026-05-08": 20770.0, "2026-05-09": 13566.0, "2026-05-10": 10254.0, "2026-05-11": 13207.0, "2026-05-12": 13804.0, "2026-05-13": 11694.0, "2026-05-14": 10115.0, "2026-05-15": 9552.0, "2026-05-16": 7686.0, "2026-05-17": 8834.0, "2026-05-18": 9583.0, "2026-05-19": 8246.0, "2026-05-20": 7600.0, "2026-05-21": 8869.0, "2026-05-22": 6571.0, "2026-05-23": 6318.0, "2026-05-24": 6390.0, "2026-05-25": 7297.0}, "Cuentas Canceladas": {"2026-05-01": 438.0, "2026-05-02": 509.0, "2026-05-03": 473.0, "2026-05-04": 575.0, "2026-05-05": 764.0, "2026-05-06": 630.0, "2026-05-07": 563.0, "2026-05-08": 2253.0, "2026-05-09": 1134.0, "2026-05-10": 796.0, "2026-05-11": 924.0, "2026-05-12": 953.0, "2026-05-13": 820.0, "2026-05-14": 818.0, "2026-05-15": 623.0, "2026-05-16": 513.0, "2026-05-17": 538.0, "2026-05-18": 709.0, "2026-05-19": 574.0, "2026-05-20": 530.0, "2026-05-21": 575.0, "2026-05-22": 428.0, "2026-05-23": 496.0, "2026-05-24": 429.0, "2026-05-25": 476.0}, "EA": {"2026-05-01": 775.0, "2026-05-02": 625.0, "2026-05-03": 467.0, "2026-05-04": 582.0, "2026-05-05": 528.0, "2026-05-06": 2848.0, "2026-05-07": 34038.0, "2026-05-08": 6194.0, "2026-05-09": 293.0, "2026-05-10": 287.0, "2026-05-11": 1343.0, "2026-05-12": 1369.0, "2026-05-13": 273.0, "2026-05-14": 542.0, "2026-05-15": 800.0, "2026-05-16": 258.0, "2026-05-17": 282.0, "2026-05-18": 272.0, "2026-05-19": 271.0, "2026-05-20": 2343.0, "2026-05-21": 3348.0, "2026-05-22": 451.0, "2026-05-23": 321.0, "2026-05-24": 286.0, "2026-05-25": 41.0}, "Mar Aberto": {"2026-05-01": 597.0, "2026-05-02": 582.0, "2026-05-03": 509.0, "2026-05-04": 630.0, "2026-05-05": 716.0, "2026-05-06": 606.0, "2026-05-07": 452.0, "2026-05-08": 338.0, "2026-05-09": 278.0, "2026-05-10": 284.0, "2026-05-11": 315.0, "2026-05-12": 322.0, "2026-05-13": 364.0, "2026-05-14": 299.0, "2026-05-15": 359.0, "2026-05-16": 283.0, "2026-05-17": 289.0, "2026-05-18": 324.0, "2026-05-19": 378.0, "2026-05-20": 399.0, "2026-05-21": 406.0, "2026-05-22": 364.0, "2026-05-23": 385.0, "2026-05-24": 315.0, "2026-05-25": 326.0}, "Only Nav": {"2026-05-01": 365.0, "2026-05-02": 339.0, "2026-05-03": 280.0, "2026-05-04": 319.0, "2026-05-05": 400.0, "2026-05-06": 345.0, "2026-05-07": 336.0, "2026-05-08": 298.0, "2026-05-09": 348.0, "2026-05-10": 268.0, "2026-05-11": 327.0, "2026-05-12": 585.0, "2026-05-13": 361.0, "2026-05-14": 231.0, "2026-05-15": 267.0, "2026-05-16": 244.0, "2026-05-17": 215.0, "2026-05-18": 256.0, "2026-05-19": 211.0, "2026-05-20": 215.0, "2026-05-21": 225.0, "2026-05-22": 230.0, "2026-05-23": 217.0, "2026-05-24": 224.0, "2026-05-25": 208.0}, "Sellers": {"2026-05-01": 364.0, "2026-05-02": 349.0, "2026-05-03": 314.0, "2026-05-04": 482.0, "2026-05-05": 572.0, "2026-05-06": 544.0, "2026-05-07": 495.0, "2026-05-08": 542.0, "2026-05-09": 355.0, "2026-05-10": 330.0, "2026-05-11": 538.0, "2026-05-12": 526.0, "2026-05-13": 512.0, "2026-05-14": 463.0, "2026-05-15": 433.0, "2026-05-16": 286.0, "2026-05-17": 262.0, "2026-05-18": 415.0, "2026-05-19": 405.0, "2026-05-20": 469.0, "2026-05-21": 3539.0, "2026-05-22": 1676.0, "2026-05-23": 1092.0, "2026-05-24": 863.0, "2026-05-25": 1127.0}}, "Micro TC": {"BAU": {"2026-05-01": 1967.0, "2026-05-02": 1698.0, "2026-05-03": 1448.0, "2026-05-04": 1811.0, "2026-05-05": 2061.0, "2026-05-06": 1848.0, "2026-05-07": 1619.0, "2026-05-08": 7130.0, "2026-05-09": 5465.0, "2026-05-10": 3568.0, "2026-05-11": 4434.0, "2026-05-12": 4662.0, "2026-05-13": 3360.0, "2026-05-14": 3503.0, "2026-05-15": 3439.0, "2026-05-16": 2992.0, "2026-05-17": 2245.0, "2026-05-18": 2765.0, "2026-05-19": 2944.0, "2026-05-20": 2696.0, "2026-05-21": 2836.0, "2026-05-22": 2183.0, "2026-05-23": 4644.0, "2026-05-24": 2723.0, "2026-05-25": 3121.0}, "EA": {"2026-05-01": 117.0, "2026-05-02": 117.0, "2026-05-03": 71.0, "2026-05-04": 92.0, "2026-05-05": 81.0, "2026-05-06": 74.0, "2026-05-07": 86.0, "2026-05-08": 54688.0, "2026-05-09": 44.0, "2026-05-10": 36.0, "2026-05-11": 61.0, "2026-05-12": 51.0, "2026-05-13": 49.0, "2026-05-14": 38.0, "2026-05-15": 1582.0, "2026-05-16": 54.0, "2026-05-17": 41.0, "2026-05-18": 71.0, "2026-05-19": 55.0, "2026-05-20": 67.0, "2026-05-21": 60.0, "2026-05-22": 469.0, "2026-05-23": 10878.0, "2026-05-24": 59.0, "2026-05-25": 7.0}, "Mar Aberto": {"2026-05-01": 43.0, "2026-05-02": 58.0, "2026-05-03": 54.0, "2026-05-04": 49.0, "2026-05-05": 61.0, "2026-05-06": 47.0, "2026-05-07": 49.0, "2026-05-08": 29.0, "2026-05-09": 28.0, "2026-05-10": 25.0, "2026-05-11": 30.0, "2026-05-12": 56.0, "2026-05-13": 52.0, "2026-05-14": 46.0, "2026-05-15": 42.0, "2026-05-16": 36.0, "2026-05-17": 25.0, "2026-05-18": 47.0, "2026-05-19": 50.0, "2026-05-20": 33.0, "2026-05-21": 45.0, "2026-05-22": 59.0, "2026-05-23": 46.0, "2026-05-24": 29.0, "2026-05-25": 54.0}, "Sellers": {"2026-05-01": 91.0, "2026-05-02": 60.0, "2026-05-03": 57.0, "2026-05-04": 80.0, "2026-05-05": 66.0, "2026-05-06": 90.0, "2026-05-07": 52.0, "2026-05-08": 78.0, "2026-05-09": 69.0, "2026-05-10": 58.0, "2026-05-11": 65.0, "2026-05-12": 68.0, "2026-05-13": 75.0, "2026-05-14": 53.0, "2026-05-15": 52.0, "2026-05-16": 55.0, "2026-05-17": 37.0, "2026-05-18": 45.0, "2026-05-19": 60.0, "2026-05-20": 53.0, "2026-05-21": 59.0, "2026-05-22": 32.0, "2026-05-23": 494.0, "2026-05-24": 240.0, "2026-05-25": 241.0}, "Cuentas Canceladas": {}, "Only Nav": {}}} };
+const MONTHS_PROJ     = { '2026-04': {}, '2026-05': {"TC Full": {"BAU": {"2026-05-26": 7570.0, "2026-05-27": 7293.0, "2026-05-28": 7293.0, "2026-05-29": 7293.0, "2026-05-30": 7293.0, "2026-05-31": 7293.0}, "Cuentas Canceladas": {"2026-05-26": 543.0, "2026-05-27": 490.0, "2026-05-28": 441.0, "2026-05-29": 565.0, "2026-05-30": 459.0, "2026-05-31": 442.0}, "Mar Aberto": {"2026-05-26": 904.0, "2026-05-27": 904.0, "2026-05-28": 904.0, "2026-05-29": 904.0, "2026-05-30": 904.0, "2026-05-31": 904.0}, "Only Nav": {"2026-05-26": 195.0, "2026-05-27": 201.0, "2026-05-28": 192.0, "2026-05-29": 191.0, "2026-05-30": 186.0, "2026-05-31": 171.0}, "Sellers": {"2026-05-26": 733.0, "2026-05-27": 676.0, "2026-05-28": 715.0, "2026-05-29": 740.0, "2026-05-30": 648.0, "2026-05-31": 624.0}, "EA": {}}, "Micro TC": {"BAU": {"2026-05-26": 3025.0, "2026-05-27": 2728.0, "2026-05-28": 2728.0, "2026-05-29": 2728.0, "2026-05-30": 2728.0, "2026-05-31": 2728.0}, "Mar Aberto": {"2026-05-26": 222.0, "2026-05-27": 222.0, "2026-05-28": 222.0, "2026-05-29": 222.0, "2026-05-30": 222.0, "2026-05-31": 222.0}, "Sellers": {"2026-05-26": 230.0, "2026-05-27": 200.0, "2026-05-28": 234.0, "2026-05-29": 150.0, "2026-05-30": 152.0, "2026-05-31": 140.0}, "EA": {}, "Cuentas Canceladas": {}, "Only Nav": {}}} };
+const MONTHS_HIST     = { '2026-04': {}, '2026-05': {"TC Full": {"2026-05-05": 7004, "2026-05-06": 10503, "2026-05-07": 13069, "2026-05-08": 18764, "2026-05-09": 24416, "2026-05-10": 82095, "2026-05-11": 22300, "2026-05-12": 24403, "2026-05-13": 21156, "2026-05-14": 18127, "2026-05-15": 14549, "2026-05-16": 14585, "2026-05-17": 11275, "2026-05-18": 11223, "2026-05-19": 12254, "2026-05-20": 14326, "2026-05-21": 11381, "2026-05-22": 9280, "2026-05-23": 11423, "2026-05-24": 9261, "2026-05-25": 10022}, "Micro TC": {"2026-05-05": 1370, "2026-05-06": 1955, "2026-05-07": 2241, "2026-05-08": 1992, "2026-05-09": 1852, "2026-05-10": 1544, "2026-05-11": 5553, "2026-05-12": 5898, "2026-05-13": 6605, "2026-05-14": 4140, "2026-05-15": 3345, "2026-05-16": 2842, "2026-05-17": 5029, "2026-05-18": 2760, "2026-05-19": 2734, "2026-05-20": 2944, "2026-05-21": 2634, "2026-05-22": 2686, "2026-05-23": 2430, "2026-05-24": 2890, "2026-05-25": 3360}} };
+
+// Estado ativo — alterado pelo seletor de mes
+let ACTIVE_MONTH  = '2026-05';
+let TODAY         = MONTHS_META[ACTIVE_MONTH].todayStr;
+let ALL_DAYS      = MONTHS_META[ACTIVE_MONTH].allDays;
+let LABELS        = MONTHS_META[ACTIVE_MONTH].labels;
+let ACTUAL_DATA   = MONTHS_ACTUAL[ACTIVE_MONTH];
+let PROJ_DATA     = MONTHS_PROJ[ACTIVE_MONTH];
+let HIST_PROJ_DATA = MONTHS_HIST[ACTIVE_MONTH];
+
+// mapeamento tc -> slug
+const TC_SLUG = {'TC Full':'full', 'Micro TC':'micro'};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmt(n) {
+  return Math.round(n).toLocaleString('pt-BR');
+}
+
+function aggDays(dataObj, tc, sgs, days) {
+  return days.map(day => {
+    const v = sgs.reduce((s, sg) => s + (dataObj?.[tc]?.[sg]?.[day] || 0), 0);
+    return v > 0 ? v : null;
+  });
+}
+
+function getSelectedSGs(tc) {
+  return SG_ORDER.filter(sg => {
+    const el = document.querySelector(`input[data-tc="${tc}"][data-sg="${sg}"]`);
+    return el && el.checked;
+  });
+}
+
+// ============================================================
+// PLUGIN: linha vertical "Hoje"
+// ============================================================
+const todayPlugin = {
+  id: 'todayLine',
+  afterDraw(chart) {
+    const { ctx, scales: {x, y} } = chart;
+    if (!x || !y) return;
+    const todayIdx  = ALL_DAYS.indexOf(TODAY);
+    if (todayIdx < 0) return;
+    const prevIdx   = todayIdx - 1;
+    const x0 = prevIdx >= 0 ? x.getPixelForValue(prevIdx) : x.left;
+    const x1 = x.getPixelForValue(todayIdx);
+    const xLine = (x0 + x1) / 2;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(xLine, y.top);
+    ctx.lineTo(xLine, y.bottom);
+    ctx.strokeStyle = 'rgba(248, 81, 73, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(248, 81, 73, 0.85)';
+    ctx.font = 'bold 10px Segoe UI, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('HOJE', xLine, y.top - 5);
+    ctx.restore();
+  }
+};
+
+// ============================================================
+// PLUGIN: rotulos de dados (soma do dia em cima das barras)
+// ============================================================
+const dataLabelPlugin = {
+  id: 'dataLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx, scales: {x, y}, data } = chart;
+    if (!x || !y) return;
+    const barDatasets = data.datasets.filter(ds => ds.type === 'bar' && !ds.hidden);
+    const nDays = ALL_DAYS.length;
+    let prevOverflow = false;
+    for (let i = 0; i < nDays; i++) {
+      const day = ALL_DAYS[i];
+      if (day >= TODAY) { prevOverflow = false; continue; }
+      let total = 0;
+      barDatasets.forEach(ds => {
+        const v = ds.data[i];
+        if (v !== null && v !== undefined) total += v;
+      });
+      if (total <= 0) { prevOverflow = false; continue; }
+      const xPos   = x.getPixelForValue(i);
+      const yTotal = y.getPixelForValue(total);
+      const isOverflow = yTotal < y.top + 5;
+      let yPos;
+      if (isOverflow) {
+        yPos = prevOverflow ? y.top + 24 : y.top + 12;
+      } else {
+        yPos = yTotal - 26;
+      }
+      prevOverflow = isOverflow;
+      ctx.save();
+      ctx.font = 'bold 10px Segoe UI, Arial';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(fmt(total), xPos, yPos);
+      ctx.restore();
+    }
+  }
+};
+
+// ============================================================
+// OPCOES BASE DO CHART
+// ============================================================
+const baseOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 300 },
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#1c2128',
+      borderColor: '#30363d',
+      borderWidth: 1,
+      titleColor: '#e6edf3',
+      bodyColor: '#8b949e',
+      padding: 10,
+      cornerRadius: 8,
+      filter: function(item) {
+        const originalVal = item.dataset.data[item.dataIndex];
+        if (originalVal === null || originalVal === undefined || originalVal === 0) return false;
+        const day = ALL_DAYS[item.dataIndex];
+        if (day >= TODAY) return item.dataset.type === 'line';
+        return true;
+      },
+      callbacks: {
+        label(ctx) {
+          return `  ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      stacked: true,
+      grid: { color: 'rgba(255,255,255,0.03)', lineWidth: 1 },
+      ticks: { color: '#6e7681', font: { size: 10 }, maxRotation: 45 },
+      border: { color: '#21262d' }
+    },
+    y: {
+      stacked: false,
+      beginAtZero: true,
+      grid: { color: 'rgba(255,255,255,0.05)', lineWidth: 1 },
+      ticks: {
+        color: '#6e7681',
+        font: { size: 10 },
+        callback: v => v >= 1000 ? (v/1000).toFixed(0) + 'k' : v
+      },
+      border: { color: '#21262d', dash: [3, 3] }
+    }
+  }
+};
+
+// ============================================================
+// CONSTRUIR DATASETS
+// ============================================================
+function buildDatasets(tc, selectedSGs) {
+  const actualDays = ALL_DAYS.map(d => d < TODAY ? d : null);
+  const projDays   = ALL_DAYS.map(d => d >= TODAY ? d : null);
+
+  // Uma barra por super_grupo (empilhada), so para dias passados
+  // BAR_ORDER = SG_ORDER invertido: menor impacto na base, BAU por cima
+  const barDatasets = BAR_ORDER.map(sg => {
+    const data = ALL_DAYS.map((d, i) => {
+      if (d >= TODAY) return null;
+      return ACTUAL_DATA?.[tc]?.[sg]?.[d] || null;
+    });
+    return {
+      type: 'bar',
+      label: sg,
+      data,
+      backgroundColor: SG_COLORS[sg],
+      borderColor:     SG_COLORS[sg],
+      borderWidth: 0,
+      borderRadius: 2,
+      stack: 'actual',
+      hidden: !selectedSGs.includes(sg),
+      order: 3
+    };
+  });
+
+  // Linha: projecao (historica para dias passados + hoje em diante)
+  const projLine = ALL_DAYS.map(d => {
+    if (d < TODAY) {
+      const v = HIST_PROJ_DATA?.[tc]?.[d];
+      return (v > 0) ? v : null;
+    }
+    const v = selectedSGs.reduce((s, sg) => s + (PROJ_DATA?.[tc]?.[sg]?.[d] || 0), 0);
+    return v > 0 ? v : null;
+  });
+  barDatasets.push({
+    type: 'line',
+    label: 'Proj. Hoje',
+    data: projLine,
+    borderColor: '#FF7F11',
+    backgroundColor: 'rgba(255,127,17,0.08)',
+    borderWidth: 2.5,
+    borderDash: [],
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    pointBackgroundColor: '#FF7F11',
+    pointBorderColor: '#0d1117',
+    fill: false,
+    tension: 0.35,
+    spanGaps: true,
+    order: 1
+  });
 
 
-// ── ENCENDIDOS DATA ──────────────────────────────────────────
-const ENC = {"months":["2025-05","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05"],"labels":["Mai/25 (YoY)","Nov/25","Dez/25","Jan/26","Fev/26","Mar/26","Abr/26","Mai/26"],"monthly":{"1. TC Full":{"2025-05":{"enc":10340843,"primo":443482,"reenc":9897361,"conv":325078},"2025-11":{"enc":10485195,"primo":329525,"reenc":10155670,"conv":457414},"2025-12":{"enc":9915327,"primo":275196,"reenc":9640131,"conv":288737},"2026-01":{"enc":10407903,"primo":303181,"reenc":10104722,"conv":347760},"2026-02":{"enc":11821274,"primo":682864,"reenc":11138410,"conv":395851},"2026-03":{"enc":11935885,"primo":452820,"reenc":11483065,"conv":480317},"2026-04":{"enc":11461481,"primo":462109,"reenc":10999372,"conv":421918},"2026-05":{"enc":11496005,"primo":368223,"reenc":11127782,"conv":340516}},"2. Micro TC":{"2025-05":{"enc":545257,"primo":180349,"reenc":364908,"conv":75380},"2025-11":{"enc":1201252,"primo":330513,"reenc":870739,"conv":166918},"2025-12":{"enc":1059604,"primo":215870,"reenc":843734,"conv":105880},"2026-01":{"enc":996688,"primo":286732,"reenc":709956,"conv":150513},"2026-02":{"enc":1228690,"primo":517760,"reenc":710930,"conv":118797},"2026-03":{"enc":1209136,"primo":232825,"reenc":976311,"conv":145240},"2026-04":{"enc":1341790,"primo":207197,"reenc":1134593,"conv":138444},"2026-05":{"enc":1506664,"primo":297978,"reenc":1208686,"conv":146198}}},"nise":{"1. TC Full":{"2025-05":{"BRONZE":508658,"SELLER":362373,"OUTROS":138,"PLATINUM":2011885,"SILVER":2720966,"GOLD":4736823},"2025-11":{"SELLER":409672,"SILVER":2957682,"BRONZE":682448,"PLATINUM":2115368,"OUTROS":20994,"GOLD":4299031},"2025-12":{"SELLER":357062,"GOLD":4066873,"SILVER":2819690,"BRONZE":674971,"OUTROS":4573,"PLATINUM":1992158},"2026-01":{"PLATINUM":2024503,"SILVER":3041749,"BRONZE":789135,"OUTROS":672,"SELLER":375315,"GOLD":4176529},"2026-02":{"GOLD":4692034,"OUTROS":846,"BRONZE":914539,"PLATINUM":2114392,"SELLER":380470,"SILVER":3718993},"2026-03":{"SILVER":3731541,"SELLER":391267,"GOLD":4712943,"BRONZE":981913,"PLATINUM":2117606,"OUTROS":615},"2026-04":{"OUTROS":104742,"GOLD":4443804,"BRONZE":977946,"SELLER":242456,"PLATINUM":1946946,"SILVER":3745587},"2026-05":{"OUTROS":963,"SELLER":246203,"BRONZE":962302,"SILVER":3696304,"GOLD":4559161,"PLATINUM":2031072}},"2. Micro TC":{"2025-05":{"OUTROS":1,"PLATINUM":38,"BRONZE":317522,"GOLD":503,"SILVER":218999,"SELLER":8194},"2025-11":{"PLATINUM":75,"GOLD":1830,"SILVER":579700,"OUTROS":2,"BRONZE":540716,"SELLER":78929},"2025-12":{"PLATINUM":127,"SELLER":71260,"SILVER":519901,"OUTROS":2,"GOLD":2330,"BRONZE":465984},"2026-01":{"SILVER":447040,"SELLER":79264,"GOLD":1566,"BRONZE":468738,"PLATINUM":80},"2026-02":{"SILVER":591643,"BRONZE":572028,"GOLD":1077,"SELLER":63873,"PLATINUM":68,"OUTROS":1},"2026-03":{"SELLER":74819,"GOLD":2287,"SILVER":532796,"PLATINUM":149,"OUTROS":1,"BRONZE":599084},"2026-04":{"OUTROS":19287,"PLATINUM":502,"BRONZE":677938,"SILVER":614103,"SELLER":22921,"GOLD":7039},"2026-05":{"BRONZE":798634,"SILVER":663809,"SELLER":33627,"PLATINUM":729,"OUTROS":101,"GOLD":9764}}},"app":{"1. TC Full":{"2025-05":{"1. MP":283462,"4. Sem App Ativo":1570079,"3. ML":5212280,"2. MP y ML":3275022},"2025-11":{"4. Sem App Ativo":1368370,"3. ML":5800856,"2. MP y ML":3011038,"1. MP":304931},"2025-12":{"3. ML":5694523,"2. MP y ML":2649452,"1. MP":277252,"4. Sem App Ativo":1294100},"2026-01":{"3. ML":6029804,"2. MP y ML":2772279,"1. MP":302183,"4. Sem App Ativo":1303637},"2026-02":{"2. MP y ML":2933010,"4. Sem App Ativo":1785598,"1. MP":335123,"3. ML":6767543},"2026-03":{"4. Sem App Ativo":1729309,"1. MP":354329,"2. MP y ML":3010564,"3. ML":6841683},"2026-04":{"2. MP y ML":2889222,"3. ML":6913325,"4. Sem App Ativo":1284432,"1. MP":374502},"2026-05":{"1. MP":377154,"2. MP y ML":2785751,"4. Sem App Ativo":1387532,"3. ML":6945568}},"2. Micro TC":{"2025-05":{"4. Sem App Ativo":73624,"3. ML":143733,"1. MP":35723,"2. MP y ML":292177},"2025-11":{"2. MP y ML":572239,"1. MP":91547,"3. ML":369112,"4. Sem App Ativo":168354},"2025-12":{"4. Sem App Ativo":148900,"1. MP":81071,"3. ML":358250,"2. MP y ML":471383},"2026-01":{"2. MP y ML":475517,"3. ML":318440,"1. MP":83163,"4. Sem App Ativo":119568},"2026-02":{"4. Sem App Ativo":212768,"3. ML":685160,"1. MP":48881,"2. MP y ML":281881},"2026-03":{"3. ML":586451,"4. Sem App Ativo":112226,"2. MP y ML":431962,"1. MP":78497},"2026-04":{"2. MP y ML":414651,"1. MP":80593,"3. ML":666558,"4. Sem App Ativo":179988},"2026-05":{"1. MP":107162,"4. Sem App Ativo":178308,"2. MP y ML":470974,"3. ML":750220}}},"rating":{"1. TC Full":{"2025-05":{"Sem Rating":7175,"AB":8944506,"D/J":13903,"C":1375259},"2025-11":{"AB":10013446,"D/J":21593,"C":405233,"Sem Rating":44923},"2025-12":{"Sem Rating":20114,"C":224890,"D/J":12070,"AB":9658253},"2026-01":{"D/J":15638,"AB":10021011,"C":355700,"Sem Rating":15554},"2026-02":{"C":972524,"Sem Rating":780959,"D/J":24504,"AB":10043287},"2026-03":{"C":933124,"AB":10205806,"D/J":30625,"Sem Rating":766330},"2026-04":{"AB":10015543,"D/J":28250,"C":854199,"Sem Rating":563489},"2026-05":{"AB":10070639,"D/J":25579,"Sem Rating":621385,"C":778402}},"2. Micro TC":{"2025-05":{"AB":1794,"Sem Rating":1264,"C":130147,"D/J":412052},"2025-11":{"D/J":854335,"AB":1142,"C":343685,"Sem Rating":2090},"2025-12":{"D/J":534558,"C":515852,"Sem Rating":1767,"AB":7427},"2026-01":{"Sem Rating":3561,"D/J":700431,"C":289841,"AB":2855},"2026-02":{"Sem Rating":2748,"AB":1330,"C":399083,"D/J":825529},"2026-03":{"C":410537,"AB":8349,"Sem Rating":3281,"D/J":786969},"2026-04":{"AB":8365,"C":472913,"Sem Rating":3100,"D/J":857412},"2026-05":{"Sem Rating":4531,"AB":14961,"D/J":977354,"C":509818}}},"bureau":{"1. TC Full":{"2025-05":{"A":2298184,"D":610743,"B":5267312,"Sem Score":75730,"E-G":292794,"C":1796080},"2025-11":{"D":426722,"A":2425450,"C":1683652,"E-G":165419,"Sem Score":188233,"B":5595719},"2025-12":{"C":1627763,"A":2162301,"E-G":39512,"Sem Score":138308,"D":441340,"B":5506103},"2026-01":{"D":599109,"Sem Score":111374,"A":1973085,"E-G":228222,"B":5599247,"C":1896866},"2026-02":{"Sem Score":111203,"E-G":274936,"B":6172963,"C":2245658,"D":696636,"A":2319878},"2026-03":{"B":6277545,"D":659499,"C":2247447,"A":2334452,"Sem Score":117254,"E-G":299688},"2026-04":{"C":2320872,"B":6149644,"E-G":307954,"A":1778701,"D":787639,"Sem Score":116671},"2026-05":{"B":6169377,"E-G":275214,"C":2082574,"Sem Score":130642,"D":642467,"A":2195731}},"2. Micro TC":{"2025-05":{"C":103874,"A":429,"D":105460,"E-G":317963,"B":17141,"Sem Score":390},"2025-11":{"D":230484,"A":1149,"B":44435,"C":243423,"E-G":669218,"Sem Score":12543},"2025-12":{"B":69528,"D":212109,"C":273529,"E-G":501739,"Sem Score":798,"A":1901},"2026-01":{"D":179465,"A":676,"C":169098,"E-G":621011,"B":25885,"Sem Score":553},"2026-02":{"A":1118,"Sem Score":155,"E-G":637102,"D":263732,"C":274530,"B":52053},"2026-03":{"C":257581,"B":45254,"E-G":662288,"A":1205,"Sem Score":234,"D":242574},"2026-04":{"B":55358,"C":289522,"D":272273,"Sem Score":354,"A":1269,"E-G":723014},"2026-05":{"A":1610,"D":290990,"E-G":844661,"B":61821,"Sem Score":357,"C":307225}}},"top_groups":{"1. TC Full":["BAU-BAU GRUPO 1 y 2 - SIN CAMBIOS","BAU-BAU GRUPO 1 y 2 - UP","BAU-HEAVY USERS","BAU-BAU GRUPO 1 y 2 - DW","BAU-USUARIOS MARKETPLACE VIP","TEST REACH-TEST NO ECOSISTEMATICOS","TEST REACH-C1 THIN","BAU-BAU G1","TEST EXPOSICION-KILLER LIMITE MINIMO","BAU-CUENTAS CANCELADAS","BAU-CARD TO CARD CON INFO OPF","TEST REACH-C2 THICK COMPRAS LM","TEST REACH-B2 REPEATS RE A,B,C,D","TEST REACH-TEST RTG EXTERNO MALO - RATING A/B","Mar Aberto RTS"],"2. Micro TC":["BAU-","BAU-11A POL�TICA MTC SELLERS � BAU + TESTE| ACTIVATION Y SIN OFERTA CC/CF/DE | CHA SELLERS V1 D/F/G | RAT EXT A/F | PF LOLO Y MILO","TEST REACH-","Mar Aberto RTS","Mar Aberto Async","BAU-BAU G1","TEST REACH-TEST RTG EXTERNO MALO - RATING A/B","Outros","TEST COMBINADO-INFO EXTERNA TC OPF - G1","TEST REACH-TEST LIMIT INSIGNIFICANTE PF","BAU-BAU TEST","BAU-BAU G2","TEST REACH-TEST RCI TC PF"]},"grupos":{"1. TC Full":{"2025-05":{},"2025-11":{},"2025-12":{},"2026-01":{},"2026-02":{},"2026-03":{},"2026-04":{},"2026-05":{"BAU-BAU GRUPO 1 y 2 - SIN CAMBIOS":3225529,"BAU-BAU GRUPO 1 y 2 - UP":2674064,"BAU-HEAVY USERS":1544615,"BAU-BAU GRUPO 1 y 2 - DW":1028687,"BAU-USUARIOS MARKETPLACE VIP":892749,"TEST REACH-TEST NO ECOSISTEMATICOS":663665,"TEST REACH-C1 THIN":384073,"BAU-BAU G1":381671,"TEST EXPOSICION-KILLER LIMITE MINIMO":239580,"BAU-CUENTAS CANCELADAS":145728,"BAU-CARD TO CARD CON INFO OPF":81681,"TEST REACH-C2 THICK COMPRAS LM":65238,"TEST REACH-B2 REPEATS RE A,B,C,D":58353,"TEST REACH-TEST RTG EXTERNO MALO - RATING A/B":32591,"Mar Aberto RTS":20086}},"2. Micro TC":{"2025-05":{},"2025-11":{},"2025-12":{},"2026-01":{},"2026-02":{},"2026-03":{},"2026-04":{},"2026-05":{"BAU-":1266839,"BAU-11A POL�TICA MTC SELLERS � BAU + TESTE| ACTIVATION Y SIN OFERTA CC/CF/DE | CHA SELLERS V1 D/F/G | RAT EXT A/F | PF LOLO Y MILO":143237,"TEST REACH-":92238,"Mar Aberto RTS":2716,"Mar Aberto Async":691,"BAU-BAU G1":657,"TEST REACH-TEST RTG EXTERNO MALO - RATING A/B":115,"Outros":61,"TEST COMBINADO-INFO EXTERNA TC OPF - G1":59,"TEST REACH-TEST LIMIT INSIGNIFICANTE PF":43,"BAU-BAU TEST":5,"BAU-BAU G2":2,"TEST REACH-TEST RCI TC PF":1}}},"grupos_conv":{"1. TC Full":{"2025-05":{},"2025-11":{},"2025-12":{},"2026-01":{},"2026-02":{},"2026-03":{},"2026-04":{},"2026-05":{"BAU-BAU GRUPO 1 y 2 - SIN CAMBIOS":77444,"BAU-BAU GRUPO 1 y 2 - UP":65010,"BAU-HEAVY USERS":31206,"BAU-BAU GRUPO 1 y 2 - DW":24950,"BAU-USUARIOS MARKETPLACE VIP":19235,"TEST REACH-TEST NO ECOSISTEMATICOS":9273,"TEST REACH-C1 THIN":8470,"BAU-BAU G1":18887,"TEST EXPOSICION-KILLER LIMITE MINIMO":3339,"BAU-CUENTAS CANCELADAS":17217,"BAU-CARD TO CARD CON INFO OPF":21913,"TEST REACH-C2 THICK COMPRAS LM":3135,"TEST REACH-B2 REPEATS RE A,B,C,D":8037,"TEST REACH-TEST RTG EXTERNO MALO - RATING A/B":3780,"Mar Aberto RTS":13825}},"2. Micro TC":{"2025-05":{},"2025-11":{},"2025-12":{},"2026-01":{},"2026-02":{},"2026-03":{},"2026-04":{},"2026-05":{"BAU-":120940,"BAU-11A POL�TICA MTC SELLERS � BAU + TESTE| ACTIVATION Y SIN OFERTA CC/CF/DE | CHA SELLERS V1 D/F/G | RAT EXT A/F | PF LOLO Y MILO":15081,"TEST REACH-":3501,"Mar Aberto RTS":1957,"Mar Aberto Async":634,"BAU-BAU G1":3,"TEST REACH-TEST RTG EXTERNO MALO - RATING A/B":1,"Outros":47,"TEST COMBINADO-INFO EXTERNA TC OPF - G1":1,"TEST REACH-TEST LIMIT INSIGNIFICANTE PF":1,"BAU-BAU TEST":0,"BAU-BAU G2":0,"TEST REACH-TEST RCI TC PF":0}}}};
-const ENC_MONTHS=ENC.months, ENC_LABELS=ENC.labels;
-const NISE_KEYS=['BRONZE','SILVER','GOLD','PLATINUM','SELLER','OUTROS'];
-const NISE_COLORS={BRONZE:'#CD7F32',SILVER:'#A8B2C1',GOLD:'#F5C500',PLATINUM:'#B8C6DB',SELLER:'#58a6ff',OUTROS:'#484f58'};
-const APP_KEYS=['1. MP','2. MP y ML','3. ML','4. Sem App Ativo'];
-const APP_LABELS=['MP','MP+ML','ML','Sem App'];
-const APP_COLORS={'1. MP':'#FF6B35','2. MP y ML':'#58a6ff','3. ML':'#3DFF91','4. Sem App Ativo':'#484f58'};
-const RTG_KEYS=['AB','C','D/J','Sem Rating'];
-const RTG_COLORS={'AB':'#3DFF91','C':'#F5C500','D/J':'#FF5A5A','Sem Rating':'#484f58'};
-const BUR_KEYS=['A','B','C','D','E-G','Sem Score'];
-const BUR_COLORS={A:'#3DFF91',B:'#58a6ff',C:'#F5C500',D:'#FF7F11','E-G':'#FF5A5A','Sem Score':'#484f58'};
-let encTC='1. TC Full';
-const encCharts={};
-function fmtM(n){if(n>=1e6)return(n/1e6).toFixed(1).replace('.',',')+' M';if(n>=1e3)return Math.round(n/1e3).toLocaleString('pt-BR')+'k';return n.toLocaleString('pt-BR');}
-function adoptClass(p){return p>=10?'adopt-hi':p>=5?'adopt-md':'adopt-lo';}
-function pctShareDatasets(src,keys,colors,keyLabels){return keys.map(k=>{const nominal=ENC_MONTHS.map(m=>(src?.[encTC]?.[m]||{})[k]||0);const data=ENC_MONTHS.map(m=>{const obj=src?.[encTC]?.[m]||{};const tot=keys.reduce((s,kk)=>s+(obj[kk]||0),0);if(!tot)return 0;return+((obj[k]||0)/tot*100).toFixed(1);});return{label:keyLabels?keyLabels[keys.indexOf(k)]:k,data,nominal,backgroundColor:colors[k],borderColor:colors[k],borderWidth:0,stack:'pct'};});}
-const evolLabelsPlugin={id:'evolLabels',afterDatasetsDraw(chart){const {ctx,scales:{x,y},data}=chart;if(!x||!y)return;const ds=data.datasets.filter(d=>!d.hidden);const n=data.labels.length;for(let i=0;i<n;i++){let total=0;const segs=[];ds.forEach(d=>{const v=d.data[i]||0;if(v>0){segs.push({v});total+=v;}});if(total<=0)continue;const xP=x.getPixelForValue(i);const yT=y.getPixelForValue(total);ctx.save();ctx.font='bold 11px Segoe UI,Arial';ctx.fillStyle='#e6edf3';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fmtM(total),xP,yT-4);ctx.restore();let cum=0;segs.forEach(s=>{const yTop=y.getPixelForValue(total-cum);cum+=s.v;const yBot=y.getPixelForValue(total-cum);if(yBot-yTop>=18){const pct=(s.v/total*100).toFixed(1).replace('.',',')+'%';ctx.save();ctx.font='bold 10px Segoe UI,Arial';ctx.fillStyle='#0d1117';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pct,xP,(yTop+yBot)/2);ctx.restore();}});}}};
-const shareLabelsPlugin={id:'shareLabels',afterDatasetsDraw(chart){const {ctx,scales:{x,y},data}=chart;if(!x||!y)return;const totals=chart.options.plugins.shareLabels?.totals||[];const ds=data.datasets.filter(d=>!d.hidden);const n=data.labels.length;for(let i=0;i<n;i++){const tot=totals[i]||0;const xP=x.getPixelForValue(i);if(tot>0){const yT=y.getPixelForValue(100);ctx.save();ctx.font='bold 10px Segoe UI,Arial';ctx.fillStyle='#e6edf3';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fmtM(tot),xP,yT-3);ctx.restore();}let cum=0;ds.forEach(d=>{const v=d.data[i]||0;if(v<=0)return;const yTop=y.getPixelForValue(100-cum);cum+=v;const yBot=y.getPixelForValue(100-cum);const h=yBot-yTop;if(h<3)return;const fs=h>=14?10:h>=9?8:7;const txt=v.toFixed(1).replace('.',',')+'%';ctx.save();ctx.font='bold '+fs+'px Segoe UI,Arial';ctx.fillStyle='#0d1117';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,xP,(yTop+yBot)/2);ctx.restore();});}}};
-function makeShareChart(cid,src,keys,colors,kl){const ex=encCharts[cid];if(ex){ex.destroy();delete encCharts[cid];}const datasets=pctShareDatasets(src,keys,colors,kl);const totals=ENC_MONTHS.map(m=>{const obj=src?.[encTC]?.[m]||{};return keys.reduce((s,k)=>s+(obj[k]||0),0);});encCharts[cid]=new Chart(document.getElementById(cid),{type:'bar',data:{labels:ENC_LABELS,datasets},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},interaction:{mode:'index',intersect:false},layout:{padding:{top:18}},plugins:{shareLabels:{totals},legend:{display:true,position:'bottom',labels:{color:'#8b949e',font:{size:10},padding:8,boxWidth:10,boxHeight:10}},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',padding:8,cornerRadius:6,callbacks:{label(ctx){const nom=ctx.dataset.nominal?.[ctx.dataIndex]||0;return`  ${ctx.dataset.label}: ${String(ctx.raw).replace('.',',')}%   ·   ${fmt(nom)}`;}}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6e7681',font:{size:9},maxRotation:40},border:{color:'#21262d'}},y:{stacked:true,min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6e7681',font:{size:9},callback:v=>v+'%'},border:{color:'#21262d',dash:[3,3]}}}},plugins:[shareLabelsPlugin]});}
-function makeEvolChart(){const ex=encCharts.encEvolChart;if(ex){ex.destroy();delete encCharts.encEvolChart;}const pd=ENC_MONTHS.map(m=>ENC.monthly?.[encTC]?.[m]?.primo||0);const rd=ENC_MONTHS.map(m=>ENC.monthly?.[encTC]?.[m]?.reenc||0);encCharts.encEvolChart=new Chart(document.getElementById('encEvolChart'),{type:'bar',data:{labels:ENC_LABELS,datasets:[{label:'1° Encendido',data:pd,backgroundColor:'#58a6ff',borderWidth:0,borderRadius:2,stack:'s'},{label:'Reencendido',data:rd,backgroundColor:'rgba(61,255,145,0.55)',borderWidth:0,borderRadius:2,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},interaction:{mode:'index',intersect:false},layout:{padding:{top:24}},plugins:{legend:{display:true,position:'top',labels:{color:'#8b949e',font:{size:11},padding:14,boxWidth:12,boxHeight:12}},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',padding:10,cornerRadius:8,callbacks:{label(ctx){return`  ${ctx.dataset.label}: ${fmt(ctx.raw)}`;},footer(items){return`  Total: ${fmt(items.reduce((s,i)=>s+i.raw,0))}`;}}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6e7681',font:{size:10},maxRotation:30},border:{color:'#21262d'}},y:{stacked:true,beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#6e7681',font:{size:10},callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':v},border:{color:'#21262d',dash:[3,3]}}}},plugins:[evolLabelsPlugin]});}
-function renderEvolTable(){const tbody=document.getElementById('enc-evol-tbody');tbody.innerHTML='';ENC_MONTHS.forEach((m,i)=>{const row=ENC.monthly?.[encTC]?.[m]||{};const enc=row.enc||0,primo=row.primo||0,reenc=row.reenc||0,conv=row.conv||0;const pct=enc?conv/enc*100:0;const pcl=adoptClass(pct);const isLast=i===ENC_MONTHS.length-1;tbody.insertAdjacentHTML('beforeend',`<tr${isLast?' class="hl-row"':''}><td>${ENC_LABELS[i]}</td><td>${fmt(enc)}</td><td>${fmt(primo)}</td><td>${fmt(reenc)}</td><td>${fmt(conv)}</td><td><span class="adopt-pct ${pcl}">${pct.toFixed(1)}%</span></td></tr>`);});}
-function renderGruposTable(){const tbody=document.getElementById('enc-grupos-tbody');tbody.innerHTML='';const lm=ENC_MONTHS[ENC_MONTHS.length-1];const gE=ENC.grupos?.[encTC]?.[lm]||{};const gC=ENC.grupos_conv?.[encTC]?.[lm]||{};const rows=Object.entries(gE).sort((a,b)=>b[1]-a[1]);rows.forEach(([g,enc])=>{const conv=gC[g]||0;const pct=enc?conv/enc*100:0;const pcl=adoptClass(pct);const label=g.length>55?g.slice(0,52)+'…':g;tbody.insertAdjacentHTML('beforeend',`<tr><td title="${g}">${label}</td><td>${fmt(enc)}</td><td>${fmt(conv)}</td><td><span class="adopt-pct ${pcl}">${pct.toFixed(1)}%</span></td></tr>`);});}
-function renderKPIs(){const lm=ENC_MONTHS[ENC_MONTHS.length-1],pm=ENC_MONTHS[ENC_MONTHS.length-2];const cur=ENC.monthly?.[encTC]?.[lm]||{},prev=ENC.monthly?.[encTC]?.[pm]||{};const labCur=ENC_LABELS[ENC_LABELS.length-1],labPrev=ENC_LABELS[ENC_LABELS.length-2];const enc=cur.enc||0,primo=cur.primo||0,reenc=cur.reenc||0,conv=cur.conv||0;const eP=prev.enc||0,pP=prev.primo||0,rP=prev.reenc||0,cP=prev.conv||0;const pct=enc?conv/enc*100:0,pctP=eP?cP/eP*100:0;const fmtNum=n=>n.toLocaleString('pt-BR');const fmtPct1=v=>v.toFixed(1).replace('.',',')+'%';const setDelta=(id,d,unit)=>{const el=document.getElementById(id);if(!el)return;const cls=d>=0?'delta-pos':'delta-neg';const arr=d>=0?'▲':'▼';const sign=unit==='pp'?(d>=0?'+':''):'';el.className='kpi-sub '+cls;el.textContent=arr+' '+sign+(unit==='pp'?d.toFixed(1).replace('.',','):Math.abs(d).toFixed(1).replace('.',','))+(unit==='pp'? ' pp':'%')+' vs '+labPrev;};document.getElementById('kpi-cur-label').textContent=labCur;document.getElementById('kpi-prev-label').textContent=labPrev;document.getElementById('enc-kpi-enc').textContent=fmtNum(enc);document.getElementById('enc-kpi-primo').textContent=fmtNum(primo);document.getElementById('enc-kpi-reenc').textContent=fmtNum(reenc);document.getElementById('enc-kpi-adopt').textContent=fmtPct1(pct);setDelta('enc-kpi-enc-sub',eP?(enc-eP)/eP*100:0);setDelta('enc-kpi-primo-sub',pP?(primo-pP)/pP*100:0);setDelta('enc-kpi-reenc-sub',rP?(reenc-rP)/rP*100:0);setDelta('enc-kpi-adopt-sub',pct-pctP,'pp');document.getElementById('enc-prev-enc').textContent=fmtNum(eP);document.getElementById('enc-prev-primo').textContent=fmtNum(pP);document.getElementById('enc-prev-reenc').textContent=fmtNum(rP);document.getElementById('enc-prev-adopt').textContent=fmtPct1(pctP);document.getElementById('enc-prev-enc-sub').textContent='';document.getElementById('enc-prev-primo-sub').textContent='';document.getElementById('enc-prev-reenc-sub').textContent='';document.getElementById('enc-prev-adopt-sub').textContent='Conv / Enc · '+labPrev;}
-function renderAnalise(){const ml=ENC_MONTHS.length-1,pi=ml-1;const lm=ENC_MONTHS[ml],pm=ENC_MONTHS[pi];const cur=ENC.monthly?.[encTC]?.[lm]||{},prev=ENC.monthly?.[encTC]?.[pm]||{};const enc=cur.enc||0,encP=prev.enc||0;const pct=enc?(cur.conv||0)/enc*100:0,pctP=encP?(prev.conv||0)/encP*100:0;const encD=(enc-encP)/encP*100,pctD=pct-pctP;const nc=ENC.nise?.[encTC]?.[lm]||{},np=ENC.nise?.[encTC]?.[pm]||{};const ntC=NISE_KEYS.reduce((s,k)=>s+(nc[k]||0),0),ntP=NISE_KEYS.reduce((s,k)=>s+(np[k]||0),0);let bN={k:'',d:0,pC:0,pP:0};NISE_KEYS.filter(k=>k!=='OUTROS').forEach(k=>{const pC=ntC?(nc[k]||0)/ntC*100:0,pP=ntP?(np[k]||0)/ntP*100:0;if(Math.abs(pC-pP)>Math.abs(bN.d))bN={k,d:pC-pP,pC,pP};});const items=[];const es=encD>=0?'pos':'neg',ei=encD>=0?'▲':'▼';items.push({cls:'ins-'+es,html:`${ei} Encendidos <b>${fmtM(enc)}</b> (${encD>=0?'+':''}${encD.toFixed(1)}% vs ${ENC_LABELS[pi]}) &mdash; de ${fmtM(encP)} para ${fmtM(enc)}`});const ps=pctD>=0?'pos':'neg',pi2=pctD>=0?'▲':'▼';items.push({cls:'ins-'+ps,html:`${pi2} % Adoption <b>${pct.toFixed(1)}%</b> (${pctD>=0?'+':''}${pctD.toFixed(1)}pp vs ${ENC_LABELS[pi]}) &mdash; de ${pctP.toFixed(1)}% para ${pct.toFixed(1)}%`});const priD=enc?(cur.primo||0)/enc*100:0,priDp=encP?(prev.primo||0)/encP*100:0,prDiff=priD-priDp;items.push({cls:'ins-neu',html:`&#9654; 1° Encendido: <b>${priD.toFixed(1)}%</b> do total (${prDiff>=0?'+':''}${prDiff.toFixed(1)}pp vs ${ENC_LABELS[pi]})`});if(bN.k){const ns=bN.d>=0?'pos':'neg',ni=bN.d>=0?'▲':'▼';items.push({cls:'ins-'+ns,html:`${ni} NISE <b>${bN.k}</b>: maior variacao de share (${bN.pP.toFixed(1)}% → ${bN.pC.toFixed(1)}%)`});}document.getElementById('enc-analise-list').innerHTML=items.map(it=>`<li class="ins-item ${it.cls}">${it.html}</li>`).join('');document.querySelector('#enc-analise .ins-title').textContent=`Insights — ${ENC_LABELS[ml]} vs ${ENC_LABELS[pi]}`;}
-function updateSectionTag(){const el=document.getElementById('enc-section-tag');if(encTC==='1. TC Full'){el.className='section-tag tag-full';el.textContent='TC Full';}else{el.className='section-tag tag-micro';el.textContent='Micro TC';}}
-function initEncendidos(){renderKPIs();makeEvolChart();renderEvolTable();makeShareChart('encNiseChart',ENC.nise,NISE_KEYS,NISE_COLORS);makeShareChart('encAppChart',ENC.app,APP_KEYS,APP_COLORS,APP_LABELS);makeShareChart('encRatingChart',ENC.rating,RTG_KEYS,RTG_COLORS);makeShareChart('encBureauChart',ENC.bureau,BUR_KEYS,BUR_COLORS);renderGruposTable();renderAnalise();}
-function switchEncTC(tc){encTC=tc;document.getElementById('tcbtn-full').classList.toggle('active',tc==='1. TC Full');document.getElementById('tcbtn-micro').classList.toggle('active',tc==='2. Micro TC');updateSectionTag();renderKPIs();makeEvolChart();renderEvolTable();makeShareChart('encNiseChart',ENC.nise,NISE_KEYS,NISE_COLORS);makeShareChart('encAppChart',ENC.app,APP_KEYS,APP_COLORS,APP_LABELS);makeShareChart('encRatingChart',ENC.rating,RTG_KEYS,RTG_COLORS);makeShareChart('encBureauChart',ENC.bureau,BUR_KEYS,BUR_COLORS);renderGruposTable();renderAnalise();}
-// ── TABS ──────────────────────────────────────────────────────
-let encInitialized=false;
-function showTab(tab){document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+tab).classList.add('active');document.querySelector(`.tab-nav-btn[onclick="showTab('${tab}')"]`).classList.add('active');document.getElementById('emissoes-month-sel').style.display=tab==='emissoes'?'flex':'none';if(tab==='encendidos'&&!encInitialized){initEncendidos();encInitialized=true;}}
+  return barDatasets;
+}
 
+// ============================================================
+// INSTANCIAR CHARTS
+// ============================================================
+const charts = {};
+
+function makeChart(canvasId, tc) {
+  const selectedSGs = SG_ORDER.slice(); // todos
+  const datasets    = buildDatasets(tc, selectedSGs);
+  const opts = JSON.parse(JSON.stringify(baseOptions));
+  // Re-acopla funcoes perdidas pelo JSON.stringify
+  opts.plugins.tooltip.filter    = baseOptions.plugins.tooltip.filter;
+  opts.plugins.tooltip.callbacks = baseOptions.plugins.tooltip.callbacks;
+  opts.scales.y.ticks.callback   = baseOptions.scales.y.ticks.callback;
+  opts.scales.y.stacked = true; // escala pelo acumulado da pilha → todos os segmentos visíveis
+  charts[tc] = new Chart(document.getElementById(canvasId), {
+    data: { labels: LABELS, datasets },
+    options: opts,
+    plugins: [todayPlugin, dataLabelPlugin]
+  });
+}
+
+makeChart('chartFull',  'TC Full');
+makeChart('chartMicro', 'Micro TC');
+
+// ============================================================
+// FILTROS
+// ============================================================
+function toggleSG(tc, sg, slug, labelEl) {
+  const cb = labelEl.querySelector('input');
+  cb.checked = !cb.checked;
+  const dot  = labelEl.querySelector('.sg-dot');
+  const name = labelEl.querySelector('.sg-name');
+  if (cb.checked) { dot.classList.remove('off'); name.classList.remove('off'); }
+  else            { dot.classList.add('off');    name.classList.add('off');    }
+
+  rebuildLines(tc);
+  updateKPIs(tc, slug);
+}
+
+function rebuildLines(tc) {
+  const chart      = charts[tc];
+  const selectedSGs = getSelectedSGs(tc);
+
+  // Barras: mostrar/ocultar (usa BAR_ORDER para bater com os indices dos datasets)
+  BAR_ORDER.forEach((sg, i) => {
+    chart.data.datasets[i].hidden = !selectedSGs.includes(sg);
+  });
+
+  // Linha proj hoje (indice n)
+  const projIdx = BAR_ORDER.length;
+  chart.data.datasets[projIdx].data = ALL_DAYS.map(d => {
+    if (d < TODAY) {
+      const v = HIST_PROJ_DATA?.[tc]?.[d];
+      return (v > 0) ? v : null;
+    }
+    const v = selectedSGs.reduce((s, sg) => s + (PROJ_DATA?.[tc]?.[sg]?.[d] || 0), 0);
+    return v > 0 ? v : null;
+  });
+
+  chart.update('none');
+}
+
+function updateKPIs(tc, slug) {
+  const sgs = getSelectedSGs(tc);
+  const actualDays = ALL_DAYS.filter(d => d < TODAY);
+  const projDays   = ALL_DAYS.filter(d => d >= TODAY);
+
+  const realTotal  = actualDays.reduce((s, d) => s + sgs.reduce((ss, sg) => ss + (ACTUAL_DATA?.[tc]?.[sg]?.[d] || 0), 0), 0);
+  const projTotal  = projDays.reduce((s, d)   => s + sgs.reduce((ss, sg) => ss + (PROJ_DATA?.[tc]?.[sg]?.[d]   || 0), 0), 0);
+  const ontemVal   = actualDays.length ? sgs.reduce((s, sg) => s + (ACTUAL_DATA?.[tc]?.[sg]?.[actualDays.at(-1)] || 0), 0) : 0;
+  const hojeProjV  = sgs.reduce((s, sg) => s + (PROJ_DATA?.[tc]?.[sg]?.[TODAY] || 0), 0);
+
+  const el = id => document.getElementById(id);
+  if (el(`kv-real-${slug}`))   el(`kv-real-${slug}`).textContent   = fmt(realTotal);
+  if (el(`kv-hoje-${slug}`))   el(`kv-hoje-${slug}`).textContent   = fmt(hojeProjV);
+  if (el(`kv-proj-${slug}`))   el(`kv-proj-${slug}`).textContent   = fmt(projTotal);
+  if (el(`kv-total-${slug}`))  el(`kv-total-${slug}`).textContent  = fmt(realTotal + projTotal);
+
+  // atualiza grand total somando os dois TCs
+  const slugOther = slug === 'full' ? 'micro' : 'full';
+  const tcOther   = slug === 'full' ? 'Micro TC' : 'TC Full';
+  const sgsOther  = getSelectedSGs(tcOther);
+  const realO = ALL_DAYS.filter(d => d < TODAY).reduce(
+    (s, d) => s + sgsOther.reduce((ss, sg) => ss + (ACTUAL_DATA?.[tcOther]?.[sg]?.[d] || 0), 0), 0);
+  const projO = ALL_DAYS.filter(d => d >= TODAY).reduce(
+    (s, d) => s + sgsOther.reduce((ss, sg) => ss + (PROJ_DATA?.[tcOther]?.[sg]?.[d] || 0), 0), 0);
+
+  if (el('gt-real'))  el('gt-real').textContent  = fmt(realTotal + realO);
+  if (el('gt-proj'))  el('gt-proj').textContent  = fmt(projTotal + projO);
+  if (el('gt-total')) el('gt-total').textContent = fmt(realTotal + projTotal + realO + projO);
+}
+
+function selectAll(tc, slug) {
+  document.querySelectorAll(`input[data-tc="${tc}"]`).forEach(cb => {
+    cb.checked = true;
+    const item = cb.closest('.sg-item');
+    item.querySelector('.sg-dot').classList.remove('off');
+    item.querySelector('.sg-name').classList.remove('off');
+  });
+  rebuildLines(tc);
+  updateKPIs(tc, slug);
+}
+
+function selectNone(tc, slug) {
+  document.querySelectorAll(`input[data-tc="${tc}"]`).forEach(cb => {
+    cb.checked = false;
+    const item = cb.closest('.sg-item');
+    item.querySelector('.sg-dot').classList.add('off');
+    item.querySelector('.sg-name').classList.add('off');
+  });
+  rebuildLines(tc);
+  updateKPIs(tc, slug);
+}
+
+// ============================================================
+// SELETOR DE MES
+// ============================================================
+function setMonth(monthKey) {
+  ACTIVE_MONTH   = monthKey;
+  const m        = MONTHS_META[monthKey];
+  TODAY          = m.todayStr;
+  ALL_DAYS       = m.allDays;
+  LABELS         = m.labels;
+  ACTUAL_DATA    = MONTHS_ACTUAL[monthKey];
+  PROJ_DATA      = MONTHS_PROJ[monthKey];
+  HIST_PROJ_DATA = MONTHS_HIST[monthKey];
+
+  // Recriar graficos com novos dados
+  ['TC Full', 'Micro TC'].forEach(tc => {
+    if (charts[tc]) { charts[tc].destroy(); delete charts[tc]; }
+  });
+  makeChart('chartFull',  'TC Full');
+  makeChart('chartMicro', 'Micro TC');
+
+  // Atualizar KPIs
+  [['TC Full','full'], ['Micro TC','micro']].forEach(([tc, slug]) => updateKPIs(tc, slug));
+
+  // Estilo dos botoes
+  document.querySelectorAll('.month-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.month === monthKey);
+  });
+}
 </script>
 </body>
 </html>
