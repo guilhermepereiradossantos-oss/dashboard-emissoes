@@ -164,6 +164,58 @@ a{color:inherit;text-decoration:none}
 .kpi-card.neutral .kpi-value{color:#e6edf3}
 .kpi-sub.delta-pos{color:#3DFF91}
 .kpi-sub.delta-neg{color:#FF5A5A}
+.chart-inner-sm{position:relative;height:460px}
+.evol-table{table-layout:fixed}
+.evol-table th{text-align:center;padding:10px 6px;font-size:10px;letter-spacing:.4px}
+.evol-table th:first-child{text-align:left;padding-left:16px;width:130px}
+.evol-table td{text-align:center;padding:9px 6px;font-size:12px;font-variant-numeric:tabular-nums}
+.evol-table td:first-child{text-align:left;padding-left:16px;color:#c9d1d9;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px}
+.evol-table tr.row-enc td:not(:first-child){color:#58a6ff;font-weight:700}
+.evol-table tr.row-conv td:not(:first-child){color:#3DFF91;font-weight:700}
+.evol-table tr.row-adopt td:not(:first-child){color:#FFB347;font-weight:700}
+.evol-table td.cur-col,.evol-table th.cur-col{background:rgba(88,166,255,0.06);font-weight:800}
+.evol-table th.cur-col{color:#58a6ff}
+.analise-card{background:#161b22;border:1px solid #21262d;border-radius:12px;overflow:hidden;margin-bottom:8px}
+.analise-hdr{background:#0d1117;border-bottom:1px solid #21262d;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.analise-title{font-size:14px;font-weight:700;color:#e6edf3;display:flex;align-items:center;gap:8px}
+.analise-title::before{content:'';display:inline-block;width:4px;height:18px;background:#F5C500;border-radius:2px}
+.analise-meta{display:flex;gap:18px;font-size:11px;color:#8b949e}
+.analise-meta b{color:#F5C500;font-weight:700;margin-left:4px}
+.analise-body{display:grid;grid-template-columns:1fr 1.2fr 1.1fr;gap:0}
+.analise-col{padding:14px 18px;border-right:1px solid #21262d;min-width:0}
+.analise-col:last-child{border-right:none}
+.analise-col-title{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.an-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+.an-dot.blue{background:#58a6ff;box-shadow:0 0 6px rgba(88,166,255,.5)}
+.an-dot.green{background:#3DFF91;box-shadow:0 0 6px rgba(61,255,145,.5)}
+.an-dot.orange{background:#FF7F11;box-shadow:0 0 6px rgba(255,127,17,.5)}
+.an-perf-item{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;font-size:12px;border-bottom:1px solid rgba(33,38,45,.6)}
+.an-perf-item:last-child{border-bottom:none}
+.an-perf-item .lbl{color:#8b949e}
+.an-perf-item .val{color:#e6edf3;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
+.an-perf-item .delta{margin-left:8px;font-weight:700;font-size:12px}
+.an-perf-item .delta.pos{color:#3DFF91}
+.an-perf-item .delta.neg{color:#FF5A5A}
+.analise-alert{margin-top:10px;padding:8px 10px;background:rgba(61,255,145,0.06);border-left:3px solid #3DFF91;border-radius:4px;font-size:11px;color:#c9d1d9;line-height:1.4}
+.analise-alert.warning{background:rgba(245,197,0,0.08);border-left-color:#F5C500}
+.analise-alert.critical{background:rgba(255,90,90,0.08);border-left-color:#FF5A5A}
+.an-opportunity{padding:8px 10px;background:rgba(245,197,0,0.06);border-left:3px solid #F5C500;border-radius:4px;font-size:12px;color:#c9d1d9;line-height:1.5;margin-bottom:6px}
+.an-opportunity b{color:#F5C500}
+.an-insights-title{margin-top:12px;font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.an-insight{padding:6px 8px;margin:4px 0;font-size:12px;color:#c9d1d9;line-height:1.5;border-left:3px solid transparent;border-radius:0 4px 4px 0;background:rgba(33,38,45,.3)}
+.an-insight.pos{border-left-color:#3DFF91}
+.an-insight.neg{border-left-color:#FF5A5A}
+.an-insight.neu{border-left-color:#58a6ff}
+.an-insight b{color:#e6edf3}
+.an-action{padding:7px 0 7px 10px;font-size:12px;color:#c9d1d9;line-height:1.5;border-left:3px solid #FF7F11;margin:5px 0;background:rgba(255,127,17,.04);border-radius:0 4px 4px 0;padding:7px 10px}
+.an-action b{color:#e6edf3}
+.analise-chips{display:flex;gap:10px;padding:10px 18px;background:#0d1117;border-top:1px solid #21262d;flex-wrap:wrap}
+.an-chip{background:#21262d;border:1px solid #30363d;border-radius:14px;padding:4px 12px;font-size:11px;color:#c9d1d9;display:inline-flex;align-items:center;gap:6px}
+.an-chip b{color:#e6edf3}
+.an-chip::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#58a6ff}
+.an-chip.adopt::before{background:#3DFF91}
+.an-chip.period::before{background:#F5C500}
+@media (max-width: 1100px){.analise-body{grid-template-columns:1fr}.analise-col{border-right:none;border-bottom:1px solid #21262d}.analise-col:last-child{border-bottom:none}}
 </style>
 </head>
 <body>
@@ -499,8 +551,8 @@ a{color:inherit;text-decoration:none}
     <div class="chart-inner"><canvas id="encEvolChart"></canvas></div>
   </div>
   <div style="background:#161b22;border:1px solid #21262d;border-top:none;border-radius:0 0 12px 12px;margin-bottom:20px;overflow-x:auto">
-    <table class="data-table" id="enc-evol-table" style="margin:0">
-      <thead><tr><th style="text-align:left;padding-left:16px">Safra</th><th>Encendidos</th><th>1° Encendido</th><th>Reencendidos</th><th>Convertidos</th><th style="padding-right:16px">% Adoption</th></tr></thead>
+    <table class="data-table evol-table" id="enc-evol-table" style="margin:0">
+      <thead id="enc-evol-thead"></thead>
       <tbody id="enc-evol-tbody"></tbody>
     </table>
   </div>
@@ -515,8 +567,35 @@ a{color:inherit;text-decoration:none}
   <div class="grupos-table-wrap">
     <table class="data-table" style="margin:0"><thead><tr><th style="text-align:left">Grupo</th><th>Encendidos</th><th>Convertidos</th><th>% Adoption</th></tr></thead><tbody id="enc-grupos-tbody"></tbody></table>
   </div>
-  <div class="section-hdr" style="margin-top:28px"><h2>Analise</h2></div>
-  <div class="insights-panel" id="enc-analise"><div class="ins-title">Insights — Mai/26 vs Abr/26</div><ul class="ins-list" id="enc-analise-list"></ul></div>
+  <div class="section-hdr" style="margin-top:28px"><h2>Analise &mdash; Encendidos</h2></div>
+  <div class="analise-card" id="enc-analise">
+    <div class="analise-hdr">
+      <div class="analise-title">Resumo Analitico &mdash; Encendidos</div>
+      <div class="analise-meta">
+        <span>Safra atual:<b id="an-cur">&mdash;</b></span>
+        <span>Anterior:<b id="an-prev">&mdash;</b></span>
+        <span>YoY:<b id="an-yoy">&mdash;</b></span>
+      </div>
+    </div>
+    <div class="analise-body">
+      <div class="analise-col">
+        <div class="analise-col-title"><span class="an-dot blue"></span>Performance &amp; Variacoes</div>
+        <div id="an-perf"></div>
+        <div class="analise-alert" id="an-alert"></div>
+      </div>
+      <div class="analise-col">
+        <div class="analise-col-title"><span class="an-dot green"></span>Oportunidades &amp; Hipoteses</div>
+        <div id="an-opp"></div>
+        <div class="an-insights-title">Insights</div>
+        <div id="an-insights"></div>
+      </div>
+      <div class="analise-col">
+        <div class="analise-col-title"><span class="an-dot orange"></span>Proximos Passos &amp; Acionaveis</div>
+        <div id="an-actions"></div>
+      </div>
+    </div>
+    <div class="analise-chips" id="an-chips"></div>
+  </div>
 </div>
 </div>
 
@@ -917,13 +996,13 @@ function fmtM(n){if(n>=1e6)return(n/1e6).toFixed(1).replace('.',',')+' M';if(n>=
 function adoptClass(p){return p>=10?'adopt-hi':p>=5?'adopt-md':'adopt-lo';}
 function pctShareDatasets(src,keys,colors,keyLabels){return keys.map(k=>{const nominal=ENC_MONTHS.map(m=>(src?.[encTC]?.[m]||{})[k]||0);const data=ENC_MONTHS.map(m=>{const obj=src?.[encTC]?.[m]||{};const tot=keys.reduce((s,kk)=>s+(obj[kk]||0),0);if(!tot)return 0;return+((obj[k]||0)/tot*100).toFixed(1);});return{label:keyLabels?keyLabels[keys.indexOf(k)]:k,data,nominal,backgroundColor:colors[k],borderColor:colors[k],borderWidth:0,stack:'pct'};});}
 const evolLabelsPlugin={id:'evolLabels',afterDatasetsDraw(chart){const {ctx,scales:{x,y},data}=chart;if(!x||!y)return;const ds=data.datasets.filter(d=>!d.hidden);const n=data.labels.length;for(let i=0;i<n;i++){let total=0;const segs=[];ds.forEach(d=>{const v=d.data[i]||0;if(v>0){segs.push({v});total+=v;}});if(total<=0)continue;const xP=x.getPixelForValue(i);const yT=y.getPixelForValue(total);ctx.save();ctx.font='bold 11px Segoe UI,Arial';ctx.fillStyle='#e6edf3';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fmtM(total),xP,yT-4);ctx.restore();let cum=0;segs.forEach(s=>{const yTop=y.getPixelForValue(total-cum);cum+=s.v;const yBot=y.getPixelForValue(total-cum);if(yBot-yTop>=18){const pct=(s.v/total*100).toFixed(1).replace('.',',')+'%';ctx.save();ctx.font='bold 10px Segoe UI,Arial';ctx.fillStyle='#0d1117';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pct,xP,(yTop+yBot)/2);ctx.restore();}});}}};
-const shareLabelsPlugin={id:'shareLabels',afterDatasetsDraw(chart){const {ctx,scales:{x,y},data}=chart;if(!x||!y)return;const totals=chart.options.plugins.shareLabels?.totals||[];const ds=data.datasets.filter(d=>!d.hidden);const n=data.labels.length;for(let i=0;i<n;i++){const tot=totals[i]||0;const xP=x.getPixelForValue(i);if(tot>0){const yT=y.getPixelForValue(100);ctx.save();ctx.font='bold 10px Segoe UI,Arial';ctx.fillStyle='#e6edf3';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fmtM(tot),xP,yT-3);ctx.restore();}let cum=0;ds.forEach(d=>{const v=d.data[i]||0;if(v<=0)return;const yTop=y.getPixelForValue(100-cum);cum+=v;const yBot=y.getPixelForValue(100-cum);const h=yBot-yTop;if(h<3)return;const fs=h>=14?10:h>=9?8:7;const txt=v.toFixed(1).replace('.',',')+'%';ctx.save();ctx.font='bold '+fs+'px Segoe UI,Arial';ctx.fillStyle='#0d1117';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,xP,(yTop+yBot)/2);ctx.restore();});}}};
+const shareLabelsPlugin={id:'shareLabels',afterDatasetsDraw(chart){const {ctx,scales:{x,y},data}=chart;if(!x||!y)return;const totals=chart.options.plugins.shareLabels?.totals||[];const ds=data.datasets.filter(d=>!d.hidden);const n=data.labels.length;for(let i=0;i<n;i++){const tot=totals[i]||0;const xP=x.getPixelForValue(i);if(tot>0){const yT=y.getPixelForValue(100);ctx.save();ctx.font='bold 11px Segoe UI,Arial';ctx.fillStyle='#e6edf3';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(fmtM(tot),xP,yT-4);ctx.restore();}let cum=0;ds.forEach(d=>{const v=d.data[i]||0;if(v<=0)return;const yTop=y.getPixelForValue(100-cum);cum+=v;const yBot=y.getPixelForValue(100-cum);const h=yBot-yTop;if(h<2)return;const fs=h>=18?11:h>=13?10:h>=9?8:h>=6?7:6;const txt=v.toFixed(1).replace('.',',')+'%';ctx.save();ctx.font='bold '+fs+'px Segoe UI,Arial';ctx.fillStyle='#0d1117';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,xP,(yTop+yBot)/2);ctx.restore();});}}};
 function makeShareChart(cid,src,keys,colors,kl){const ex=encCharts[cid];if(ex){ex.destroy();delete encCharts[cid];}const datasets=pctShareDatasets(src,keys,colors,kl);const totals=ENC_MONTHS.map(m=>{const obj=src?.[encTC]?.[m]||{};return keys.reduce((s,k)=>s+(obj[k]||0),0);});encCharts[cid]=new Chart(document.getElementById(cid),{type:'bar',data:{labels:ENC_LABELS,datasets},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},interaction:{mode:'index',intersect:false},layout:{padding:{top:18}},plugins:{shareLabels:{totals},legend:{display:true,position:'bottom',labels:{color:'#8b949e',font:{size:10},padding:8,boxWidth:10,boxHeight:10}},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',padding:8,cornerRadius:6,callbacks:{label(ctx){const nom=ctx.dataset.nominal?.[ctx.dataIndex]||0;return`  ${ctx.dataset.label}: ${String(ctx.raw).replace('.',',')}%   ·   ${fmt(nom)}`;}}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6e7681',font:{size:9},maxRotation:40},border:{color:'#21262d'}},y:{stacked:true,min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6e7681',font:{size:9},callback:v=>v+'%'},border:{color:'#21262d',dash:[3,3]}}}},plugins:[shareLabelsPlugin]});}
 function makeEvolChart(){const ex=encCharts.encEvolChart;if(ex){ex.destroy();delete encCharts.encEvolChart;}const pd=ENC_MONTHS.map(m=>ENC.monthly?.[encTC]?.[m]?.primo||0);const rd=ENC_MONTHS.map(m=>ENC.monthly?.[encTC]?.[m]?.reenc||0);encCharts.encEvolChart=new Chart(document.getElementById('encEvolChart'),{type:'bar',data:{labels:ENC_LABELS,datasets:[{label:'1° Encendido',data:pd,backgroundColor:'#58a6ff',borderWidth:0,borderRadius:2,stack:'s'},{label:'Reencendido',data:rd,backgroundColor:'rgba(61,255,145,0.55)',borderWidth:0,borderRadius:2,stack:'s'}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},interaction:{mode:'index',intersect:false},layout:{padding:{top:24}},plugins:{legend:{display:true,position:'top',labels:{color:'#8b949e',font:{size:11},padding:14,boxWidth:12,boxHeight:12}},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',padding:10,cornerRadius:8,callbacks:{label(ctx){return`  ${ctx.dataset.label}: ${fmt(ctx.raw)}`;},footer(items){return`  Total: ${fmt(items.reduce((s,i)=>s+i.raw,0))}`;}}}},scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6e7681',font:{size:10},maxRotation:30},border:{color:'#21262d'}},y:{stacked:true,beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#6e7681',font:{size:10},callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':v},border:{color:'#21262d',dash:[3,3]}}}},plugins:[evolLabelsPlugin]});}
-function renderEvolTable(){const tbody=document.getElementById('enc-evol-tbody');tbody.innerHTML='';ENC_MONTHS.forEach((m,i)=>{const row=ENC.monthly?.[encTC]?.[m]||{};const enc=row.enc||0,primo=row.primo||0,reenc=row.reenc||0,conv=row.conv||0;const pct=enc?conv/enc*100:0;const pcl=adoptClass(pct);const isLast=i===ENC_MONTHS.length-1;tbody.insertAdjacentHTML('beforeend',`<tr${isLast?' class="hl-row"':''}><td>${ENC_LABELS[i]}</td><td>${fmt(enc)}</td><td>${fmt(primo)}</td><td>${fmt(reenc)}</td><td>${fmt(conv)}</td><td><span class="adopt-pct ${pcl}">${pct.toFixed(1)}%</span></td></tr>`);});}
+function renderEvolTable(){const thead=document.getElementById('enc-evol-thead');const tbody=document.getElementById('enc-evol-tbody');const last=ENC_MONTHS.length-1;let h='<tr><th></th>';ENC_LABELS.forEach((lab,i)=>{const cls=i===last?' class="cur-col"':'';h+=`<th${cls}>${lab}</th>`;});h+='</tr>';thead.innerHTML=h;const metrics=[{key:'enc',label:'Encendidos',cls:'row-enc'},{key:'conv',label:'Convertidos',cls:'row-conv'},{key:'adopt',label:'% Adoption',cls:'row-adopt'}];let body='';metrics.forEach(mt=>{body+=`<tr class="${mt.cls}"><td>${mt.label}</td>`;ENC_MONTHS.forEach((m,i)=>{const row=ENC.monthly?.[encTC]?.[m]||{};const cls=i===last?' class="cur-col"':'';let val='';if(mt.key==='enc')val=fmt(row.enc||0);else if(mt.key==='conv')val=fmt(row.conv||0);else{const p=row.enc?(row.conv||0)/row.enc*100:0;val=p.toFixed(1).replace('.',',')+'%';}body+=`<td${cls}>${val}</td>`;});body+='</tr>';});tbody.innerHTML=body;}
 function renderGruposTable(){const tbody=document.getElementById('enc-grupos-tbody');tbody.innerHTML='';const lm=ENC_MONTHS[ENC_MONTHS.length-1];const gE=ENC.grupos?.[encTC]?.[lm]||{};const gC=ENC.grupos_conv?.[encTC]?.[lm]||{};const rows=Object.entries(gE).sort((a,b)=>b[1]-a[1]);rows.forEach(([g,enc])=>{const conv=gC[g]||0;const pct=enc?conv/enc*100:0;const pcl=adoptClass(pct);const label=g.length>55?g.slice(0,52)+'…':g;tbody.insertAdjacentHTML('beforeend',`<tr><td title="${g}">${label}</td><td>${fmt(enc)}</td><td>${fmt(conv)}</td><td><span class="adopt-pct ${pcl}">${pct.toFixed(1)}%</span></td></tr>`);});}
 function renderKPIs(){const lm=ENC_MONTHS[ENC_MONTHS.length-1],pm=ENC_MONTHS[ENC_MONTHS.length-2];const cur=ENC.monthly?.[encTC]?.[lm]||{},prev=ENC.monthly?.[encTC]?.[pm]||{};const labCur=ENC_LABELS[ENC_LABELS.length-1],labPrev=ENC_LABELS[ENC_LABELS.length-2];const enc=cur.enc||0,primo=cur.primo||0,reenc=cur.reenc||0,conv=cur.conv||0;const eP=prev.enc||0,pP=prev.primo||0,rP=prev.reenc||0,cP=prev.conv||0;const pct=enc?conv/enc*100:0,pctP=eP?cP/eP*100:0;const fmtNum=n=>n.toLocaleString('pt-BR');const fmtPct1=v=>v.toFixed(1).replace('.',',')+'%';const setDelta=(id,d,unit)=>{const el=document.getElementById(id);if(!el)return;const cls=d>=0?'delta-pos':'delta-neg';const arr=d>=0?'▲':'▼';const sign=unit==='pp'?(d>=0?'+':''):'';el.className='kpi-sub '+cls;el.textContent=arr+' '+sign+(unit==='pp'?d.toFixed(1).replace('.',','):Math.abs(d).toFixed(1).replace('.',','))+(unit==='pp'? ' pp':'%')+' vs '+labPrev;};document.getElementById('kpi-cur-label').textContent=labCur;document.getElementById('kpi-prev-label').textContent=labPrev;document.getElementById('enc-kpi-enc').textContent=fmtNum(enc);document.getElementById('enc-kpi-primo').textContent=fmtNum(primo);document.getElementById('enc-kpi-reenc').textContent=fmtNum(reenc);document.getElementById('enc-kpi-adopt').textContent=fmtPct1(pct);setDelta('enc-kpi-enc-sub',eP?(enc-eP)/eP*100:0);setDelta('enc-kpi-primo-sub',pP?(primo-pP)/pP*100:0);setDelta('enc-kpi-reenc-sub',rP?(reenc-rP)/rP*100:0);setDelta('enc-kpi-adopt-sub',pct-pctP,'pp');document.getElementById('enc-prev-enc').textContent=fmtNum(eP);document.getElementById('enc-prev-primo').textContent=fmtNum(pP);document.getElementById('enc-prev-reenc').textContent=fmtNum(rP);document.getElementById('enc-prev-adopt').textContent=fmtPct1(pctP);document.getElementById('enc-prev-enc-sub').textContent='';document.getElementById('enc-prev-primo-sub').textContent='';document.getElementById('enc-prev-reenc-sub').textContent='';document.getElementById('enc-prev-adopt-sub').textContent='Conv / Enc · '+labPrev;}
-function renderAnalise(){const ml=ENC_MONTHS.length-1,pi=ml-1;const lm=ENC_MONTHS[ml],pm=ENC_MONTHS[pi];const cur=ENC.monthly?.[encTC]?.[lm]||{},prev=ENC.monthly?.[encTC]?.[pm]||{};const enc=cur.enc||0,encP=prev.enc||0;const pct=enc?(cur.conv||0)/enc*100:0,pctP=encP?(prev.conv||0)/encP*100:0;const encD=(enc-encP)/encP*100,pctD=pct-pctP;const nc=ENC.nise?.[encTC]?.[lm]||{},np=ENC.nise?.[encTC]?.[pm]||{};const ntC=NISE_KEYS.reduce((s,k)=>s+(nc[k]||0),0),ntP=NISE_KEYS.reduce((s,k)=>s+(np[k]||0),0);let bN={k:'',d:0,pC:0,pP:0};NISE_KEYS.filter(k=>k!=='OUTROS').forEach(k=>{const pC=ntC?(nc[k]||0)/ntC*100:0,pP=ntP?(np[k]||0)/ntP*100:0;if(Math.abs(pC-pP)>Math.abs(bN.d))bN={k,d:pC-pP,pC,pP};});const items=[];const es=encD>=0?'pos':'neg',ei=encD>=0?'▲':'▼';items.push({cls:'ins-'+es,html:`${ei} Encendidos <b>${fmtM(enc)}</b> (${encD>=0?'+':''}${encD.toFixed(1)}% vs ${ENC_LABELS[pi]}) &mdash; de ${fmtM(encP)} para ${fmtM(enc)}`});const ps=pctD>=0?'pos':'neg',pi2=pctD>=0?'▲':'▼';items.push({cls:'ins-'+ps,html:`${pi2} % Adoption <b>${pct.toFixed(1)}%</b> (${pctD>=0?'+':''}${pctD.toFixed(1)}pp vs ${ENC_LABELS[pi]}) &mdash; de ${pctP.toFixed(1)}% para ${pct.toFixed(1)}%`});const priD=enc?(cur.primo||0)/enc*100:0,priDp=encP?(prev.primo||0)/encP*100:0,prDiff=priD-priDp;items.push({cls:'ins-neu',html:`&#9654; 1° Encendido: <b>${priD.toFixed(1)}%</b> do total (${prDiff>=0?'+':''}${prDiff.toFixed(1)}pp vs ${ENC_LABELS[pi]})`});if(bN.k){const ns=bN.d>=0?'pos':'neg',ni=bN.d>=0?'▲':'▼';items.push({cls:'ins-'+ns,html:`${ni} NISE <b>${bN.k}</b>: maior variacao de share (${bN.pP.toFixed(1)}% → ${bN.pC.toFixed(1)}%)`});}document.getElementById('enc-analise-list').innerHTML=items.map(it=>`<li class="ins-item ${it.cls}">${it.html}</li>`).join('');document.querySelector('#enc-analise .ins-title').textContent=`Insights — ${ENC_LABELS[ml]} vs ${ENC_LABELS[pi]}`;}
+function renderAnalise(){const ml=ENC_MONTHS.length-1,pi=ml-1,yi=0;const lm=ENC_MONTHS[ml],pm=ENC_MONTHS[pi];const cur=ENC.monthly?.[encTC]?.[lm]||{},prev=ENC.monthly?.[encTC]?.[pm]||{};const enc=cur.enc||0,encP=prev.enc||0,conv=cur.conv||0,convP=prev.conv||0;const pct=enc?conv/enc*100:0,pctP=encP?convP/encP*100:0;const encD=encP?(enc-encP)/encP*100:0,pctD=pct-pctP;const fmtPct=v=>v.toFixed(1).replace('.',',')+'%';const fmtPP=v=>(v>=0?'+':'')+v.toFixed(1).replace('.',',')+' pp';const arr=d=>d>=0?'▲':'▼';const cls=d=>d>=0?'pos':'neg';document.getElementById('an-cur').textContent=' '+ENC_LABELS[ml];document.getElementById('an-prev').textContent=' '+ENC_LABELS[pi];document.getElementById('an-yoy').textContent=' '+ENC_LABELS[yi];document.getElementById('an-perf').innerHTML=`<div class="an-perf-item"><span class="lbl">Encendidos ${ENC_LABELS[ml]}</span><span class="val">${fmt(enc)}<span class="delta ${cls(encD)}">${arr(encD)} ${Math.abs(encD).toFixed(1).replace('.',',')}%</span></span></div><div class="an-perf-item"><span class="lbl">% Adoption ${ENC_LABELS[ml]}</span><span class="val">${fmtPct(pct)}<span class="delta ${cls(pctD)}">${arr(pctD)} ${Math.abs(pctD).toFixed(1).replace('.',',')} pp</span></span></div>`;let alertHtml='Sem alertas criticos para '+ENC_LABELS[ml];let alertCls='';if(encD<=-10||pctD<=-2){alertHtml='&#9888; Queda critica detectada em metricas-chave';alertCls=' critical';}else if(encD<=-5||pctD<=-1){alertHtml='&#9888; Variacao negativa relevante em '+ENC_LABELS[ml];alertCls=' warning';}const alEl=document.getElementById('an-alert');alEl.className='analise-alert'+alertCls;alEl.innerHTML=alertHtml;const oppGain=Math.round(enc*0.01);document.getElementById('an-opp').innerHTML=`<div class="an-opportunity">&#128273; <b>Melhorar Adoption</b>: +1 pp na taxa = +${fmt(oppGain)} convertidos adicionais</div>`;const insightsHtml=[`<div class="an-insight ${cls(encD)}">Encendidos ${ENC_LABELS[ml]}: <b>${fmt(enc)}</b> (${encD>=0?'+':''}${encD.toFixed(1).replace('.',',')}% vs ${ENC_LABELS[pi]})</div>`,`<div class="an-insight ${cls(pctD)}">% Adoption: <b>${fmtPct(pct)}</b> (${fmtPP(pctD)} M/M)</div>`,`<div class="an-insight neu">1&ordm; Encendido: <b>${(enc?(cur.primo||0)/enc*100:0).toFixed(1).replace('.',',')}%</b> do total</div>`].join('');document.getElementById('an-insights').innerHTML=insightsHtml;const actions=[`Acompanhar <b>${ENC_LABELS[yi]}</b> para validar tendencia YoY`,`Analisar breakdown por <b>canal de aquisicao</b> e <b>NISE</b> para identificar concentracao`,`Revisar projecao mensal com base na curva de <b>ultimos 3 meses</b>`];document.getElementById('an-actions').innerHTML=actions.map(a=>`<div class="an-action">${a}</div>`).join('');document.getElementById('an-chips').innerHTML=`<span class="an-chip">M/M: <b>${encD>=0?'+':''}${encD.toFixed(1).replace('.',',')}%</b></span><span class="an-chip adopt">Adoption: <b>${fmtPct(pct)}</b></span><span class="an-chip period">Periodo: <b>${ENC_LABELS[1]} &rarr; ${ENC_LABELS[ml]}</b></span>`;}
 function updateSectionTag(){const el=document.getElementById('enc-section-tag');if(encTC==='1. TC Full'){el.className='section-tag tag-full';el.textContent='TC Full';}else{el.className='section-tag tag-micro';el.textContent='Micro TC';}}
 function initEncendidos(){renderKPIs();makeEvolChart();renderEvolTable();makeShareChart('encNiseChart',ENC.nise,NISE_KEYS,NISE_COLORS);makeShareChart('encAppChart',ENC.app,APP_KEYS,APP_COLORS,APP_LABELS);makeShareChart('encRatingChart',ENC.rating,RTG_KEYS,RTG_COLORS);makeShareChart('encBureauChart',ENC.bureau,BUR_KEYS,BUR_COLORS);renderGruposTable();renderAnalise();}
 function switchEncTC(tc){encTC=tc;document.getElementById('tcbtn-full').classList.toggle('active',tc==='1. TC Full');document.getElementById('tcbtn-micro').classList.toggle('active',tc==='2. Micro TC');updateSectionTag();renderKPIs();makeEvolChart();renderEvolTable();makeShareChart('encNiseChart',ENC.nise,NISE_KEYS,NISE_COLORS);makeShareChart('encAppChart',ENC.app,APP_KEYS,APP_COLORS,APP_LABELS);makeShareChart('encRatingChart',ENC.rating,RTG_KEYS,RTG_COLORS);makeShareChart('encBureauChart',ENC.bureau,BUR_KEYS,BUR_COLORS);renderGruposTable();renderAnalise();}
