@@ -47,7 +47,8 @@ MONTH_ABBR  = {1:'Jan',2:'Fev',3:'Mar',4:'Abr',5:'Mai',6:'Jun',
                7:'Jul',8:'Ago',9:'Set',10:'Out',11:'Nov',12:'Dez'}
 
 TC_KEYS  = ['TC Full', 'Micro TC']
-SG_ORDER = ['BAU', 'CC', 'Mar Aberto', 'Only Nav', 'Sellers']
+# Super-grupos que o SQL devolve (match com o JS index.html SG_ORDER)
+SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Aberto']
 
 def fmt(n):
     return f"{int(round(n)):,}".replace(',', '.')
