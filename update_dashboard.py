@@ -189,6 +189,12 @@ html = patch(html, r'(id="gt-total">)[^<]*(</div>)', (lambda m: f'{m.group(1)}{f
 today_label = f'{TODAY[8:10]}/{MONTH_ABBR[month]}/{TODAY[:4]}'
 html = patch(html, r'(Atualizado:\s*<span>)[^<]*(</span>)', (lambda m: f'{m.group(1)}{today_label}{m.group(2)}'), 'Atualizado')
 
+# todayStr do MONTHS_META do mes corrente: precisa apontar pra HOJE (TODAY)
+# Sem isso, o grafico Emissoes trata os dias anteriores ao todayStr antigo
+# como projecao em vez de real (bug: encendidos de ontem somem do grafico).
+cur_meta_pat = rf"('{year}-{month:02d}':\s*\{{[^}}]*?todayStr:')[^']+(')"
+html = patch(html, cur_meta_pat, (lambda m: f'{m.group(1)}{TODAY}{m.group(2)}'), f'todayStr {year}-{month:02d}')
+
 # KPI labels com data
 today_short = f'{TODAY[8:10]}/{MONTH_ABBR[month]}'
 last_short  = f'{ALL_DAYS[-1][8:10]}/{MONTH_ABBR[month]}'
