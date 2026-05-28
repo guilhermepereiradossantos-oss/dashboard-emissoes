@@ -7,9 +7,9 @@
 
 ## 1. Visao geral
 
-Dashboard dark-mode com 2 abas que compartilham um seletor de mes (botoes Abr/2026 / Mai/2026):
+Dashboard dark-mode com 3 abas que compartilham um seletor de mes (botoes Abr/2026 / Mai/2026):
 
-### Aba **Emissoes** (montada via Claude Code — `run_dashboard.py` original)
+### Aba **Projeção TCMP** (id `tab-projecao`; antiga "Emissoes" — montada via Claude Code — `run_dashboard.py` original)
 - KPIs TC Full e Micro TC: Realizado, Projecao hoje, Restante, Total Estimado, Plano vs MoM
 - Grafico stacked diario por super_grupo + linha de projecao
 - Filtros: super_grupos (BAU, EA, Sellers, Cuentas Canceladas, Only Nav, Mar Aberto)
@@ -17,7 +17,18 @@ Dashboard dark-mode com 2 abas que compartilham um seletor de mes (botoes Abr/20
 - Grand Total
 - **Fatores de Projecao** (dinamico via `renderFatores`)
 
-### Aba **Encendidos** (montada via Claude Cowork)
+### Aba **Emissões** (id `tab-emissoes`; convertidos via DT_CONV + janela 30d — adicionada 28/05/2026)
+- Toggle TC Full / Micro TC
+- KPI panels (Mes Atual vs Mes Anterior): 2 cards cada (Emissões nominal + % Adoption = emi/enc)
+- **Evolucao por Safra**: barra unica Emissões/mes (8 meses, single-color verde) + tabela transposta (Encendidos / Emissões / % Adoption)
+- **Evolucao Diaria**: barras Emissões/dia (Abr/26 + Mai/26 cobertos — outros meses caem em placeholder)
+- **Share por Safra**: 4 graficos 100%-stacked (NISE / App Ativo / Rating TC / Bureau) — universo = convertidos
+- **Emissões por Grupo Especial — Share por Safra**: top 15 grupos
+- **Resumo Analitico — Emissões**: performance, alertas, oportunidades, insights, acoes, chips
+
+Filtros aplicados pela query base: `FLAG_CONVERSAO='1. Convertido'` + `DATE_DIFF(DT_CONV, DT_ENCENDIDO, DAY) <= 30`.
+
+### Aba **Encendidos** (id `tab-encendidos`; montada via Claude Cowork)
 - KPI panels lado a lado: Mes Atual vs Mes Anterior (4 cards cada: Encendidos / 1o Encendido / Reencendidos / % Adoption)
 - **Evolucao por Safra**: barras stacked (1o vs Reenc) + tabela transposta (Encendidos / Convertidos / % Adoption em 8 meses)
 - **Evolucao Diaria**: barras enc/dia + linhas canc-risco/dia e conv/dia (so para o mes corrente; placeholder em outros meses)
@@ -120,6 +131,9 @@ Quando vier um plano novo, editar essa estrutura no `index.html` direto.
 
 ### 4.6 Aba Encendidos é "mes-aware"
 Variavel global `ACTIVE_ENC_MONTH`. Cada render (`renderKPIs`, `renderEvolTable`, `renderGruposTable`, `renderAnalise`, `makeDailyChart`) chama `encIdx()` que retorna `{ml, pi, yi}` dependentes de `ACTIVE_ENC_MONTH`. Quando setMonth executa, propaga e chama todos os renders.
+
+### 4.7 Aba Emissões é "mes-aware" (espelha 4.6)
+Variavel global `ACTIVE_EMI_MONTH`. Renders: `renderEmiKPIs`, `makeEmiEvolChart`, `renderEmiEvolTable`, `makeEmiDailyChart`, `makeEmiShareChart`, `renderEmiGruposTable`, `renderEmiAnalise`. Helper `emiIdx()`. `setMonth` propaga para `ACTIVE_EMI_MONTH` quando o mes esta em `EMI_MONTHS`. Os 8 meses sao os mesmos de ENC. Dados em `const EMI = {...}` (snapshot, refresh sob demanda — mesma logica de ENC).
 
 ---
 
