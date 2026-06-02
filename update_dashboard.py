@@ -117,15 +117,29 @@ for tc in TC_KEYS:
     )
 
 # ============================================================
-# 5. MONTHS_HIST (de proj_historico de ontem) — para a linha tracejada
+# 5. MONTHS_ACTUAL / MONTHS_PROJ — separado por mes
 # ============================================================
-months_actual_jsobj = {}  # {'2026-04': {...}, '2026-05': {...}}
+# SQL `past` agora retorna actuals do mes atual + mes anterior (backfill
+# automatico das ultimas datas do mes anterior — robusto a falhas no fim de mes).
+prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
+prev_key = f'{prev_year}-{prev_month:02d}'
+cur_key  = f'{year}-{month:02d}'
 
-# Mes anterior (-1 mes) — pega ENC histórico do BQ separadamente, ja temos em actual_data se rodou no inicio do mes
-# Pra simplificar: keep apenas o mes corrente em actual_data; mes anterior fica no que ja estava no HTML
-months_actual_jsobj[f'{year}-{month:02d}'] = {tc: {sg: dict(actual_data[tc][sg]) for sg in actual_data[tc]} for tc in TC_KEYS}
+def _slice_actuals(prefix):
+    out = {}
+    for tc in TC_KEYS:
+        out[tc] = {}
+        for sg in actual_data[tc]:
+            d = {dia: v for dia, v in actual_data[tc][sg].items() if dia.startswith(prefix)}
+            if d:
+                out[tc][sg] = d
+    return out
 
-months_proj_jsobj = {f'{year}-{month:02d}': {tc: {sg: dict(proj_data[tc][sg]) for sg in proj_data[tc]} for tc in TC_KEYS}}
+months_actual_jsobj = {
+    cur_key:  _slice_actuals(cur_key),
+    prev_key: _slice_actuals(prev_key),
+}
+months_proj_jsobj = {cur_key: {tc: {sg: dict(proj_data[tc][sg]) for sg in proj_data[tc]} for tc in TC_KEYS}}
 
 # ============================================================
 # 6. PATCH index.html (in-place)
@@ -145,11 +159,9 @@ def patch(html, pattern, replacement, label, flags=0):
 # Helper pra escapar barras invertidas em replacements
 def lit(s): return lambda m: s
 
-cur_key = f'{year}-{month:02d}'
-
-# Lemos o existing MONTHS_ACTUAL e MONTHS_PROJ e atualizamos APENAS o mes corrente,
+# Lemos o existing MONTHS_ACTUAL e MONTHS_PROJ e atualizamos a chave dada,
 # preservando dados de meses anteriores.
-def update_months_const(html, var_name, new_for_cur, cur_key):
+def update_months_const(html, var_name, new_for_key, key):
     m = re.search(rf"const {var_name}\s*=\s*(\{{[^;]+?\}})\s*;", html)
     if not m:
         print(f'  WARN: {var_name} not found')
@@ -160,14 +172,120 @@ def update_months_const(html, var_name, new_for_cur, cur_key):
     except Exception as e:
         print(f'  WARN: cant parse {var_name}: {e}')
         return html
-    cur_obj[cur_key] = new_for_cur
+    cur_obj[key] = new_for_key
     new_str = f"const {var_name}={json.dumps(cur_obj, ensure_ascii=False)};"
     return html.replace(m.group(0), new_str)
 
-html = update_months_const(html, 'MONTHS_ACTUAL', months_actual_jsobj[cur_key], cur_key)
-print('  OK   MONTHS_ACTUAL')
+html = update_months_const(html, 'MONTHS_ACTUAL', months_actual_jsobj[cur_key],  cur_key)
+print(f'  OK   MONTHS_ACTUAL[{cur_key}]')
+# Backfill do mes anterior — pega os ultimos dias que o scheduler perdeu
+if months_actual_jsobj[prev_key] and any(months_actual_jsobj[prev_key][tc] for tc in TC_KEYS):
+    html = update_months_const(html, 'MONTHS_ACTUAL', months_actual_jsobj[prev_key], prev_key)
+    print(f'  OK   MONTHS_ACTUAL[{prev_key}] (backfill)')
 html = update_months_const(html, 'MONTHS_PROJ', months_proj_jsobj[cur_key], cur_key)
-print('  OK   MONTHS_PROJ')
+print(f'  OK   MONTHS_PROJ[{cur_key}]')
+
+# ============================================================
+# 6a. BOOTSTRAP de novo mes (MONTHS_META + MONTHS_HIST + botao + header)
+# ============================================================
+cur_label = f'{MONTH_ABBR[month]}/{year}'
+
+def bootstrap_months_meta(html, key, yr, mo):
+    """Se MONTHS_META[key] nao existe, insere a entry no bloco."""
+    block = re.search(r"const MONTHS_META\s*=\s*\{[^;]+?\};", html, flags=re.S)
+    if not block:
+        print('  WARN: MONTHS_META block not found')
+        return html
+    if re.search(rf"'{key}'\s*:", block.group(0)):
+        return html
+    _, n = monthrange(yr, mo)
+    days = [date(yr, mo, d).isoformat() for d in range(1, n + 1)]
+    labels = [f"{d[8:10]}/{MONTH_ABBR[mo]}" for d in days]
+    entry = ("  '{k}': {{ label:'{lbl}', allDays:{days}, labels:{labels}, "
+             "todayStr:'{today}', hasPrev:true }}").format(
+        k=key, lbl=f'{MONTH_ABBR[mo]}/{yr}',
+        days=json.dumps(days), labels=json.dumps(labels), today=TODAY)
+    # Insere logo antes do `};` que fecha o objeto MONTHS_META
+    new_block = re.sub(r"(\n\};)$", f",\n{entry}\\1", block.group(0), count=1)
+    if new_block == block.group(0):
+        print(f'  WARN: cant bootstrap MONTHS_META[{key}]')
+        return html
+    print(f'  OK   MONTHS_META[{key}] (bootstrap)')
+    return html.replace(block.group(0), new_block)
+
+def bootstrap_months_hist(html, key):
+    """Garante MONTHS_HIST[key] existe (mesmo vazio) — evita crash em setMonth()."""
+    if re.search(rf"'{key}'\s*:", html):
+        # MONTHS_HIST usa aspas simples; o regex generico ja casa com qualquer ocorrencia.
+        # Especifico: procurar no escopo do const MONTHS_HIST.
+        pass
+    m = re.search(r"const MONTHS_HIST\s*=\s*\{[^;]+?\};", html, flags=re.S)
+    if not m:
+        print('  WARN: MONTHS_HIST not found')
+        return html
+    if re.search(rf"'{key}'\s*:", m.group(0)):
+        return html
+    new_block = m.group(0).replace('};', f", '{key}': {{}} }};")
+    print(f'  OK   MONTHS_HIST[{key}] (bootstrap)')
+    return html.replace(m.group(0), new_block)
+
+def bootstrap_month_button(html, key, label):
+    """Adiciona botao do mes na .month-selector e troca o `active` pra ele."""
+    if f'data-month="{key}"' in html:
+        # Botao ja existe — apenas garante que ele e o unico com `active`
+        html = re.sub(r'class="month-btn active"', 'class="month-btn"', html)
+        html = re.sub(
+            rf'class="month-btn"(\s+data-month="{key}")',
+            rf'class="month-btn active"\1',
+            html, count=1)
+        print(f'  OK   month-btn[{key}] (already exists, marked active)')
+        return html
+    # Remove active de qualquer botao existente
+    html = re.sub(r'class="month-btn active"', 'class="month-btn"', html)
+    # Insere novo botao antes do </div> da month-selector
+    new_btn = f'      <button class="month-btn active" data-month="{key}" onclick="setMonth(\'{key}\')">{label}</button>\n'
+    new_html, n_sub = re.subn(
+        r'(<div class="month-selector">[\s\S]*?)(\n\s*</div>)',
+        lambda m: f"{m.group(1)}\n{new_btn}{m.group(2)}",
+        html, count=1)
+    if n_sub:
+        print(f'  OK   month-btn[{key}] (bootstrap)')
+        return new_html
+    print(f'  WARN: cant insert month-btn[{key}]')
+    return html
+
+def update_active_month_state(html, key, label):
+    """Atualiza let ACTIVE_MONTH e o header 'Mes vigente: XXX/YYYY'."""
+    html, n1 = re.subn(r"(let\s+ACTIVE_MONTH\s*=\s*')[^']+(')", rf"\g<1>{key}\g<2>", html, count=1)
+    if n1:
+        print(f'  OK   ACTIVE_MONTH={key}')
+    html, n2 = re.subn(r'(Mes vigente:\s*)[^&<]+', rf'\g<1>{label} ', html, count=1)
+    if n2:
+        print(f'  OK   header (Mes vigente: {label})')
+    return html
+
+html = bootstrap_months_meta(html, cur_key, year, month)
+html = bootstrap_months_hist(html, cur_key)
+html = bootstrap_month_button(html, cur_key, cur_label)
+html = update_active_month_state(html, cur_key, cur_label)
+
+# Atualiza todayStr do mes anterior pra dia 1 do mes corrente.
+# Chart JS usa `d < TODAY` (estrito) pra classificar real vs projecao;
+# pondo todayStr no dia 1 do mes seguinte garante que TODOS os dias do mes
+# anterior (incluindo o ultimo) sejam tratados como real.
+prev_close_day = date(year, month, 1).isoformat()
+prev_close_pat = rf"('{prev_key}':\s*\{{[^}}]*?todayStr:')[^']+(')"
+html, n_close = re.subn(prev_close_pat, lambda m: f"{m.group(1)}{prev_close_day}{m.group(2)}", html, count=1)
+if n_close:
+    print(f'  OK   todayStr[{prev_key}] -> {prev_close_day} (mes fechado)')
+
+# Zera MONTHS_PROJ do mes anterior (mes ja fechado, projecao nao serve mais).
+# Sem isso, alguns elementos podem renderizar a projecao velha em ferramentas
+# que iteram tanto ACTUAL quanto PROJ.
+html = update_months_const(html, 'MONTHS_PROJ',
+                           {tc: {sg: {} for sg in SG_ORDER} for tc in TC_KEYS},
+                           prev_key)
+print(f'  OK   MONTHS_PROJ[{prev_key}] cleared (mes fechado)')
 
 # KPIs
 for tc, slug in [('TC Full','full'), ('Micro TC','micro')]:
@@ -205,7 +323,7 @@ html = patch(html, r'(<div class="kpi-sub">ate )[^<]*(</div>)', (lambda m: f'{m.
 for slug, tc in [('full','TC Full'),('micro','Micro TC')]:
     pct = kpis[tc]['pct_real']
     # patch o kpi-sub seguinte ao kv-real-{slug}
-    pat = rf'(id="kv-real-{slug}">[^<]*</div><div class="kpi-sub">)[^<]*(</div>)'
+    pat = rf'(id="kv-real-{slug}">[^<]*</div>\s*<div class="kpi-sub">)[^<]*(</div>)'
     html = patch(html, pat, (lambda m, v=f'{pct}% do mes concluido': f'{m.group(1)}{v}{m.group(2)}'), f'pct-real-{slug}')
 
 HTML_FILE.write_text(html, encoding='utf-8')
