@@ -165,41 +165,77 @@ april_last_day AS (
   ) WHERE rn = 1
 ),
 
--- Dia do pico de conversoes em abril (maior volume do mes)
-april_spike AS (
-  SELECT FLAG_TC, dia_num AS spike_day
-  FROM (
-    SELECT FLAG_TC, dia_num, ROW_NUMBER() OVER (PARTITION BY FLAG_TC ORDER BY conv DESC) AS rn
-    FROM april_daily_bcp
+-- ==========================================================================
+-- SPIKE ALIGNMENT (refeito 03/06/2026)
+-- Objetivo: replicar shape do mes anterior, alinhado pelo pico esperado do
+-- mes corrente. Pico esperado vem de auto-detect (media dos 2 ultimos meses)
+-- ou override de evento (EA drops planejados, etc.).
+-- ==========================================================================
+
+-- CONFIG: overrides de pico para eventos especiais.
+-- Edite essa CTE quando souber a data exata do EA drop ou similar.
+-- Sem override = auto-detect (media dos 2 meses anteriores).
+spike_override AS (
+  SELECT * FROM UNNEST([
+    STRUCT('2026-06' AS ym, '1. TC Full'  AS FLAG_TC, 11 AS forced_peak_day),
+    STRUCT('2026-06',       '2. Micro TC',            11)
+  ])
+),
+
+-- Volumes diarios (BCP, ultimos 2 meses)
+hist_daily AS (
+  SELECT
+    CASE WHEN CCARD_GLOBAL_LIMIT_AMT_LC <= 300 THEN '2. Micro TC' ELSE '1. TC Full' END AS FLAG_TC,
+    FORMAT_DATE('%Y-%m', DATE(CCARD_PROP_UPDATE_DT)) AS ym,
+    EXTRACT(DAY FROM DATE(CCARD_PROP_UPDATE_DT)) AS dia_num,
+    COUNT(DISTINCT CUS_CUST_ID) AS conv
+  FROM `meli-bi-data.WHOWNER.BT_CCARD_PROPOSAL`
+  WHERE SIT_SITE_ID='MLB' AND CCARD_PROP_STATUS='accepted'
+    AND DATE(CCARD_PROP_UPDATE_DT) >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 2 MONTH), MONTH)
+    AND DATE(CCARD_PROP_UPDATE_DT) <  DATE_TRUNC(CURRENT_DATE(), MONTH)
+  GROUP BY 1,2,3
+),
+
+-- Pico (dia do mes) dos 2 meses anteriores
+hist_spikes AS (
+  SELECT FLAG_TC, ym, dia_num AS dia_pico FROM (
+    SELECT FLAG_TC, ym, dia_num,
+      ROW_NUMBER() OVER (PARTITION BY FLAG_TC, ym ORDER BY conv DESC) AS rn
+    FROM hist_daily
   ) WHERE rn = 1
 ),
 
--- Dia do pico de conversoes em maio (maior volume realizado ate hoje)
-may_spike AS (
-  SELECT FLAG_TC, spike_day
-  FROM (
-    SELECT FLAG_TC, spike_day, conv,
+-- Pico esperado do mes corrente: override > media dos 2 ultimos meses
+expected_cur_spike AS (
+  SELECT
+    h.FLAG_TC,
+    COALESCE(MAX(o.forced_peak_day), CAST(ROUND(AVG(h.dia_pico)) AS INT64)) AS spike_day
+  FROM hist_spikes h
+  CROSS JOIN datas d
+  LEFT JOIN spike_override o
+    ON o.FLAG_TC = h.FLAG_TC
+   AND o.ym = FORMAT_DATE('%Y-%m', d.data_hoje)
+  GROUP BY 1
+),
+
+-- Pico do mes IMEDIATAMENTE anterior, usando o dado SUAVIZADO (que e
+-- o que o proj_template efetivamente aplica). Garante que o pico do
+-- shape alinhado caia exatamente no expected_cur_spike.
+prev_month_spike AS (
+  SELECT FLAG_TC, dia_num AS spike_day FROM (
+    SELECT FLAG_TC, dia_num, conv,
       ROW_NUMBER() OVER (PARTITION BY FLAG_TC ORDER BY conv DESC) AS rn
-    FROM (
-      SELECT
-        CASE WHEN CCARD_GLOBAL_LIMIT_AMT_LC <= 300 THEN '2. Micro TC' ELSE '1. TC Full' END AS FLAG_TC,
-        EXTRACT(DAY FROM DATE(CCARD_PROP_UPDATE_DT)) AS spike_day,
-        COUNT(DISTINCT CUS_CUST_ID) AS conv
-      FROM `meli-bi-data.WHOWNER.BT_CCARD_PROPOSAL`
-      WHERE SIT_SITE_ID = 'MLB' AND CCARD_PROP_STATUS = 'accepted'
-        AND DATE_TRUNC(DATE(CCARD_PROP_UPDATE_DT), MONTH) = DATE_TRUNC(CURRENT_DATE(), MONTH)
-        AND DATE(CCARD_PROP_UPDATE_DT) < CURRENT_DATE()
-      GROUP BY 1, 2
-    )
+    FROM april_daily_smooth
   ) WHERE rn = 1
 ),
 
--- offset_dias = spike_abril - spike_maio
--- Para maio dia k: usar abril dia (k + offset_dias)
--- Ex: spike_maio=7, spike_abril=10 → offset=+3 → maio dia 11 = abril dia 14 (pos-pico)
+-- offset = spike_mes_anterior - spike_esperado_mes_corrente
+-- Pra mes corrente dia k: olha mes anterior dia (k + offset)
+-- Ex: prev_spike=7, expected_cur_spike=11 -> offset=-4
+--     -> mes corrente dia 11 = mes anterior dia 7 (o pico)
 spike_offset AS (
-  SELECT a.FLAG_TC, (a.spike_day - m.spike_day) AS offset_dias
-  FROM april_spike a JOIN may_spike m USING(FLAG_TC)
+  SELECT p.FLAG_TC, (p.spike_day - e.spike_day) AS offset_dias
+  FROM prev_month_spike p JOIN expected_cur_spike e USING(FLAG_TC)
 ),
 
 -- Projecao alinhada pelo pico: replica o shape de abril pos-encendimento
@@ -321,7 +357,14 @@ ma_proj AS (
   FROM ma_emit_c m CROSS JOIN future_grid f
 ),
 
-past AS (
+-- ==========================================================================
+-- past = realizados ate ontem.
+-- Fonte primaria: base_projecao_emissao_igor (tem quebra por super_grupo)
+-- Fallback: BCP (BT_CCARD_PROPOSAL) pra dias onde base_projecao estah
+-- desatualizada/incompleta (volume < 50% do BCP do mesmo dia).
+-- Pra dias fallback, tudo entra como 'BAU' (BCP nao tem dim de super_grupo).
+-- ==========================================================================
+past_proj AS (
   SELECT
     FLAG_TC,
     CASE
@@ -339,6 +382,38 @@ past AS (
     AND DT_CONV >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
     AND DT_CONV <  CURRENT_DATE()
   GROUP BY ALL
+),
+past_proj_day_tot AS (
+  SELECT FLAG_TC, dia, SUM(total) AS proj_total FROM past_proj GROUP BY 1, 2
+),
+past_bcp_day_tot AS (
+  SELECT
+    CASE WHEN CCARD_GLOBAL_LIMIT_AMT_LC <= 300 THEN '2. Micro TC' ELSE '1. TC Full' END AS FLAG_TC,
+    DATE(CCARD_PROP_UPDATE_DT) AS dia,
+    COUNT(*) AS bcp_total
+  FROM `meli-bi-data.WHOWNER.BT_CCARD_PROPOSAL`
+  WHERE SIT_SITE_ID='MLB' AND CCARD_PROP_STATUS='accepted'
+    AND DATE(CCARD_PROP_UPDATE_DT) >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+    AND DATE(CCARD_PROP_UPDATE_DT) <  CURRENT_DATE()
+  GROUP BY 1, 2
+),
+-- Dias stale = base_projecao tem < 50% do volume do BCP (atrasada/incompleta)
+stale_days AS (
+  SELECT b.FLAG_TC, b.dia, b.bcp_total
+  FROM past_bcp_day_tot b
+  LEFT JOIN past_proj_day_tot p USING (FLAG_TC, dia)
+  WHERE COALESCE(p.proj_total, 0) < 0.5 * b.bcp_total
+),
+past AS (
+  -- Dias OK (base_projecao saudavel): mantem quebra por super_grupo
+  SELECT p.FLAG_TC, p.super_grupo, p.dia, p.total
+  FROM past_proj p
+  LEFT JOIN stale_days s USING (FLAG_TC, dia)
+  WHERE s.dia IS NULL
+  UNION ALL
+  -- Dias stale: usa total BCP, tudo em BAU (sem quebra possivel)
+  SELECT FLAG_TC, 'BAU' AS super_grupo, dia, bcp_total AS total
+  FROM stale_days
 ),
 
 -- Ajuste manual: -15k TC Full distribuidos nos dias restantes do mes
