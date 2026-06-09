@@ -135,6 +135,22 @@ Variavel global `ACTIVE_ENC_MONTH`. Cada render (`renderKPIs`, `renderEvolTable`
 ### 4.7 Aba Emissões é "mes-aware" (espelha 4.6)
 Variavel global `ACTIVE_EMI_MONTH`. Renders: `renderEmiKPIs`, `makeEmiEvolChart`, `renderEmiEvolTable`, `makeEmiDailyChart`, `makeEmiShareChart`, `renderEmiGruposTable`, `renderEmiAnalise`. Helper `emiIdx()`. `setMonth` propaga para `ACTIVE_EMI_MONTH` quando o mes esta em `EMI_MONTHS`. Os 8 meses sao os mesmos de ENC. Dados em `const EMI = {...}` (snapshot, refresh sob demanda — mesma logica de ENC).
 
+### 4.8 SEMPRE usar `SUM(QTDE)` na base_projecao_emissao_igor
+A coluna QTDE eh multiplicador de cards na linha (linhas agregadas). `COUNT(*)` subestima volumes em ~14% (multiplicador medio ~1,16x). Padrao correto em qualquer query: `SUM(QTDE)`. O `dashboard_sg.sql` (Projecao TCMP) ja segue isso; o snapshot EMI foi corrigido em Jun/26 (ver bug #9).
+
+### 4.9 Adoption da aba Emissões usa janela dinâmica
+Numerador = conv com `DT_CONV BETWEEN DT_ENCENDIDO AND cutoff`, onde cutoff = dia anterior ao proximo encendido principal (pico do mes seguinte). Cutoffs hardcoded em `_emi_query_v3.sql` (CTE `cutoffs`). Quando virar o mes, atualizar com a data do proximo encendido planejado.
+
+Cutoffs ativos (descobertos via query — dia anterior ao pico de cada mes):
+- Mai/25 → 04/06/2025
+- Nov/25 → 03/12/2025
+- Dez/25 → 07/01/2026
+- Jan/26 → 06/02/2026
+- Fev/26 → 04/03/2026
+- Mar/26 → 09/04/2026
+- Abr/26 → 06/05/2026
+- Mai/26 → 09/06/2026
+
 ---
 
 ## 5. Bugs historicos (LICOES APRENDIDAS)
@@ -149,6 +165,7 @@ Variavel global `ACTIVE_EMI_MONTH`. Renders: `renderEmiKPIs`, `makeEmiEvolChart`
 | 6 | Encendidos de ontem somiam do grafico | `todayStr` ficou estatico em ontem | Patch automatico no update_dashboard.py (ver §4.2) |
 | 7 | Cuentas Canceladas alert era falso-positivo | Estava lendo do grupo BAU-CUENTAS CANCELADAS (segmentacao) em vez de status_cancelada_no_mes_de_encendido (cancelamento real pelo risco) | Refactor renderAnalise pra usar funnel.canc_mes |
 | 8 | Fatores de Projecao repetia entre meses | Texto patcheado estatico no HTML | renderFatores dinamico via JS, calcula a partir de MONTHS_ACTUAL + PLAN_BY_MONTH |
+| 9 | EMI tab subestimava volumes ~14% e adoption inflado (3,65% vs real 2,97% Mai/26) | (a) Agente BQ usou `COUNT(*)` em vez de `SUM(QTDE)` — `base_projecao_emissao_igor` agrega cards via QTDE; (b) Adoption usava janela 30d fixa enquanto Tableau usa janela dinamica ate vespera do proximo encendido | `SUM(QTDE)` em todas agregacoes + CTE de cutoffs hardcoded por mes (ver §4.8 e §4.9). Query em `_emi_query_v3.sql`, builder em `_build_emi_v3.py` |
 
 ---
 
