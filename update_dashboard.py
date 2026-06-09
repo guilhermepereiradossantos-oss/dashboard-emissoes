@@ -32,7 +32,8 @@ from pathlib import Path
 # ============================================================
 BPY        = r'C:\Users\GPEREIRADOSS\AppData\Local\Google\Cloud SDK\google-cloud-sdk\platform\bundledpython\python.exe'
 BQ_CMD     = r'C:\Users\GPEREIRADOSS\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\bq.cmd'
-PROJECT_ID = 'meli-bi-data'
+# Project usado pra QUERY billing (evita quota issues). A tabela continua em meli-bi-data.
+PROJECT_ID = 'ddme000725-g9rtvpqr28z-furyid'
 REPO       = Path(__file__).resolve().parent
 SQL_FILE   = REPO / 'dashboard_sg.sql'
 HIST_FILE  = REPO / 'proj_historico.json'
