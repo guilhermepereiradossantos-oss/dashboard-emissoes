@@ -99,6 +99,31 @@ historico[TODAY] = {tc: {sg: dict(proj_data[tc][sg]) for sg in proj_data[tc]} fo
 HIST_FILE.write_text(json.dumps(historico, ensure_ascii=False, indent=2), encoding='utf-8')
 
 # ============================================================
+# 3b. MONTHS_HIST — best-effort por dia, sem gaps
+# ============================================================
+# Pra cada dia D do mes filtrado, busca o snapshot mais recente (com snap_date<=D)
+# que tenha projecao pra D. Garante que a linha laranja do chart cobre TODOS os
+# dias mesmo quando o scheduler falhou em dias intermediarios (ex: 30/05 e 31/05
+# nao tem snapshot do proprio dia mas 29/05 ja projetou esses dias).
+def build_months_hist_entry(historico, ym_filter):
+    snap_dates_sorted = sorted(historico.keys(), reverse=True)
+    out = {tc: {} for tc in TC_KEYS}
+    yr, mo = int(ym_filter[:4]), int(ym_filter[5:7])
+    _, nd = monthrange(yr, mo)
+    days_in_month = [date(yr, mo, d).isoformat() for d in range(1, nd + 1)]
+    for tc in TC_KEYS:
+        for D in days_in_month:
+            for snap_date in snap_dates_sorted:
+                if snap_date > D:
+                    continue
+                snap = historico.get(snap_date, {})
+                tot = sum(snap.get(tc, {}).get(sg, {}).get(D, 0) for sg in snap.get(tc, {}))
+                if tot > 0:
+                    out[tc][D] = int(round(tot))
+                    break
+    return out
+
+# ============================================================
 # 4. KPIs
 # ============================================================
 actual_days = [d for d in ALL_DAYS if d < TODAY]
@@ -140,6 +165,10 @@ months_actual_jsobj = {
     prev_key: _slice_actuals(prev_key),
 }
 months_proj_jsobj = {cur_key: {tc: {sg: dict(proj_data[tc][sg]) for sg in proj_data[tc]} for tc in TC_KEYS}}
+months_hist_jsobj = {
+    cur_key:  build_months_hist_entry(historico, cur_key),
+    prev_key: build_months_hist_entry(historico, prev_key),
+}
 
 # ============================================================
 # 6. PATCH index.html (in-place)
@@ -185,6 +214,13 @@ if months_actual_jsobj[prev_key] and any(months_actual_jsobj[prev_key][tc] for t
 html = update_months_const(html, 'MONTHS_PROJ', months_proj_jsobj[cur_key], cur_key)
 print(f'  OK   MONTHS_PROJ[{cur_key}]')
 
+# MONTHS_HIST: linha laranja da projecao historica
+html = update_months_const(html, 'MONTHS_HIST', months_hist_jsobj[cur_key], cur_key)
+print(f'  OK   MONTHS_HIST[{cur_key}]')
+if any(months_hist_jsobj[prev_key][tc] for tc in TC_KEYS):
+    html = update_months_const(html, 'MONTHS_HIST', months_hist_jsobj[prev_key], prev_key)
+    print(f'  OK   MONTHS_HIST[{prev_key}] (backfill)')
+
 # ============================================================
 # 6a. BOOTSTRAP de novo mes (MONTHS_META + MONTHS_HIST + botao + header)
 # ============================================================
@@ -214,17 +250,16 @@ def bootstrap_months_meta(html, key, yr, mo):
     return html.replace(block.group(0), new_block)
 
 def bootstrap_months_hist(html, key):
-    """Garante MONTHS_HIST[key] existe (mesmo vazio) — evita crash em setMonth()."""
-    if re.search(rf"'{key}'\s*:", html):
-        # MONTHS_HIST usa aspas simples; o regex generico ja casa com qualquer ocorrencia.
-        # Especifico: procurar no escopo do const MONTHS_HIST.
-        pass
+    """Garante MONTHS_HIST[key] existe (mesmo vazio) — evita crash em setMonth().
+
+    Idempotente: checa entry com aspas simples OU duplas.
+    """
     m = re.search(r"const MONTHS_HIST\s*=\s*\{[^;]+?\};", html, flags=re.S)
     if not m:
         print('  WARN: MONTHS_HIST not found')
         return html
-    if re.search(rf"'{key}'\s*:", m.group(0)):
-        return html
+    if re.search(rf'["\']{key}["\']\s*:', m.group(0)):
+        return html  # ja existe (com aspas simples ou duplas)
     new_block = m.group(0).replace('};', f", '{key}': {{}} }};")
     print(f'  OK   MONTHS_HIST[{key}] (bootstrap)')
     return html.replace(m.group(0), new_block)
