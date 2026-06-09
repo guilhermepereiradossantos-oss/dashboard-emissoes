@@ -359,10 +359,13 @@ ma_proj AS (
 
 -- ==========================================================================
 -- past = realizados ate ontem.
--- Fonte primaria: base_projecao_emissao_igor (tem quebra por super_grupo)
--- Fallback: BCP (BT_CCARD_PROPOSAL) pra dias onde base_projecao estah
--- desatualizada/incompleta (volume < 50% do BCP do mesmo dia).
--- Pra dias fallback, tudo entra como 'BAU' (BCP nao tem dim de super_grupo).
+-- Fonte primaria: base_projecao_emissao_igor (tem quebra por super_grupo).
+-- TEMPORARIO (09/06/2026): o pipeline do Igor falha desde 04/06 com policy
+-- tag error em BT_REG_MONEY_PLUS.REG_IDENTIFICATION_NUMBER. Enquanto nao
+-- temos base propria, fallback pra BCP (BT_CCARD_PROPOSAL) nos dias onde
+-- base_projecao tem < 50% do volume do BCP. Pra dias fallback, tudo em BAU
+-- (BCP nao tem dim de super_grupo). Remover esse fallback quando a base
+-- propria estiver pronta.
 -- ==========================================================================
 past_proj AS (
   SELECT
@@ -397,7 +400,6 @@ past_bcp_day_tot AS (
     AND DATE(CCARD_PROP_UPDATE_DT) <  CURRENT_DATE()
   GROUP BY 1, 2
 ),
--- Dias stale = base_projecao tem < 50% do volume do BCP (atrasada/incompleta)
 stale_days AS (
   SELECT b.FLAG_TC, b.dia, b.bcp_total
   FROM past_bcp_day_tot b
@@ -405,13 +407,11 @@ stale_days AS (
   WHERE COALESCE(p.proj_total, 0) < 0.5 * b.bcp_total
 ),
 past AS (
-  -- Dias OK (base_projecao saudavel): mantem quebra por super_grupo
   SELECT p.FLAG_TC, p.super_grupo, p.dia, p.total
   FROM past_proj p
   LEFT JOIN stale_days s USING (FLAG_TC, dia)
   WHERE s.dia IS NULL
   UNION ALL
-  -- Dias stale: usa total BCP, tudo em BAU (sem quebra possivel)
   SELECT FLAG_TC, 'BAU' AS super_grupo, dia, bcp_total AS total
   FROM stale_days
 ),
