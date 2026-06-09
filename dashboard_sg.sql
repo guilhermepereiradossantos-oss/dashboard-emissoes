@@ -24,7 +24,7 @@ hist AS (
       ELSE 'BAU'
     END AS super_grupo,
     PLACEMENT, FLAG_CONVERSAO, DIAS_CONV, QTDE
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   WHERE DT_ENCENDIDO >= DATE_TRUNC(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 3 MONTH), MONTH)
     AND DT_ENCENDIDO <  DATE_TRUNC(CURRENT_DATE(), MONTH)
     AND EXTRACT(MONTH FROM DT_ENCENDIDO) NOT IN (11, 12)
@@ -83,7 +83,7 @@ nao_conv_sod AS (
     END AS super_grupo,
     DATE_DIFF(d.data_hoje, DT_ENCENDIDO, DAY) AS d_dec,
     SUM(QTDE) AS qtde_nc
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   CROSS JOIN datas d
   WHERE DT_ENCENDIDO >= DATE_SUB(d.data_hoje, INTERVAL 45 DAY)
     AND DT_ENCENDIDO <  d.data_hoje
@@ -96,13 +96,13 @@ nao_conv_sod AS (
 -- Volume de ativacoes do mes atual vs mes anterior para detectar se encendimento ocorreu
 qtde_enc_mes_atual AS (
   SELECT COALESCE(SUM(QTDE), 0) AS n
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   CROSS JOIN datas d
   WHERE DATE_TRUNC(DT_ENCENDIDO, MONTH) = DATE_TRUNC(d.data_hoje, MONTH)
 ),
 qtde_enc_mes_prev AS (
   SELECT COALESCE(SUM(QTDE), 0) AS n
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   CROSS JOIN datas d
   WHERE DATE_TRUNC(DT_ENCENDIDO, MONTH) = DATE_TRUNC(DATE_SUB(d.data_hoje, INTERVAL 1 MONTH), MONTH)
     AND EXTRACT(MONTH FROM DT_ENCENDIDO) NOT IN (11, 12)
@@ -123,7 +123,7 @@ prev_daily_template AS (
     END AS super_grupo,
     EXTRACT(DAY FROM DT_CONV) AS dia_num,
     SUM(QTDE) AS conversoes
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   CROSS JOIN datas d
   WHERE FLAG_CONVERSAO = '1. Convertido'
     AND DATE_TRUNC(DT_CONV, MONTH) = DATE_TRUNC(DATE_SUB(d.data_hoje, INTERVAL 1 MONTH), MONTH)
@@ -293,7 +293,7 @@ proj_organico AS (
 
 ma_enc_hist AS (
   SELECT FLAG_TC, DATE_TRUNC(DT_ENCENDIDO, MONTH) AS mes, SUM(QTDE) AS enc_ma
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   WHERE FLAG_SELLERS NOT IN ('SELLER','MIXTO') AND grupo_especial LIKE '%Mar Aberto%'
     AND DT_ENCENDIDO >= DATE_TRUNC(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 3 MONTH), MONTH)
     AND DT_ENCENDIDO <  DATE_TRUNC(CURRENT_DATE(), MONTH)
@@ -302,7 +302,7 @@ ma_enc_hist AS (
 ),
 ma_conv_hist AS (
   SELECT FLAG_TC, DATE_TRUNC(DT_CONV, MONTH) AS mes, SUM(QTDE) AS conv_ma
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   WHERE FLAG_CONVERSAO = '1. Convertido'
     AND FLAG_SELLERS NOT IN ('SELLER','MIXTO') AND grupo_especial LIKE '%Mar Aberto%'
     AND DT_CONV >= DATE_TRUNC(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 3 MONTH), MONTH)
@@ -317,7 +317,7 @@ ma_taxa_hist AS (
 ),
 ma_enc_atual AS (
   SELECT FLAG_TC, SUM(QTDE) AS enc_so_far
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   CROSS JOIN datas
   WHERE FLAG_SELLERS NOT IN ('SELLER','MIXTO') AND grupo_especial LIKE '%Mar Aberto%'
     AND DATE_TRUNC(DT_ENCENDIDO, MONTH) = DATE_TRUNC(CURRENT_DATE(), MONTH)
@@ -334,7 +334,7 @@ ma_est_enc_total AS (
 ),
 ma_real AS (
   SELECT FLAG_TC, SUM(QTDE) AS ma_conv_real
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   CROSS JOIN datas
   WHERE FLAG_CONVERSAO = '1. Convertido'
     AND FLAG_SELLERS NOT IN ('SELLER','MIXTO') AND grupo_especial LIKE '%Mar Aberto%'
@@ -357,17 +357,7 @@ ma_proj AS (
   FROM ma_emit_c m CROSS JOIN future_grid f
 ),
 
--- ==========================================================================
--- past = realizados ate ontem.
--- Fonte primaria: base_projecao_emissao_igor (tem quebra por super_grupo).
--- TEMPORARIO (09/06/2026): o pipeline do Igor falha desde 04/06 com policy
--- tag error em BT_REG_MONEY_PLUS.REG_IDENTIFICATION_NUMBER. Enquanto nao
--- temos base propria, fallback pra BCP (BT_CCARD_PROPOSAL) nos dias onde
--- base_projecao tem < 50% do volume do BCP. Pra dias fallback, tudo em BAU
--- (BCP nao tem dim de super_grupo). Remover esse fallback quando a base
--- propria estiver pronta.
--- ==========================================================================
-past_proj AS (
+past AS (
   SELECT
     FLAG_TC,
     CASE
@@ -380,40 +370,11 @@ past_proj AS (
     END AS super_grupo,
     DT_CONV AS dia,
     SUM(QTDE) AS total
-  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_igor`
+  FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   WHERE FLAG_CONVERSAO = '1. Convertido'
     AND DT_CONV >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
     AND DT_CONV <  CURRENT_DATE()
   GROUP BY ALL
-),
-past_proj_day_tot AS (
-  SELECT FLAG_TC, dia, SUM(total) AS proj_total FROM past_proj GROUP BY 1, 2
-),
-past_bcp_day_tot AS (
-  SELECT
-    CASE WHEN CCARD_GLOBAL_LIMIT_AMT_LC <= 300 THEN '2. Micro TC' ELSE '1. TC Full' END AS FLAG_TC,
-    DATE(CCARD_PROP_UPDATE_DT) AS dia,
-    COUNT(*) AS bcp_total
-  FROM `meli-bi-data.WHOWNER.BT_CCARD_PROPOSAL`
-  WHERE SIT_SITE_ID='MLB' AND CCARD_PROP_STATUS='accepted'
-    AND DATE(CCARD_PROP_UPDATE_DT) >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
-    AND DATE(CCARD_PROP_UPDATE_DT) <  CURRENT_DATE()
-  GROUP BY 1, 2
-),
-stale_days AS (
-  SELECT b.FLAG_TC, b.dia, b.bcp_total
-  FROM past_bcp_day_tot b
-  LEFT JOIN past_proj_day_tot p USING (FLAG_TC, dia)
-  WHERE COALESCE(p.proj_total, 0) < 0.5 * b.bcp_total
-),
-past AS (
-  SELECT p.FLAG_TC, p.super_grupo, p.dia, p.total
-  FROM past_proj p
-  LEFT JOIN stale_days s USING (FLAG_TC, dia)
-  WHERE s.dia IS NULL
-  UNION ALL
-  SELECT FLAG_TC, 'BAU' AS super_grupo, dia, bcp_total AS total
-  FROM stale_days
 ),
 
 -- Ajuste manual: -15k TC Full distribuidos nos dias restantes do mes
