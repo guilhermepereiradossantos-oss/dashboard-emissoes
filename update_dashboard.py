@@ -50,6 +50,23 @@ TC_KEYS  = ['TC Full', 'Micro TC']
 # Super-grupos que o SQL devolve (match com o JS index.html SG_ORDER)
 SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Aberto']
 
+# ----------------------------------------------------------------------
+# OVERRIDES de target total do mes (Real + Projecao = target).
+# Aplicado por escala uniforme no proj_data antes de salvar historico/HTML.
+# Edite quando time de negocio passar um numero alvo.
+# ----------------------------------------------------------------------
+TARGET_TOTALS = {
+    '2026-06': {'TC Full': 360000, 'Micro TC': 165000},
+}
+
+# ----------------------------------------------------------------------
+# Snapshots de proj_historico.json a IGNORAR quando reconstruir MONTHS_HIST.
+# Use quando o modelo daquele dia tinha um bug conhecido (ex: pico
+# de Jun ficava no dia 2 antes do fix em 03/06 - pipelines de 01 e 02/06
+# refletiam o bug).
+# ----------------------------------------------------------------------
+SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02'}
+
 def fmt(n):
     return f"{int(round(n)):,}".replace(',', '.')
 
@@ -89,6 +106,43 @@ for row in reader:
         proj_data[tc][sg][dia] += val
 
 # ============================================================
+# 2b. ESCALA PROJ PRA HIT TARGET TOTAL DO MES (override de negocio)
+# ============================================================
+cur_key_for_target = f'{year}-{month:02d}'
+_target_cfg = TARGET_TOTALS.get(cur_key_for_target)
+if _target_cfg:
+    for tc in TC_KEYS:
+        target = _target_cfg.get(tc)
+        if not target:
+            continue
+        real_so_far = sum(
+            v for sg in actual_data[tc]
+            for d, v in actual_data[tc][sg].items()
+            if d.startswith(cur_key_for_target)
+        )
+        proj_raw_total = sum(
+            v for sg in proj_data[tc]
+            for d, v in proj_data[tc][sg].items()
+            if d.startswith(cur_key_for_target)
+        )
+        proj_target = target - real_so_far
+        if proj_raw_total > 0 and proj_target > 0:
+            factor = proj_target / proj_raw_total
+            for sg in proj_data[tc]:
+                for d in list(proj_data[tc][sg].keys()):
+                    if d.startswith(cur_key_for_target):
+                        proj_data[tc][sg][d] *= factor
+            print(f'  TARGET {tc}: real={int(real_so_far):,} + proj raw={int(proj_raw_total):,} '
+                  f'-> proj alvo={int(proj_target):,} (factor={factor:.4f})')
+        elif proj_target <= 0:
+            # Real ja passou o target: zera projecao
+            for sg in proj_data[tc]:
+                for d in list(proj_data[tc][sg].keys()):
+                    if d.startswith(cur_key_for_target):
+                        proj_data[tc][sg][d] = 0
+            print(f'  TARGET {tc}: real ({int(real_so_far):,}) ja >= target ({int(target):,}); proj zerada')
+
+# ============================================================
 # 3. HISTORICO
 # ============================================================
 if HIST_FILE.exists():
@@ -106,7 +160,9 @@ HIST_FILE.write_text(json.dumps(historico, ensure_ascii=False, indent=2), encodi
 # dias mesmo quando o scheduler falhou em dias intermediarios (ex: 30/05 e 31/05
 # nao tem snapshot do proprio dia mas 29/05 ja projetou esses dias).
 def build_months_hist_entry(historico, ym_filter):
-    snap_dates_sorted = sorted(historico.keys(), reverse=True)
+    # Filtra snapshots conhecidamente buggy
+    snap_dates_sorted = [d for d in sorted(historico.keys(), reverse=True)
+                         if d not in SKIP_HIST_SNAPSHOTS]
     out = {tc: {} for tc in TC_KEYS}
     yr, mo = int(ym_filter[:4]), int(ym_filter[5:7])
     _, nd = monthrange(yr, mo)
