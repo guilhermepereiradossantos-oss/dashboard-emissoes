@@ -176,6 +176,18 @@ melimas AS (
     and TIME_FRAME  = 'WEEK' and tim_day >= '2024-01-01'
 ),
 
+-- EAs detectados via BT_CCARD_MONZA_AUTO_ISSUANCE_MLB (auto-issuance)
+-- Substitui a dependencia da CONTROLE_ENCENDIDOS_CCARD_MLB pra identificar EAs.
+-- Fonte: query 0_AUT_TBL_CONGRATS_ADQ_MLB_TOTAL
+monza_ea AS (
+  SELECT DISTINCT acc.CCARD_PROP_ID
+  FROM `meli-bi-data.WHOWNER.BT_CCARD_MONZA_AUTO_ISSUANCE_MLB` ea
+  LEFT JOIN `meli-bi-data.WHOWNER.BT_CCARD_ACCOUNT` acc
+    ON acc.SIT_SITE_ID = 'MLB'
+   AND acc.CCARD_ACCOUNT_ID = ea.CCARD_ACCOUNT_ID
+  WHERE ea.CCARD_AI_FLAG_AUTO_ISSUED = TRUE
+),
+
 variante AS (
   SELECT CUS_CUST_ID,
     STRING_AGG(distinct status_variante,'.' ORDER BY status_variante asc ) AS status_variante,
@@ -319,6 +331,9 @@ SELECT
   decil as decil_conversao,
 
   case
+    -- EA tem prioridade absoluta: vem de BT_CCARD_MONZA_AUTO_ISSUANCE_MLB.
+    -- Substitui a dependencia da CONTROLE_ENCENDIDOS_CCARD_MLB (que tem lag).
+    when monza_ea.CCARD_PROP_ID is not null then 'EA - MP'
     when matc.cus_cust_id_borrower is not null AND flow_resolution like '%on_hold%' then 'Mar Aberto Async'
     when matc.cus_cust_id_borrower is not null and  flow_resolution like '%opf%' then 'Mar Aberto Async - OPF Fora'
     when matc.cus_cust_id_borrower is not null then 'Mar Aberto RTS'
@@ -459,6 +474,9 @@ LEFT JOIN app_instalado as app2
 LEFT JOIN `meli-bi-data.SBOX_CREDITSTC.base_users_transacionais_12M` transac
   ON transac.cus_cust_id = prop.cus_cust_id
   AND date_trunc(dt_encendido,month) = '2025-02-01'
+
+LEFT JOIN monza_ea
+  ON monza_ea.CCARD_PROP_ID = prop.ccard_prop_id
 
 WHERE CAST(prop.DT_ENCENDIDO AS DATE) >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
 

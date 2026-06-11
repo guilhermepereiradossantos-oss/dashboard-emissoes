@@ -23,7 +23,7 @@ hist AS (
       WHEN grupo_especial LIKE '%CANCELADAS%'                    THEN 'Cuentas Canceladas'
       ELSE 'BAU'
     END AS super_grupo,
-    PLACEMENT, FLAG_CONVERSAO, DIAS_CONV, QTDE
+    PLACEMENT, FLAG_CONVERSAO, DIAS_CONV, QTDE, grupo_especial
   FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_emissao_guilherme`
   WHERE DT_ENCENDIDO >= DATE_TRUNC(DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 3 MONTH), MONTH)
     AND DT_ENCENDIDO <  DATE_TRUNC(CURRENT_DATE(), MONTH)
@@ -37,7 +37,8 @@ conv_por_dia AS (
   SELECT FLAG_TC, FLAG_REENCENDIDO, nise_seller, APP_INST, super_grupo,
          DIAS_CONV AS dia,
          SUM(CASE WHEN FLAG_CONVERSAO = '1. Convertido'
-                   AND COALESCE(PLACEMENT,'') != 'EA' THEN QTDE ELSE 0 END) AS conv_dia
+                   AND COALESCE(PLACEMENT,'') != 'EA'
+                   AND COALESCE(grupo_especial,'') != 'EA - MP' THEN QTDE ELSE 0 END) AS conv_dia
   FROM hist
   WHERE DIAS_CONV IS NOT NULL AND DIAS_CONV <= 59
   GROUP BY ALL
@@ -361,6 +362,7 @@ past AS (
   SELECT
     FLAG_TC,
     CASE
+      WHEN grupo_especial = 'EA - MP'                            THEN 'EA'
       WHEN COALESCE(PLACEMENT,'') = 'EA'                         THEN 'EA'
       WHEN FLAG_SELLERS IN ('SELLER','MIXTO')                    THEN 'Sellers'
       WHEN grupo_especial LIKE '%Mar Aberto%'                    THEN 'Mar Aberto'
