@@ -57,7 +57,7 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # Edite quando time de negocio passar um numero alvo.
 # ----------------------------------------------------------------------
 TARGET_TOTALS = {
-    '2026-06': {'TC Full': 360000, 'Micro TC': 165000},
+    '2026-06': {'TC Full': 360000},  # Micro TC volta ao modelo (sem target fixo)
 }
 
 # ----------------------------------------------------------------------
