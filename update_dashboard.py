@@ -110,6 +110,34 @@ for row in reader:
         proj_data[tc][sg][dia] += val
 
 # ============================================================
+# 2a. AJUSTES MANUAIS no proj_data (eventos especificos do mes)
+# ============================================================
+# Jun/26: (1) normalizar BAU Micro TC 24-26 (modelo herdou pico de Mai 23 que
+# nao vai repetir); (2) injetar padrao de drop Sellers Micro TC a partir de
+# 17/06 baseado no padrao real de Mai/26 (drop dia 23/05).
+cur_key_for_adj = f'{year}-{month:02d}'
+if cur_key_for_adj == '2026-06':
+    # (1) Normalizar BAU Micro TC dias 24-26 pra avg dos dias adjacentes
+    bau_mtc = proj_data['Micro TC']['BAU']
+    neighbors = [bau_mtc.get(f'2026-06-{d:02d}', 0) for d in [22, 23, 27, 28]]
+    avg_neighbor = sum(neighbors) / len([v for v in neighbors if v > 0]) if any(neighbors) else 0
+    for d in [24, 25, 26]:
+        dt = f'2026-06-{d:02d}'
+        if dt in bau_mtc:
+            bau_mtc[dt] = avg_neighbor
+    print(f'  ADJ Micro TC BAU 24-26: normalizado pra avg {int(avg_neighbor):,}'.replace(',', '.'))
+
+    # (2) Sellers Micro TC: aplica padrao real de Mai/26 (dias 23/05..31/05)
+    # a partir de 17/06. Valores REAIS observados no Mai (com FLAG_SELLERS IN (SELLER,MIXTO)).
+    SELLERS_PATTERN_MAI = [2599, 226, 237, 340, 207, 171, 172, 105, 113]
+    sellers_mtc = proj_data['Micro TC']['Sellers']
+    for i, val in enumerate(SELLERS_PATTERN_MAI):
+        day = 17 + i
+        if day > 30: break
+        sellers_mtc[f'2026-06-{day:02d}'] = float(val)
+    print(f'  ADJ Micro TC Sellers 17-25: aplicado padrao Mai/26 (peak 2.599 dia 17, total +{sum(SELLERS_PATTERN_MAI):,})'.replace(',', '.'))
+
+# ============================================================
 # 2b. ESCALA PROJ PRA HIT TARGET TOTAL DO MES (override de negocio)
 # ============================================================
 cur_key_for_target = f'{year}-{month:02d}'
@@ -229,6 +257,35 @@ months_hist_jsobj = {
     cur_key:  build_months_hist_entry(historico, cur_key),
     prev_key: build_months_hist_entry(historico, prev_key),
 }
+
+# ============================================================
+# 5b. ESCALA MONTHS_HIST[cur_key] PRA QUE A SOMA DA CURVA LARANJA INTEIRA
+#     (HIST_passado + PROJ_futuro) BATA COM O TOTAL_ESTIMADO (real + proj).
+#     Sem isso, snapshots antigos (com target maior ou projecao inflada)
+#     fazem o passado da curva parecer "alto demais" vs as barras reais.
+# ============================================================
+for tc in TC_KEYS:
+    hist_data = months_hist_jsobj[cur_key].get(tc, {})
+    if not hist_data:
+        continue
+    real_sum = sum(
+        v for sg in actual_data[tc]
+        for d, v in actual_data[tc][sg].items()
+        if d.startswith(cur_key)
+    )
+    proj_sum = sum(
+        v for sg in proj_data[tc]
+        for d, v in proj_data[tc][sg].items()
+        if d.startswith(cur_key)
+    )
+    # Target da soma do HIST = real_sum (para que curva total = real + proj = estimado_mes)
+    target_hist_sum = real_sum
+    current_hist_sum = sum(hist_data.values())
+    if current_hist_sum > 0 and target_hist_sum > 0:
+        factor = target_hist_sum / current_hist_sum
+        for d in list(hist_data.keys()):
+            hist_data[d] = int(round(hist_data[d] * factor))
+        print(f'  HIST_SCALE {tc}: factor={factor:.3f} (hist {int(current_hist_sum):,} -> {int(target_hist_sum):,}, curve total -> {int(real_sum + proj_sum):,})'.replace(',', '.'))
 
 # ============================================================
 # 6. PATCH index.html (in-place)
