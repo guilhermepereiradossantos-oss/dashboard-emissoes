@@ -57,7 +57,10 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # Edite quando time de negocio passar um numero alvo.
 # ----------------------------------------------------------------------
 TARGET_TOTALS = {
-    '2026-06': {'TC Full': 360000},  # Micro TC volta ao modelo (sem target fixo)
+    # Jun/26: encendido TC Full atrasou ~8 dias vs Mai (drop esperado 16/06 vs Mai 8/06).
+    # Recalibrado: 10MM enc * 4.06% adopt avg (Abr+Mai) * 0.84 lag discount = 340k.
+    # Micro TC sem target fixo (volta ao modelo organico).
+    '2026-06': {'TC Full': 340000},
 }
 
 # ----------------------------------------------------------------------
