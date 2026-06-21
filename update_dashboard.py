@@ -57,10 +57,9 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # Edite quando time de negocio passar um numero alvo.
 # ----------------------------------------------------------------------
 TARGET_TOTALS = {
-    # Jun/26: encendido TC Full atrasou ~8 dias vs Mai (drop esperado 16/06 vs Mai 8/06).
-    # Recalibrado: 10MM enc * 4.06% adopt avg (Abr+Mai) * 0.84 lag discount = 340k.
-    # Micro TC sem target fixo (volta ao modelo organico).
-    '2026-06': {'TC Full': 340000},
+    # Jun/26: encendido TC Full chegou em 18-20/06 (drop atrasado ~10 dias vs Mai).
+    # Volume real: 9.22M cumulativo (vs 11.5M de Mai). Modelo organico agora tem
+    # dados reais pos-drop e decide a projecao.
 }
 
 # ----------------------------------------------------------------------
