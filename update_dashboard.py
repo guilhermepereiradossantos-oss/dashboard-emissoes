@@ -58,8 +58,11 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # ----------------------------------------------------------------------
 TARGET_TOTALS = {
     # Jun/26: encendido TC Full chegou em 18-20/06 (drop atrasado ~10 dias vs Mai).
-    # Volume real: 9.22M cumulativo (vs 11.5M de Mai). Modelo organico agora tem
-    # dados reais pos-drop e decide a projecao.
+    # Pico conv = dia 19 (45,176, alinhado com hist ~45-49k).
+    # Projecao recalibrada com base no padrao historico pos-drop dias +2..+11
+    # (avg Abr+Mai = 145.316) com lag factor 0.87 (Jun dia +1 foi 73% do hist):
+    #   Real ate 20: 199,078 + Proj 21-30: 145,316 * 0.87 = 126,425 = TOTAL 325,503
+    '2026-06': {'TC Full': 325000},
 }
 
 # ----------------------------------------------------------------------
