@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeção TCMP — TC Brasil</title>
+<script src="/d/_assets/grid-sdk.js"></script>
+<!-- Chart.js da lib local do Grid (sem fallback CDN — CSP bloqueia externos). -->
+<script src="/d/_libs/chart.min.js" onerror="window.__CHART_LOAD_FAILED=true;console.error('[Projecao] Chart.js (/d/_libs/chart.min.js) nao carregou.');"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
+
+/* HEADER */
+.header{background:#161b22;border-bottom:1px solid #21262d;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.header h1{font-size:18px;font-weight:700;color:#58a6ff;letter-spacing:-.3px}
+.header-meta{font-size:11px;color:#8b949e;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:10px}
+.btn-refresh{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-refresh:hover{background:#30363d;color:#e6edf3}
+.btn-refresh:disabled{opacity:.5;cursor:not-allowed}
+.header-badge{background:#21262d;border:1px solid #30363d;border-radius:20px;padding:4px 12px;font-size:11px;color:#8b949e}
+.header-badge span{color:#58a6ff;font-weight:600}
+
+/* TABS */
+.tabs-bar{background:#161b22;border-bottom:1px solid #21262d;padding:0 28px;display:flex;gap:0;position:sticky;top:0;z-index:110}
+.tab-nav-btn{background:none;border:none;color:#8b949e;font-size:13px;font-weight:600;padding:13px 22px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.2px}
+.tab-nav-btn:hover{color:#e6edf3}
+.tab-nav-btn.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* FILTER BAR */
+#filter-bar-section{background:#161b22;border-bottom:1px solid #21262d;position:sticky;top:44px;z-index:40}
+.filter-bar-inner{padding:10px 28px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.filter-group-label{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.6px;margin-right:4px;flex-shrink:0}
+.filter-btn{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:5px 11px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px;position:relative;transition:all .15s;white-space:nowrap;font-family:inherit}
+.filter-btn:hover{border-color:#58a6ff;color:#e6edf3}
+.filter-btn.has-active{border-color:#58a6ff;color:#58a6ff;background:rgba(88,166,255,.08)}
+.filter-btn .fb-count{background:#58a6ff;color:#0d1117;border-radius:9px;padding:0 6px;font-size:10px;font-weight:800;line-height:16px;display:inline-block}
+.filter-btn .fb-arrow{font-size:9px;opacity:.6}
+.filter-dropdown{display:none;position:absolute;top:calc(100% + 5px);left:0;background:#1c2128;border:1px solid #30363d;border-radius:8px;padding:6px 0;min-width:210px;max-height:280px;overflow-y:auto;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.filter-btn.open .filter-dropdown{display:block}
+.fd-header{padding:6px 12px 4px;border-bottom:1px solid #21262d;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.fd-sel-all{font-size:11px;color:#8b949e;cursor:pointer}
+.fd-sel-all:hover{color:#58a6ff}
+.fd-item{display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;font-size:12px;color:#c9d1d9;transition:background .12s}
+.fd-item:hover{background:#21262d}
+.fd-item input[type=checkbox]{accent-color:#58a6ff;width:13px;height:13px;flex-shrink:0}
+.fd-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filter-bar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.filter-count{font-size:11px;color:#8b949e;white-space:nowrap}
+.filter-count span{color:#58a6ff;font-weight:700}
+.btn-clear-filters{background:none;border:none;color:#FF5A5A;font-size:11px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:background .15s;font-family:inherit}
+.btn-clear-filters:hover{background:rgba(255,90,90,.1)}
+/* PILLS */
+.filter-pills{padding:0 28px 8px;display:flex;gap:6px;flex-wrap:wrap;min-height:0}
+.filter-pills:empty{display:none;padding:0}
+.pill{background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.25);color:#58a6ff;padding:2px 10px;border-radius:20px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.pill:hover{background:rgba(255,90,90,.1);border-color:rgba(255,90,90,.3);color:#FF5A5A}
+
+/* CONTAINER */
+.container{max-width:1760px;margin:0 auto;padding:20px 24px 48px}
+
+/* SECTION */
+.section-hdr{display:flex;align-items:center;gap:10px;margin:24px 0 12px}
+.section-hdr h2{font-size:15px;font-weight:700;color:#e6edf3}
+
+/* KPI PANELS */
+.kpi-panels{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.kpi-panel{flex:1;min-width:280px;background:rgba(88,166,255,.04);border:1.5px solid rgba(88,166,255,.4);border-radius:14px;padding:12px 16px}
+.kpi-panel.prev{border-color:rgba(139,148,158,.4);background:rgba(139,148,158,.04)}
+.kpi-panel-title{font-size:11px;font-weight:700;color:#58a6ff;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px}
+.kpi-panel.prev .kpi-panel-title{color:#8b949e}
+.kpi-panel-row{display:flex;gap:8px;flex-wrap:wrap}
+.kpi-panel-row .kpi-card{flex:1;min-width:110px;padding:10px 12px}
+.kpi-panel-row .kpi-value{font-size:20px}
+
+/* KPI CARDS */
+.kpi-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.kpi-card{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:14px 18px;flex:1;min-width:130px;border-top:3px solid}
+.kpi-card.blue   {border-top-color:#58a6ff}
+.kpi-card.green  {border-top-color:#3DFF91}
+.kpi-card.orange {border-top-color:#FF7F11}
+.kpi-card.yellow {border-top-color:#F5C500}
+.kpi-card.neutral{border-top-color:#c9d1d9}
+.kpi-card.cyan   {border-top-color:#00D4FF}
+.kpi-label{font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:22px;font-weight:800;margin-top:4px;line-height:1}
+.kpi-card.blue   .kpi-value{color:#58a6ff}
+.kpi-card.green  .kpi-value{color:#3DFF91}
+.kpi-card.orange .kpi-value{color:#FF7F11}
+.kpi-card.yellow .kpi-value{color:#F5C500}
+.kpi-card.neutral .kpi-value{color:#e6edf3}
+.kpi-card.cyan   .kpi-value{color:#00D4FF}
+.kpi-sub{font-size:11px;color:#6e7681;margin-top:4px}
+.kpi-sub.delta-pos{color:#3DFF91}
+.kpi-sub.delta-neg{color:#FF5A5A}
+
+/* CHARTS */
+.chart-wrap{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:18px 18px 12px;margin-bottom:16px}
+.chart-title{font-size:12px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.chart-inner{position:relative;height:460px}
+.chart-inner-sm{position:relative;height:400px}
+.charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.charts-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+
+/* TABLES */
+.table-wrap{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 18px;margin-bottom:16px;overflow-x:auto}
+.table-wrap h3{font-size:12px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{color:#8b949e;font-weight:600;padding:8px 12px;border-bottom:1px solid #21262d;font-size:10px;text-transform:uppercase;letter-spacing:.4px;text-align:right;white-space:nowrap}
+.data-table th:first-child{text-align:left}
+.data-table td{padding:7px 12px;text-align:right;color:#c9d1d9;border-bottom:1px solid #0d1117;white-space:nowrap}
+.data-table td:first-child{text-align:left;color:#8b949e;font-weight:600}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr.row-highlight td{color:#e6edf3;font-weight:700;border-top:1px solid #21262d}
+.adopt-hi{color:#3DFF91;font-weight:700}
+.adopt-md{color:#F5C500;font-weight:700}
+.adopt-lo{color:#FF5A5A;font-weight:700}
+
+/* PLACEHOLDER PROJECAO */
+.placeholder-card{background:#161b22;border:1px solid #21262d;border-radius:16px;padding:48px 32px;text-align:center;max-width:620px;margin:60px auto}
+.placeholder-card .icon{font-size:48px;margin-bottom:16px}
+.placeholder-card h2{font-size:20px;font-weight:700;color:#e6edf3;margin-bottom:10px}
+.placeholder-card p{font-size:14px;color:#8b949e;line-height:1.6;margin-bottom:8px}
+.placeholder-card a{color:#58a6ff;text-decoration:underline}
+
+/* DAILY MONTH SELECTOR */
+.daily-controls{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.daily-controls label{font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px}
+.daily-month-sel{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
+.daily-month-sel:focus{outline:none;border-color:#58a6ff}
+
+/* ERROR BANNER */
+.error-banner{background:rgba(255,90,90,.1);border:1px solid rgba(255,90,90,.3);border-radius:8px;padding:10px 16px;font-size:12px;color:#FF5A5A;margin-bottom:16px;display:none}
+
+/* GRID UNAVAILABLE */
+.bq-unavail{background:rgba(245,197,0,.08);border:1px solid rgba(245,197,0,.3);border-radius:8px;padding:10px 16px;font-size:13px;color:#F5C500;margin-bottom:16px;display:none}
+
+/* LOADING OVERLAY */
+#loading-overlay{display:none;position:fixed;top:88px;left:0;right:0;bottom:0;background:rgba(13,17,23,.75);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#loading-overlay.show{display:flex}
+.spinner{width:36px;height:36px;border:3px solid #21262d;border-top-color:#58a6ff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-size:13px;color:#8b949e}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0d1117}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+
+/* ===== ABA PROJEÇÃO TCMP ===== */
+.section-tag{font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:.6px}
+.tag-full{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3)}
+.tag-micro{background:rgba(61,255,145,.12);color:#3DFF91;border:1px solid rgba(61,255,145,.3)}
+.kpi-card.orange2{border-top-color:#FFB347}
+.kpi-card.comp{border-top-color:#9B59B6}
+.kpi-card.orange2 .kpi-value{color:#FFB347}
+.kpi-card.comp .kpi-value{color:#C77DFF}
+.cmp-row{display:flex;align-items:baseline;gap:6px;margin-top:7px;flex-wrap:wrap}
+.cmp-label{font-size:10px;color:#8b949e;min-width:90px;flex-shrink:0}
+.cmp-ref{font-size:11px;color:#c9d1d9;font-weight:600}
+.cmp-delta{font-size:12px;font-weight:700;margin-left:auto}
+.cmp-pos{color:#3DFF91}
+.cmp-neg{color:#FF5A5A}
+.insights-panel{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:14px 18px;margin-top:8px;margin-bottom:4px}
+.ins-title{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+.ins-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.ins-item{font-size:12px;color:#c9d1d9;line-height:1.5;padding-left:4px}
+.chart-section{display:flex;gap:12px;margin-bottom:8px}
+.filter-panel{width:200px;flex-shrink:0;background:#161b22;border:1px solid #21262d;border-radius:12px;padding:16px 14px;display:flex;flex-direction:column;gap:12px}
+.fp-title{font-size:10px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;padding-bottom:8px;border-bottom:1px solid #21262d}
+.fp-items{display:flex;flex-direction:column;gap:6px}
+.sg-item{display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 8px;border-radius:6px;transition:background .15s;user-select:none}
+.sg-item:hover{background:#21262d}
+.sg-item input{display:none}
+.sg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:opacity .2s}
+.sg-dot.off{opacity:.2;box-shadow:none !important}
+.sg-name{font-size:12px;color:#c9d1d9;transition:color .2s}
+.sg-name.off{color:#484f58}
+.fp-btns{display:flex;gap:6px}
+.fp-btns button{flex:1;background:#21262d;border:1px solid #30363d;color:#8b949e;padding:5px 0;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s}
+.fp-btns button:hover{background:#30363d;color:#e6edf3}
+.fp-legend{padding-top:8px;border-top:1px solid #21262d;display:flex;flex-direction:column;gap:5px}
+.fp-leg-item{display:flex;align-items:center;gap:7px;font-size:11px;color:#8b949e}
+.fp-line{display:inline-block;width:22px;height:2px}
+.fp-line.solid{background:#FF7F11}
+.grand-total{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:20px 32px;margin-top:20px;display:flex;justify-content:space-around;align-items:center}
+.gt-item{text-align:center}
+.gt-label{font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.7px}
+.gt-value{font-size:26px;font-weight:800;margin-top:5px}
+.gt-item.act .gt-value{color:#58a6ff}
+.gt-item.pj  .gt-value{color:#FF7F11}
+.gt-item.tot .gt-value{color:#3DFF91}
+.gt-divider{width:1px;height:44px;background:#21262d}
+.adoption-sub{font-size:12px;color:#8b949e;margin:-8px 0 16px}
+.adoption-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.adoption-card{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:18px 20px}
+.adoption-card-title{font-size:14px;font-weight:700;color:#e6edf3;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.adoption-card-title .ac-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px}
+.ac-full{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.3)}
+.ac-micro{background:rgba(61,255,145,.12);color:#3DFF91;border:1px solid rgba(61,255,145,.3)}
+.adoption-table{width:100%;border-collapse:collapse;font-size:12px}
+.adoption-table th{color:#8b949e;font-weight:600;text-align:right;padding:6px 10px;border-bottom:1px solid #21262d;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.adoption-table th:first-child{text-align:left}
+.adoption-table td{padding:7px 10px;text-align:right;color:#c9d1d9;border-bottom:1px solid #161b22}
+.adoption-table td:first-child{text-align:left;color:#8b949e}
+.adoption-table tr.total-row td{font-weight:700;color:#e6edf3;border-top:1px solid #30363d;border-bottom:none}
+.adoption-table .proj-val{color:#FF7F11;font-weight:700;font-size:14px}
+.mul-up{color:#3DFF91}.mul-down{color:#FF5A5A}.mul-flat{color:#8b949e}
+.month-selector{display:flex;gap:6px;align-items:center;margin-bottom:16px}
+.month-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.3px}
+.month-btn:hover{background:#30363d;color:#e6edf3}
+.month-btn.active{background:#58a6ff;border-color:#58a6ff;color:#0d1117}
+/* Safra: agrupamento Fechados | Vigente */
+.safra-grp-lab{font-size:9px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.6px;margin:0 2px;flex-shrink:0}
+.safra-div{width:1px;height:20px;background:#30363d;margin:0 8px;flex-shrink:0}
+.month-btn.current{background:rgba(255,127,17,.10);border-color:rgba(255,127,17,.55);color:#FF7F11}
+.month-btn.current:hover{background:rgba(255,127,17,.18);color:#FFB347}
+.month-btn.current.active{background:#FF7F11;border-color:#FF7F11;color:#0d1117}
+/* Controles da projeção (Safra + Tipo TC) */
+.proj-controls{display:flex;gap:28px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.proj-ctrl-group{display:flex;align-items:center;gap:10px}
+.proj-ctrl-label{font-size:10px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.8px}
+.proj-controls .month-selector{margin-bottom:0}
+.tc-selector{display:flex;gap:6px;align-items:center}
+.tc-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.3px}
+.tc-btn:hover{background:#30363d;color:#e6edf3}
+.tc-btn.active{background:#3DFF91;border-color:#3DFF91;color:#0d1117}
+/* Gráfico estica para preencher a coluna ao lado do painel de filtros */
+.chart-section>.chart-wrap{flex:1;min-width:0;margin-bottom:0}
+
+/* Botão "Voltar ao menu" (link no header) */
+.btn-back{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-back:hover{background:#30363d;color:#e6edf3;border-color:#58a6ff}
+</style>
+<script>(function(){function _ok(r,onOk){return r.json().then(function(b){if(!r.ok)throw b;onOk(b);return b;});}window.GRID=window.GRID||{};window.GRID.docId="01KVWX9C5JAFHN4QCKP4HZCKB5";window.GRID._stateUpdatedAt='';window.GRID._stateUpdatedAtByName=window.GRID._stateUpdatedAtByName||{};window.GRID.states={get:function(name){var n=String(name||'').trim();if(!n)return Promise.reject({error:'validation_error',detail:'state name is required'});return fetch('/api/v1/documents/'+"01KVWX9C5JAFHN4QCKP4HZCKB5"+'/states/'+encodeURIComponent(n)).then(function(r){return _ok(r,function(b){window.GRID._stateUpdatedAtByName[n]=b.updated_at||'';});});},set:function(name,data,ifUpdatedAt){var n=String(name||'').trim();if(!n)return Promise.reject({error:'validation_error',detail:'state name is required'});return fetch('/api/v1/documents/'+"01KVWX9C5JAFHN4QCKP4HZCKB5"+'/states/'+encodeURIComponent(n),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:data,if_updated_at:(typeof ifUpdatedAt==='string'?ifUpdatedAt:(window.GRID._stateUpdatedAtByName[n]||''))})}).then(function(r){return _ok(r,function(b){window.GRID._stateUpdatedAtByName[n]=b.updated_at||'';});});},patch:function(name,patchData,ifUpdatedAt){var n=String(name||'').trim();if(!n)return Promise.reject({error:'validation_error',detail:'state name is required'});return fetch('/api/v1/documents/'+"01KVWX9C5JAFHN4QCKP4HZCKB5"+'/states/'+encodeURIComponent(n),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({patch:patchData,if_updated_at:(typeof ifUpdatedAt==='string'?ifUpdatedAt:(window.GRID._stateUpdatedAtByName[n]||''))})}).then(function(r){return _ok(r,function(b){window.GRID._stateUpdatedAtByName[n]=b.updated_at||'';});});}};window.GRID.state={get:function(){return fetch('/api/v1/documents/'+"01KVWX9C5JAFHN4QCKP4HZCKB5"+'/state').then(function(r){return _ok(r,function(b){window.GRID._stateUpdatedAt=b.updated_at||'';});});},set:function(data,ifUpdatedAt){return fetch('/api/v1/documents/'+"01KVWX9C5JAFHN4QCKP4HZCKB5"+'/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:data,if_updated_at:(typeof ifUpdatedAt==='string'?ifUpdatedAt:(window.GRID._stateUpdatedAt||''))})}).then(function(r){return _ok(r,function(b){window.GRID._stateUpdatedAt=b.updated_at||'';});});},patch:function(patchData,ifUpdatedAt){return fetch('/api/v1/documents/'+"01KVWX9C5JAFHN4QCKP4HZCKB5"+'/state',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({patch:patchData,if_updated_at:(typeof ifUpdatedAt==='string'?ifUpdatedAt:(window.GRID._stateUpdatedAt||''))})}).then(function(r){return _ok(r,function(b){window.GRID._stateUpdatedAt=b.updated_at||'';});});}};}());</script>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<div class="header">
+  <div>
+    <h1>📈 Projeção TCMP</h1>
+    <div class="header-meta">Projeção de Encendidos · TC Full &amp; Micro TC · MercadoLivre · Dados 2x/dia (datasets Grid)</div>
+  </div>
+  <div class="header-right">
+    <a class="btn-back" href="https://grid.adminml.com/d/01KVWX9P01ZH59AFSEFJ31A91Q/view" target="_blank">← Voltar ao menu</a>
+  </div>
+</div>
+
+  <div class="container">
+    <!-- FILTROS: Safra + Tipo TC -->
+    <div class="proj-controls">
+      <div class="proj-ctrl-group">
+        <span class="proj-ctrl-label">Safra</span>
+        <div class="month-selector" id="proj-month-selector"></div>
+      </div>
+      <div class="proj-ctrl-group">
+        <span class="proj-ctrl-label">Tipo TC</span>
+        <div class="tc-selector" id="proj-tc-selector"></div>
+      </div>
+    </div>
+
+    <div class="section-hdr"><h2 id="proj-title">Projeção — TC Full</h2></div>
+    <div class="kpi-row">
+      <div class="kpi-card cyan"><div class="kpi-label" id="kl-real">Total realizado no mês</div><div class="kpi-value" id="kv-real">—</div><div class="kpi-sub" id="kv-pct"></div><div class="cmp-row"><span class="cmp-label" id="kc-real-lab">Mesmo dia M-1</span><span class="cmp-ref" id="kv-real-ref">—</span></div><div class="cmp-delta" id="kv-real-mom"></div></div>
+      <div class="kpi-card orange"><div class="kpi-label" id="kl-hoje">Projeção hoje</div><div class="kpi-value" id="kv-hoje">—</div><div class="kpi-sub" id="ksub-hoje">estimativa do dia</div></div>
+      <div class="kpi-card orange2"><div class="kpi-label" id="kl-proj">Projeção restante</div><div class="kpi-value" id="kv-proj">—</div><div class="kpi-sub" id="kl-ate">até fim do mês</div></div>
+      <div class="kpi-card green"><div class="kpi-label" id="kl-total">Total estimado do mês</div><div class="kpi-value" id="kv-total">—</div><div class="kpi-sub" id="ksub-total">realizado + projeção</div><div class="cmp-row"><span class="cmp-label" id="kc-total-lab">M-1 real</span><span class="cmp-ref" id="kv-total-ref">—</span></div><div class="cmp-delta" id="kv-total-mom"></div></div>
+      <div class="kpi-card comp"><div class="kpi-label" id="kl-plan">Proj. Final vs Plano</div><div class="kpi-value" id="kv-plan-val">—</div><div class="kpi-sub" id="kv-plan-label">Plano —</div><div class="cmp-delta" id="kv-plan-delta" style="margin-top:4px"></div></div>
+    </div>
+    <div class="chart-section">
+      <div class="chart-wrap"><div class="chart-inner"><canvas id="chartProj"></canvas></div></div>
+      <div class="filter-panel">
+        <div class="fp-title">Grupos encendidos</div>
+        <div class="fp-items" id="fp-proj"></div>
+        <div class="fp-btns">
+          <button onclick="Proj.selectAll()">Todos</button>
+          <button onclick="Proj.selectNone()">Nenhum</button>
+        </div>
+        <div class="fp-legend"><div class="fp-leg-item"><span class="fp-line solid"></span> Proj. hoje</div></div>
+      </div>
+    </div>
+  </div>
+
+
+<script>
+(function(){
+  // Bundle carregado do Grid (dataset 'projecao', 1 linha JSON-string) dentro de init().
+  // Local sem Grid: um stub de window.Grid pode ser injetado antes de abrir a aba.
+  let PROJ_BUNDLE = null;
+  let SG_ORDER, BAR_ORDER, MONTHS_META, MONTHS_ACTUAL, MONTHS_PROJ, MONTHS_HIST;
+  const SG_COLORS = {
+    'BAU':'#2E4976', 'EA':'#D9D9D9', 'Sellers':'#5B9BD5',
+    'Cuentas Canceladas':'#FFF2B3', 'Only Nav':'#F5C500', 'Mar Aberto':'#BF9000'
+  };
+  const TC_OPTIONS = ['TC Full', 'Micro TC', 'Total'];
+  function bindBundle(b){
+    PROJ_BUNDLE   = b;
+    SG_ORDER      = b.sg_order;
+    BAR_ORDER     = [...SG_ORDER].reverse(); // base = menor impacto, BAU no topo
+    MONTHS_META   = b.META;
+    MONTHS_ACTUAL = b.ACTUAL;
+    MONTHS_PROJ   = b.PROJ;
+    MONTHS_HIST   = b.HIST;
+  }
+
+  let ACTIVE_MONTH, TODAY, ALL_DAYS, LABELS, ACTUAL_DATA, PROJ_DATA, HIST_PROJ_DATA;
+  let ACTIVE_TC = 'TC Full';
+  function syncMonth(mk){
+    ACTIVE_MONTH   = mk;
+    const m        = MONTHS_META[mk];
+    TODAY          = m.todayStr;
+    ALL_DAYS       = m.allDays;
+    LABELS         = m.labels;
+    ACTUAL_DATA    = MONTHS_ACTUAL[mk] || {};
+    PROJ_DATA      = MONTHS_PROJ[mk]   || {};
+    HIST_PROJ_DATA = MONTHS_HIST[mk]   || {};
+  }
+
+  function fmt(n){ return Math.round(n).toLocaleString('pt-BR'); }
+  function dm(iso){ const p = iso.split('-'); return p[2] + '/' + p[1]; } // DD/MM
+  function fmtMY(mk){ const p = mk.split('-'); return p[1] + '/' + p[0]; } // MM/YYYY
+
+  // Plano oficial 2026 — fonte: planilha "Seguimiento TC Brasil", aba "Resumen Mensual 2026"
+  // (linha 6 = TC Full, linha 7 = Micro TC). ATUALIZAR aqui quando o plano mudar.
+  const PLAN_2026 = {
+    'TC Full': {'2026-01':412830,'2026-02':373600,'2026-03':437592,'2026-04':427356,'2026-05':452120,'2026-06':466884,'2026-07':501646,'2026-08':496292,'2026-09':486055,'2026-10':530581,'2026-11':544456,'2026-12':487030},
+    'Micro TC':{'2026-01':97171,'2026-02':86000,'2026-03':97406,'2026-04':97643,'2026-05':97881,'2026-06':98117,'2026-07':98353,'2026-08':98708,'2026-09':98946,'2026-10':99418,'2026-11':110544,'2026-12':102970}
+  };
+  function planFor(tc, mk){
+    const f = (PLAN_2026['TC Full']||{})[mk], mi = (PLAN_2026['Micro TC']||{})[mk];
+    if(tc === 'Total') return (f==null && mi==null) ? null : (f||0)+(mi||0);
+    const v = (PLAN_2026[tc]||{})[mk];
+    return v==null ? null : v;
+  }
+  function prevMonthKey(mk){
+    const a = mk.split('-'); const y = +a[0], m = +a[1];
+    return m===1 ? (y-1)+'-12' : y+'-'+String(m-1).padStart(2,'0');
+  }
+  // formata um delta: "▲ +123 (+4,5%)" / "▼ -123 (-4,5%)"
+  function deltaStr(delta, base){
+    const arrow = delta>=0 ? '▲' : '▼';
+    const sign  = delta>=0 ? '+' : '-';
+    const pctTxt = (base && base>0) ? ' ('+sign+(Math.abs(delta)/base*100).toFixed(1).replace('.',',')+'%)' : '';
+    return arrow+' '+sign+fmt(Math.abs(delta))+pctTxt;
+  }
+  // valor de um super-grupo num dia, respeitando o Tipo TC ativo (Total = Full + Micro)
+  function tcVal(obj, sg, d){
+    if(ACTIVE_TC === 'Total') return (obj?.['TC Full']?.[sg]?.[d]||0) + (obj?.['Micro TC']?.[sg]?.[d]||0);
+    return obj?.[ACTIVE_TC]?.[sg]?.[d]||0;
+  }
+  // valor da linha histórica (HIST é por TC, sem super-grupo)
+  function histVal(d){
+    if(ACTIVE_TC === 'Total') return (HIST_PROJ_DATA?.['TC Full']?.[d]||0) + (HIST_PROJ_DATA?.['Micro TC']?.[d]||0);
+    return HIST_PROJ_DATA?.[ACTIVE_TC]?.[d]||0;
+  }
+  function getSelectedSGs(){
+    return SG_ORDER.filter(sg => {
+      const el = document.querySelector(`#fp-proj input[data-sg="${sg}"]`);
+      return el && el.checked;
+    });
+  }
+
+  // Plugin: linha vertical "HOJE"
+  const todayPlugin = {
+    id:'todayLine',
+    afterDraw(chart){
+      const {ctx, scales:{x,y}} = chart;
+      if(!x||!y) return;
+      const ti = ALL_DAYS.indexOf(TODAY);
+      if(ti < 0) return;
+      const x0 = ti-1 >= 0 ? x.getPixelForValue(ti-1) : x.left;
+      const x1 = x.getPixelForValue(ti);
+      const xL = (x0+x1)/2;
+      ctx.save(); ctx.beginPath(); ctx.moveTo(xL,y.top); ctx.lineTo(xL,y.bottom);
+      ctx.strokeStyle='rgba(248,81,73,.5)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.fillStyle='rgba(248,81,73,.85)'; ctx.font='bold 10px Segoe UI, Arial';
+      ctx.textAlign='center'; ctx.fillText('HOJE', xL, y.top-5); ctx.restore();
+    }
+  };
+  // Plugin: rótulo de total (soma do dia) em cima das barras reais
+  const dataLabelPlugin = {
+    id:'projDataLabels',
+    afterDatasetsDraw(chart){
+      const {ctx, scales:{x,y}, data} = chart;
+      if(!x||!y) return;
+      const bars = data.datasets.filter(ds => ds.type==='bar' && !ds.hidden);
+      let prevOv = false;
+      for(let i=0;i<ALL_DAYS.length;i++){
+        if(ALL_DAYS[i] >= TODAY){ prevOv=false; continue; }
+        let total=0; bars.forEach(ds=>{ const v=ds.data[i]; if(v!=null) total+=v; });
+        if(total<=0){ prevOv=false; continue; }
+        const xPos=x.getPixelForValue(i), yTot=y.getPixelForValue(total);
+        const ov = yTot < y.top+5;
+        const yPos = ov ? (prevOv? y.top+24 : y.top+12) : yTot-26;
+        prevOv = ov;
+        ctx.save(); ctx.font='bold 10px Segoe UI, Arial'; ctx.fillStyle='#fff';
+        ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(fmt(total), xPos, yPos); ctx.restore();
+      }
+    }
+  };
+
+  function baseOptions(){
+    return {
+      responsive:true, maintainAspectRatio:false, animation:{duration:300},
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1c2128', borderColor:'#30363d', borderWidth:1,
+          titleColor:'#e6edf3', bodyColor:'#8b949e', padding:10, cornerRadius:8,
+          filter:function(item){
+            const v=item.dataset.data[item.dataIndex];
+            if(v==null||v===0) return false;
+            if(ALL_DAYS[item.dataIndex] >= TODAY) return item.dataset.type==='line';
+            return true;
+          },
+          callbacks:{ label:(ctx)=>`  ${ctx.dataset.label}: ${fmt(ctx.raw)}` }
+        }
+      },
+      scales:{
+        x:{ stacked:true, grid:{color:'rgba(255,255,255,.03)'}, ticks:{color:'#6e7681',font:{size:10},maxRotation:45}, border:{color:'#21262d'} },
+        y:{ stacked:true, beginAtZero:true, grid:{color:'rgba(255,255,255,.05)'},
+            ticks:{color:'#6e7681',font:{size:10}, callback:v=> v>=1000 ? (v/1000).toFixed(0)+'k' : v},
+            border:{color:'#21262d', dash:[3,3]} }
+      }
+    };
+  }
+
+  function buildDatasets(selectedSGs){
+    const bars = BAR_ORDER.map(sg => ({
+      type:'bar', label:sg,
+      data: ALL_DAYS.map(d => d >= TODAY ? null : (tcVal(ACTUAL_DATA, sg, d) || null)),
+      backgroundColor:SG_COLORS[sg], borderColor:SG_COLORS[sg], borderWidth:0, borderRadius:2,
+      stack:'actual', hidden:!selectedSGs.includes(sg), order:3
+    }));
+    const projLine = ALL_DAYS.map(d => {
+      if(d < TODAY){ const v=histVal(d); return (v>0)?v:null; }
+      const v = selectedSGs.reduce((s,sg)=> s + tcVal(PROJ_DATA, sg, d), 0);
+      return v>0?v:null;
+    });
+    bars.push({
+      type:'line', label:'Proj. Hoje', data:projLine,
+      borderColor:'#FF7F11', backgroundColor:'rgba(255,127,17,.08)', borderWidth:2.5,
+      pointRadius:3, pointHoverRadius:5, pointBackgroundColor:'#FF7F11', pointBorderColor:'#0d1117',
+      fill:false, tension:.35, spanGaps:true, order:1
+    });
+    return bars;
+  }
+
+  let chart = null;
+  function makeChart(){
+    const sel = getSelectedSGs();
+    const all = sel.length ? sel : SG_ORDER.slice();
+    if(chart){ chart.destroy(); chart = null; }
+    chart = new Chart(document.getElementById('chartProj'), {
+      data:{ labels:LABELS, datasets:buildDatasets(all) },
+      options: baseOptions(),
+      plugins:[todayPlugin, dataLabelPlugin]
+    });
+  }
+
+  function rebuildLines(){
+    if(!chart) return;
+    const sel = getSelectedSGs();
+    BAR_ORDER.forEach((sg,i)=>{ chart.data.datasets[i].hidden = !sel.includes(sg); });
+    const projIdx = BAR_ORDER.length;
+    chart.data.datasets[projIdx].data = ALL_DAYS.map(d => {
+      if(d < TODAY){ const v=histVal(d); return (v>0)?v:null; }
+      const v = sel.reduce((s,sg)=> s + tcVal(PROJ_DATA, sg, d), 0);
+      return v>0?v:null;
+    });
+    chart.update('none');
+  }
+
+  // soma cumulativa do realizado (SGs selecionados) num mes anterior, ate o dia `upto` (1..upto-1) ou mes todo
+  function prevRealCumul(prevAct, prevKey, sgs, upto){
+    let t = 0; const lim = upto || 32;
+    for(let dd=1; dd<lim; dd++){
+      const d = prevKey + '-' + String(dd).padStart(2,'0');
+      t += sgs.reduce((ss,sg)=> ss + tcVal(prevAct, sg, d), 0);
+    }
+    return t;
+  }
+
+  function updateKPIs(){
+    const sgs  = getSelectedSGs();
+    const el   = id => document.getElementById(id);
+    const meta = MONTHS_META[ACTIVE_MONTH] || {};
+    const isClosed = !!meta.closed;
+
+    const aDays = ALL_DAYS.filter(d=> d < TODAY);
+    const pDays = ALL_DAYS.filter(d=> d >= TODAY);
+    const real  = aDays.reduce((s,d)=> s + sgs.reduce((ss,sg)=> ss + tcVal(ACTUAL_DATA, sg, d),0),0);
+    const proj  = pDays.reduce((s,d)=> s + sgs.reduce((ss,sg)=> ss + tcVal(PROJ_DATA, sg, d),0),0);
+    const hoje  = sgs.reduce((s,sg)=> s + tcVal(PROJ_DATA, sg, TODAY),0);
+    const estimado = real + proj;
+    const prevKey  = prevMonthKey(ACTIVE_MONTH);
+    const prevAct  = (MONTHS_ACTUAL && MONTHS_ACTUAL[prevKey]) || null;
+    const plan     = planFor(ACTIVE_TC, ACTIVE_MONTH);
+
+    if(el('proj-title')) el('proj-title').textContent = 'Projeção — ' + ACTIVE_TC;
+    if(el('kv-real'))    el('kv-real').textContent    = fmt(real);
+    if(el('kl-real'))    el('kl-real').textContent    = 'Total realizado no mês';
+
+    // ── Card "vs Plano" (comum): vigente usa estimado; fechado usa realizado ──
+    const planRef = isClosed ? real : estimado;
+    if(el('kl-plan'))      el('kl-plan').textContent      = isClosed ? 'Realizado vs Plano' : 'Proj. Final vs Plano';
+    if(el('kv-plan-val'))  el('kv-plan-val').textContent  = (plan!=null) ? fmt(plan) : '—';
+    if(el('kv-plan-label'))el('kv-plan-label').textContent= 'Plano ' + fmtMY(ACTIVE_MONTH);
+    if(el('kv-plan-delta')){
+      const e = el('kv-plan-delta');
+      if(plan!=null && plan>0){ const d = planRef - plan; e.textContent = deltaStr(d, plan); e.className = 'cmp-delta ' + (d>=0?'cmp-pos':'cmp-neg'); }
+      else { e.textContent = '—'; e.className = 'cmp-delta'; }
+    }
+
+    if(isClosed){
+      // ════════ MÊS FECHADO: foco em desvio Projetado × Realizado (aprendizado) ════════
+      // Projetado = soma da linha laranja (HIST = projeção logada) no mês todo.
+      const projTot = ALL_DAYS.reduce((s,d)=> s + histVal(d), 0);
+      const hasProj = projTot > 0;
+      const dev     = real - projTot;
+      const devSign = dev>=0 ? '+' : '-';
+      // maior desvio diário (realizado do dia − linha laranja do dia)
+      let maxAbs=0, maxDay=null, maxSigned=0;
+      ALL_DAYS.forEach(d=>{
+        const pd = histVal(d); if(pd<=0) return;
+        const rd = sgs.reduce((ss,sg)=> ss + tcVal(ACTUAL_DATA, sg, d),0);
+        const dv = rd - pd;
+        if(Math.abs(dv) > maxAbs){ maxAbs=Math.abs(dv); maxDay=d; maxSigned=dv; }
+      });
+
+      if(el('kv-pct')) el('kv-pct').textContent = 'mês fechado';
+
+      // cyan: realizado total vs M-1 mês cheio
+      if(el('kc-real-lab')) el('kc-real-lab').textContent = 'M-1 (mês todo)';
+      { const prevTot = prevAct ? prevRealCumul(prevAct, prevKey, sgs) : 0;
+        if(el('kv-real-ref')) el('kv-real-ref').textContent = prevAct ? fmt(prevTot) : '—';
+        if(el('kv-real-mom')){ const e=el('kv-real-mom');
+          if(prevAct){ const d=real-prevTot; e.textContent=deltaStr(d,prevTot); e.className='cmp-delta '+(d>=0?'cmp-pos':'cmp-neg'); }
+          else { e.textContent=''; e.className='cmp-delta'; } } }
+
+      // orange → Desvio Proj × Real
+      if(el('kl-hoje'))   el('kl-hoje').textContent   = 'Desvio Proj × Real';
+      if(el('kv-hoje'))   el('kv-hoje').textContent   = hasProj ? devSign+fmt(Math.abs(dev)) : '—';
+      if(el('ksub-hoje')) el('ksub-hoje').textContent = hasProj ? (devSign+(Math.abs(dev)/projTot*100).toFixed(1).replace('.',',')+'% vs projetado') : 'sem projeção logada';
+
+      // orange2 → Maior desvio diário
+      if(el('kl-proj')) el('kl-proj').textContent = 'Maior desvio diário';
+      if(el('kv-proj')) el('kv-proj').textContent = maxDay ? ((maxSigned>=0?'+':'-')+fmt(Math.abs(maxSigned))) : '—';
+      if(el('kl-ate'))  el('kl-ate').textContent  = maxDay ? ('em '+dm(maxDay)) : 'sem projeção logada';
+
+      // green → Realizado × Projetado
+      if(el('kl-total'))    el('kl-total').textContent    = 'Realizado × Projetado';
+      if(el('kv-total'))    el('kv-total').textContent    = fmt(real);
+      if(el('ksub-total'))  el('ksub-total').textContent  = hasProj ? ('projetado: '+fmt(projTot)) : 'sem projeção logada';
+      if(el('kc-total-lab'))el('kc-total-lab').textContent= 'Projetado';
+      if(el('kv-total-ref'))el('kv-total-ref').textContent= hasProj ? fmt(projTot) : '—';
+      if(el('kv-total-mom')){ const e=el('kv-total-mom');
+        if(hasProj){ const d=real-projTot; e.textContent=deltaStr(d,projTot); e.className='cmp-delta '+(d>=0?'cmp-pos':'cmp-neg'); }
+        else { e.textContent=''; e.className='cmp-delta'; } }
+      return;
+    }
+
+    // ════════ MÊS VIGENTE (comportamento original) ════════
+    const pct = (real+proj)>0 ? (real/(real+proj)*100).toFixed(1) : '0';
+    if(el('kv-hoje'))   el('kv-hoje').textContent   = fmt(hoje);
+    if(el('kv-proj'))   el('kv-proj').textContent   = fmt(proj);
+    if(el('kv-total'))  el('kv-total').textContent  = fmt(estimado);
+    if(el('kv-pct'))    el('kv-pct').textContent    = pct+'% do mês concluído';
+    if(el('kl-hoje'))   el('kl-hoje').textContent   = 'Projeção hoje ('+dm(TODAY)+')';
+    if(el('ksub-hoje')) el('ksub-hoje').textContent = 'estimativa do dia';
+    if(el('kl-proj'))   el('kl-proj').textContent   = 'Projeção restante';
+    if(el('kl-ate'))    el('kl-ate').textContent    = 'até '+dm(ALL_DAYS[ALL_DAYS.length-1]);
+    if(el('kl-total'))  el('kl-total').textContent  = 'Total estimado do mês';
+    if(el('ksub-total'))el('ksub-total').textContent= 'realizado + projeção';
+
+    // cyan: realizado até hoje vs mesmo dia M-1
+    const todayDay = parseInt(TODAY.split('-')[2], 10);
+    if(el('kc-real-lab')) el('kc-real-lab').textContent = 'Mesmo dia M-1';
+    { const has = (prevAct && todayDay > 1);
+      const prevCumul = has ? prevRealCumul(prevAct, prevKey, sgs, todayDay) : 0;
+      if(el('kv-real-ref')) el('kv-real-ref').textContent = has ? fmt(prevCumul) : '—';
+      if(el('kv-real-mom')){ const e=el('kv-real-mom');
+        if(has){ const d=real-prevCumul; e.textContent=deltaStr(d,prevCumul); e.className='cmp-delta '+(d>=0?'cmp-pos':'cmp-neg'); }
+        else { e.textContent=''; e.className='cmp-delta'; } } }
+
+    // green: total estimado vs realizado total M-1
+    if(el('kc-total-lab')) el('kc-total-lab').textContent = 'M-1 real';
+    { const prevTotal = prevAct ? prevRealCumul(prevAct, prevKey, sgs) : 0;
+      if(el('kv-total-ref')) el('kv-total-ref').textContent = prevAct ? fmt(prevTotal) : '—';
+      if(el('kv-total-mom')){ const e=el('kv-total-mom');
+        if(prevAct){ const d=estimado-prevTotal; e.textContent=deltaStr(d,prevTotal); e.className='cmp-delta '+(d>=0?'cmp-pos':'cmp-neg'); }
+        else { e.textContent=''; e.className='cmp-delta'; } } }
+  }
+
+  function toggleSG(sg, labelEl){
+    const cb = labelEl.querySelector('input'); cb.checked = !cb.checked;
+    labelEl.querySelector('.sg-dot').classList.toggle('off', !cb.checked);
+    labelEl.querySelector('.sg-name').classList.toggle('off', !cb.checked);
+    rebuildLines(); updateKPIs();
+  }
+  function selectAll(){
+    document.querySelectorAll('#fp-proj input').forEach(cb=>{
+      cb.checked=true; const it=cb.closest('.sg-item');
+      it.querySelector('.sg-dot').classList.remove('off'); it.querySelector('.sg-name').classList.remove('off');
+    });
+    rebuildLines(); updateKPIs();
+  }
+  function selectNone(){
+    document.querySelectorAll('#fp-proj input').forEach(cb=>{
+      cb.checked=false; const it=cb.closest('.sg-item');
+      it.querySelector('.sg-dot').classList.add('off'); it.querySelector('.sg-name').classList.add('off');
+    });
+    rebuildLines(); updateKPIs();
+  }
+
+  function renderFilterPanel(){
+    const wrap = document.getElementById('fp-proj'); if(!wrap) return;
+    wrap.innerHTML = SG_ORDER.map(sg => {
+      const c = SG_COLORS[sg] || '#8b949e';
+      const safe = sg.replace(/'/g, "\\'");
+      return `<label class="sg-item" onclick="Proj.toggleSG('${safe}',this)">`
+        + `<input type="checkbox" checked data-sg="${sg}">`
+        + `<span class="sg-dot" style="background:${c};box-shadow:0 0 6px ${c}80"></span>`
+        + `<span class="sg-name">${sg}</span></label>`;
+    }).join('');
+  }
+
+  function renderMonthSelector(){
+    const sel = document.getElementById('proj-month-selector'); if(!sel) return;
+    const keys = Object.keys(MONTHS_META).sort(); // asc; vigente por ultimo
+    const closed  = keys.filter(mk => MONTHS_META[mk].closed);
+    const current = keys.filter(mk => !MONTHS_META[mk].closed);
+    let html = '';
+    // M0 (vigente) APARTE, como botao destacado
+    current.forEach(mk =>
+      html += `<span class="safra-grp-lab">Vigente</span>`
+        + `<button class="month-btn current${mk===ACTIVE_MONTH?' active':''}" data-month="${mk}" onclick="Proj.setMonth('${mk}')">${MONTHS_META[mk].label}</button>`);
+    // Safras fechadas em LISTA SUSPENSA (mais recente primeiro)
+    if(closed.length){
+      const activeClosed = closed.includes(ACTIVE_MONTH) ? ACTIVE_MONTH : '';
+      html += `<span class="safra-div"></span><span class="safra-grp-lab">Fechadas</span>`
+        + `<select class="daily-month-sel" id="proj-closed-sel" onchange="Proj.setMonth(this.value)">`
+        + `<option value="" ${activeClosed?'':'selected'} disabled>Selecionar…</option>`
+        + closed.slice().reverse().map(mk =>
+            `<option value="${mk}" ${mk===activeClosed?'selected':''}>${MONTHS_META[mk].label}</option>`).join('')
+        + `</select>`;
+    }
+    sel.innerHTML = html;
+  }
+
+  function renderTcSelector(){
+    const sel = document.getElementById('proj-tc-selector'); if(!sel) return;
+    sel.innerHTML = TC_OPTIONS.map(tc =>
+      `<button class="tc-btn${tc===ACTIVE_TC?' active':''}" data-tc="${tc}" onclick="Proj.setTc('${tc}')">${tc}</button>`
+    ).join('');
+  }
+
+  function setMonth(mk){
+    if(!mk || !MONTHS_META[mk]) return;
+    syncMonth(mk);
+    renderMonthSelector(); // mantem pill vigente + dropdown de fechadas em sincronia
+    makeChart(); updateKPIs();
+  }
+
+  function setTc(tc){
+    if(!TC_OPTIONS.includes(tc)) return;
+    ACTIVE_TC = tc;
+    makeChart(); updateKPIs();
+    document.querySelectorAll('#proj-tc-selector .tc-btn').forEach(b=> b.classList.toggle('active', b.dataset.tc===tc));
+  }
+
+  let initialized = false, loading = false;
+  async function init(){
+    if(initialized || loading) return;
+    if(!PROJ_BUNDLE){
+      if(typeof Grid === 'undefined' || typeof Grid.dataset !== 'function'){
+        console.warn('[Proj] Grid indisponivel; aba Projecao requer dados publicados');
+        return;
+      }
+      loading = true;
+      try {
+        const rows = await Grid.dataset('projecao').load();
+        if(!Array.isArray(rows) || !rows.length || !rows[0].bundle) throw new Error('dataset projecao vazio');
+        bindBundle(JSON.parse(rows[0].bundle));
+      } catch(e){
+        console.error('[Proj] erro ao carregar dataset projecao:', e);
+        loading = false;
+        return;
+      }
+      loading = false;
+    }
+    syncMonth(PROJ_BUNDLE.active_month);
+    renderMonthSelector();
+    renderTcSelector();
+    renderFilterPanel();
+    makeChart();
+    updateKPIs();
+    initialized = true;
+  }
+
+  window.Proj = { init, toggleSG, selectAll, selectNone, setMonth, setTc };
+})();
+</script>
+
+<script>
+/* Grid: only allow approved Grid domains to open unsandboxed tabs */
+(function(){
+  var allowedHosts = ["figma.com", "www.figma.com", "furydocs.io", "zeroheight.com", "google.com", "docs.google.com", "meet.google.com", "grid.adminml.com", "grid-artifacts.adminml.com", "mercadolibre.atlassian.net", "mercadolibre-opsgenie.atlassian.net", "app.datadoghq.com", "grafana-service.furycloud.io", "web.furycloud.io", "nasdaq-meli.app.opsgenie.com", "meli.enterprise.slack.com"];
+  var allowedSuffixes = [".adminml.com", ".atlassian.net", ".google.com", ".furycloud.io", ".melioffice.com", ".melisystems.com"];
+  var allowedPathPrefixes = {"github.com": ["/melisource/"], "www.github.com": ["/melisource/"]};
+  function normalizeUrl(rawUrl){
+    try {
+      return new URL(String(rawUrl || ""), window.location.href);
+    } catch (_err) {
+      return null;
+    }
+  }
+  function isAllowedUrl(rawUrl){
+    var parsed = normalizeUrl(rawUrl);
+    if(!parsed) return false;
+    if(parsed.protocol === "slack:") return true;
+    if(parsed.protocol !== "https:") return false;
+    var h = (parsed.hostname || "").toLowerCase();
+    if(!h) return false;
+    if(allowedHosts.indexOf(h) !== -1) return true;
+    for(var i = 0; i < allowedSuffixes.length; i++){
+      var s = allowedSuffixes[i];
+      if(h === s.slice(1) || (h.length > s.length && h.slice(-s.length) === s)) return true;
+    }
+    var pathPrefixes = allowedPathPrefixes[h];
+    if(pathPrefixes){
+      var p = parsed.pathname || "/";
+      for(var j = 0; j < pathPrefixes.length; j++){
+        if(p.slice(0, pathPrefixes[j].length) === pathPrefixes[j]) return true;
+      }
+    }
+    return false;
+  }
+  function requestParentPopup(rawUrl){
+    var parsed = normalizeUrl(rawUrl);
+    if(!parsed || !window.parent || window.parent === window) return false;
+    try {
+      window.parent.postMessage({type: "grid-open-safe-popup", url: parsed.href}, window.location.origin);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  document.addEventListener("click", function(event){
+    var target = event.target;
+    var anchor = target && target.closest ? target.closest("a[href]") : null;
+    if(!anchor) return;
+    var href = anchor.getAttribute("href") || "";
+    if(!href || href.charAt(0) === "#") return;
+    var opensNewTab = anchor.target === "_blank" || event.ctrlKey || event.metaKey || event.button === 1;
+    if(!opensNewTab) return;
+    if(!isAllowedUrl(href)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    if(requestParentPopup(href)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, true);
+
+  var nativeOpen = window.open;
+  window.open = function(rawUrl, target, features){
+    if(!isAllowedUrl(rawUrl)) return null;
+    if(requestParentPopup(rawUrl)) return null;
+    return nativeOpen ? nativeOpen.call(window, normalizeUrl(rawUrl).href, target, features) : null;
+  };
+})();
+</script>
+
+<script>
+/* Grid: sync iframe URL mutations to parent address bar */
+(function(){
+  function notifyParent(search, hash){
+    if(!window.parent || window.parent === window) return;
+    try{
+      window.parent.postMessage(
+        {type:"grid-url-sync", search:search, hash:hash},
+        window.location.origin
+      );
+    }catch(_){}
+  }
+  function parseAndNotify(url){
+    try{
+      var p = new URL(String(url), window.location.href);
+      notifyParent(p.search, p.hash);
+    }catch(_){}
+  }
+  var _push = history.pushState.bind(history);
+  var _replace = history.replaceState.bind(history);
+  history.pushState = function(state, title, url){
+    _push(state, title, url);
+    if(url != null) parseAndNotify(url);
+  };
+  history.replaceState = function(state, title, url){
+    _replace(state, title, url);
+    if(url != null) parseAndNotify(url);
+  };
+  window.addEventListener("hashchange", function(){
+    notifyParent(window.location.search, window.location.hash);
+  });
+})();
+</script>
+
+
+<script>
+/* Boot standalone (TDZ-safe, no fim do body):
+   1) configura o SDK com o docId DESTE doc — sem isso Grid.dataset() nao sabe de qual
+      doc ler e load() volta vazio (mesmo padrao do _grid_v6.html, linhas 564-567);
+   2) defaults do Chart;
+   3) init da Projecao. */
+try {
+  if (typeof Grid !== 'undefined' && typeof Grid.configure === 'function') {
+    try { Grid.configure({ docId: (window.GRID && window.GRID.docId) || '01KVWX9C5JAFHN4QCKP4HZCKB5' }); } catch(e) {}
+  }
+  if (typeof Chart !== 'undefined') {
+    Chart.defaults.color = '#8b949e';
+    Chart.defaults.font.family = "'Segoe UI', system-ui, Arial";
+  }
+  if (window.Proj && typeof window.Proj.init === 'function') window.Proj.init();
+  else console.error('[Projecao] window.Proj não definido');
+} catch(e) { console.error('[Projecao] init error:', e); }
+</script>
+</body>
+</html>
