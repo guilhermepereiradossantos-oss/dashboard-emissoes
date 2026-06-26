@@ -135,6 +135,20 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 .daily-controls label{font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px}
 .daily-month-sel{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
 .daily-month-sel:focus{outline:none;border-color:#58a6ff}
+/* ADOPTION: slider de dias + filtro desabilitado pela quebra */
+#adopt-dias{accent-color:#58a6ff;cursor:pointer;width:200px;vertical-align:middle}
+#adopt-dias-val{color:#58a6ff;font-weight:800}
+.filter-btn.fb-disabled{opacity:.4;pointer-events:none;border-style:dashed}
+#adopt-filter-bar{padding:0 0 4px;gap:6px}
+#adopt-pills{padding:0 0 8px}
+/* KPI resumo vivo da aba Adoption (abaixo do gráfico) */
+.adopt-kpi{display:flex;gap:24px;flex-wrap:wrap;align-items:center;background:#161b22;border:1px solid #21262d;border-radius:10px;padding:12px 20px;margin-top:8px}
+.adopt-kpi .ak-item{display:flex;flex-direction:column;gap:2px}
+.adopt-kpi .ak-lab{font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px}
+.adopt-kpi .ak-val{font-size:22px;font-weight:800;color:#58a6ff;line-height:1}
+.adopt-kpi .ak-val.prev{color:#8b949e}
+.adopt-kpi .ak-delta{font-size:13px;font-weight:700}
+.adopt-kpi .ak-pos{color:#3DFF91}.adopt-kpi .ak-neg{color:#FF5A5A}
 
 /* ERROR BANNER */
 .error-banner{background:rgba(255,90,90,.1);border:1px solid rgba(255,90,90,.3);border-radius:8px;padding:10px 16px;font-size:12px;color:#FF5A5A;margin-bottom:16px;display:none}
@@ -249,6 +263,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 <div class="tabs-bar" id="tabs-bar">
   <button class="tab-nav-btn active" data-tab="emissoes">Emissões</button>
   <button class="tab-nav-btn" data-tab="encendidos">Encendidos</button>
+  <button class="tab-nav-btn" data-tab="adoption">% Adoption</button>
 </div>
 
 <!-- ══ FILTER BAR ══ -->
@@ -426,6 +441,46 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
   </div>
 </div>
 
+<!-- % ADOPTION -->
+<div id="tab-adoption" class="tab-pane">
+  <div class="container">
+    <div class="bq-unavail" id="adopt-bq-warn">⚠️ Grid SDK não disponível. Abra este arquivo em grid.adminml.com para ver os dados.</div>
+    <div class="error-banner" id="adopt-error"></div>
+
+    <div class="section-hdr"><h2>% Adoption — por safra de encendido (janela de dias)</h2></div>
+
+    <!-- Controles próprios da aba (independentes da barra global) -->
+    <div class="daily-controls">
+      <label>Quebra por:</label>
+      <select class="daily-month-sel" id="adopt-break">
+        <option value="__total__" selected>Total</option>
+        <option value="FLAG_TC">Tipo TC</option>
+        <option value="FLAG_NISE">Nise</option>
+        <option value="rating_tc_grp">Rating TC</option>
+        <option value="super_grupo">Grupo Especial</option>
+        <option value="range_numero_propostas">Range Nº Propostas</option>
+      </select>
+      <label style="margin-left:8px">Safra:</label>
+      <select class="daily-month-sel" id="adopt-safra">
+        <option value="6">6M</option>
+        <option value="12" selected>12M</option>
+        <option value="999">Tudo</option>
+      </select>
+      <label style="margin-left:14px">Dias até conversão: <span id="adopt-dias-val">40</span></label>
+      <input type="range" id="adopt-dias" min="0" max="40" value="40">
+    </div>
+
+    <!-- Filtros da aba (multi-select; o filtro da dimensão em "Quebra por" é desabilitado) -->
+    <div class="filter-bar-inner" id="adopt-filter-bar">
+      <span class="filter-group-label">Filtros</span>
+    </div>
+    <div class="filter-pills" id="adopt-pills"></div>
+
+    <div class="chart-wrap"><div class="chart-inner"><canvas id="adopt-chart"></canvas></div></div>
+    <div id="adopt-kpi" class="adopt-kpi" style="display:none"></div>
+  </div>
+</div>
+
 <!-- ══ LOADING OVERLAY ══ -->
 <div id="loading-overlay">
   <div class="spinner"></div>
@@ -532,6 +587,7 @@ let _ds_emi       = null;
 let _ds_diario    = null;
 let _ds_nprop_enc = null;
 let _ds_nprop_emi = null;
+let _ds_adoption  = null;
 let _loading      = false;
 let _initialized  = false;
 
@@ -789,18 +845,21 @@ async function loadAllDatasets() {
   hideError();
 
   try {
-    const [enc, emi, diario, npropEnc, npropEmi] = await Promise.all([
+    const [enc, emi, diario, npropEnc, npropEmi, adoption] = await Promise.all([
       Grid.dataset('mensal_encendidos').load(),
       Grid.dataset('mensal_emissoes').load(),
       Grid.dataset('diario').load(),
       Grid.dataset('nprop_enc').load(),
       Grid.dataset('nprop_emi').load(),
+      Grid.dataset('adoption').load(),
     ]);
     _ds_enc       = fromColumnar(enc);
     _ds_emi       = fromColumnar(emi);
     _ds_diario    = fromColumnar(diario);
     _ds_nprop_enc = fromColumnar(npropEnc);
     _ds_nprop_emi = fromColumnar(npropEmi);
+    _ds_adoption  = fromColumnar(adoption);
+    if (typeof buildAdoptFilters === 'function') buildAdoptFilters();
 
     // Populate dynamic filters (safra_enc, canal_aquisicao)
     const safras = uniqueSorted(_ds_enc, 'safra_enc').sort((a,b) => b.localeCompare(a));
@@ -1356,6 +1415,242 @@ function showBqUnavail() {
 }
 
 // ════════════════════════════════════════════════════════════════
+// ABA % ADOPTION (controles próprios; recalcula no cliente pelo slider)
+// ════════════════════════════════════════════════════════════════
+// adoption(N) = SUM(cc{N}) / SUM(n_enc), por safra, recalculado p/ quebra/filtro.
+const ADOPT_COLORS = {
+  FLAG_TC: { '1. TC Full': '#58a6ff', '2. Micro TC': '#3DFF91' },
+  FLAG_NISE: C_NISE,
+  rating_tc_grp: C_RATING,
+  super_grupo: C_SG,
+  range_numero_propostas: C_NPROP,
+};
+const ADOPT_ORDERS = {
+  FLAG_TC: ['1. TC Full', '2. Micro TC'],
+  FLAG_NISE: ['1. Bronze', '2. Silver', '3. Gold', '4. Platinum', '5. Nulo', '0. SELLER'],
+  rating_tc_grp: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C', 'D-J', 'Sem rating'],
+  super_grupo: ['BAU', 'Sellers', 'Mar Aberto', 'Only Nav', 'Cuentas Canceladas'],
+  range_numero_propostas: ORDER_NPROP,
+};
+// Dimensões filtráveis da aba (super_grupo é só quebra, sem filtro)
+const ADOPT_FILTER_DEFS = [
+  { id: 'FLAG_TC',                label: 'Tipo TC',            values: ['1. TC Full', '2. Micro TC'] },
+  { id: 'FLAG_NISE',             label: 'Nise',               values: ['1. Bronze', '2. Silver', '3. Gold', '4. Platinum', '5. Nulo', '0. SELLER'] },
+  { id: 'rating_tc_grp',         label: 'Rating TC',          values: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C', 'D-J', 'Sem rating'] },
+  { id: 'range_numero_propostas',label: 'Range Nº Propostas', values: ORDER_NPROP },
+];
+let adoptBreak = '__total__', adoptDias = 40, adoptSafraN = 12;
+let adoptFilters = {};
+
+function adoptSafraMonths() {
+  if (!_ds_adoption) return new Set();
+  const all = [...new Set(_ds_adoption.map(r => r.safra_enc))].sort(); // asc
+  const take = adoptSafraN >= 999 ? all.length : adoptSafraN;
+  return new Set(all.slice(-take));
+}
+
+function buildAdoptFilters() {
+  const bar = document.getElementById('adopt-filter-bar');
+  if (!bar) return;
+  bar.querySelectorAll('.afilter-btn').forEach(el => el.remove());
+  ADOPT_FILTER_DEFS.forEach(def => {
+    const sel = adoptFilters[def.id];
+    const selCount = sel ? sel.size : 0;
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn afilter-btn' + (selCount > 0 ? ' has-active' : '');
+    btn.dataset.afield = def.id;
+    btn.innerHTML = `<span>${def.label}</span>${selCount > 0 ? `<span class="fb-count">${selCount}</span>` : ''}<span class="fb-arrow">▾</span>`;
+    const dd = document.createElement('div'); dd.className = 'filter-dropdown';
+    const hdr = document.createElement('div'); hdr.className = 'fd-header';
+    hdr.innerHTML = `<span style="font-size:11px;font-weight:700;color:#c9d1d9">${def.label}</span><span class="fd-sel-all" data-aaction="toggle-all" data-afield="${def.id}">Todos</span>`;
+    dd.appendChild(hdr);
+    def.values.forEach(val => {
+      const item = document.createElement('label'); item.className = 'fd-item';
+      const checked = sel && sel.has(val) ? 'checked' : '';
+      const safe = String(val).replace(/"/g, '&quot;');
+      item.innerHTML = `<input type="checkbox" ${checked} data-afield="${def.id}" data-aval="${safe}"><span title="${safe}">${val}</span>`;
+      dd.appendChild(item);
+    });
+    btn.appendChild(dd);
+    btn.addEventListener('click', function (e) {
+      if (e.target.closest('.filter-dropdown')) return;
+      const wasOpen = btn.classList.contains('open');
+      document.querySelectorAll('.afilter-btn.open').forEach(b => b.classList.remove('open'));
+      if (!wasOpen) btn.classList.add('open');
+    });
+    bar.appendChild(btn);
+  });
+  renderAdoptPills();
+}
+
+function onAdoptFilterCheck(field, val, checked) {
+  if (!adoptFilters[field]) adoptFilters[field] = new Set();
+  if (checked) adoptFilters[field].add(val);
+  else { adoptFilters[field].delete(val); if (adoptFilters[field].size === 0) delete adoptFilters[field]; }
+  buildAdoptFilters(); renderAdoption();
+}
+
+function toggleAdoptAll(field) {
+  const def = ADOPT_FILTER_DEFS.find(d => d.id === field);
+  if (!def) return;
+  if (adoptFilters[field] && adoptFilters[field].size === def.values.length) delete adoptFilters[field];
+  else adoptFilters[field] = new Set(def.values);
+  buildAdoptFilters(); renderAdoption();
+}
+
+function renderAdoptPills() {
+  const c = document.getElementById('adopt-pills'); if (!c) return; c.innerHTML = '';
+  for (const [field, vals] of Object.entries(adoptFilters)) {
+    if (!vals || vals.size === 0) continue;
+    const def = ADOPT_FILTER_DEFS.find(d => d.id === field); const label = def ? def.label : field;
+    vals.forEach(val => {
+      const pill = document.createElement('span'); pill.className = 'pill';
+      pill.innerHTML = `<span style="opacity:.7;font-size:10px">${label}:</span> ${val} ✕`;
+      pill.addEventListener('click', () => { vals.delete(val); if (vals.size === 0) delete adoptFilters[field]; buildAdoptFilters(); renderAdoption(); });
+      c.appendChild(pill);
+    });
+  }
+}
+
+function setAdoptBreak(b) {
+  adoptBreak = b;   // o filtro da dimensão da quebra PERMANECE ativo (usuário pode excluir categorias)
+  buildAdoptFilters(); renderAdoption();
+}
+
+// Plugin: rótulo de % em cada ponto (cor da própria linha)
+const adoptPointLabels = {
+  id: 'adoptPointLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      ds.data.forEach((v, i) => {
+        if (v == null) return;
+        const pt = meta.data[i]; if (!pt) return;
+        ctx.save();
+        ctx.font = '600 10px Segoe UI, Arial';
+        ctx.fillStyle = ds.borderColor || '#c9d1d9';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(v.toFixed(1).replace('.', ',') + '%', pt.x, pt.y - 5);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+// partialIdx = índice do mês vigente (parcial) -> segmento final pontilhado + ponto vazado
+function adoptLineConfig(months, series, partialIdx) {
+  return {
+    type: 'line',
+    plugins: [adoptPointLabels],
+    data: {
+      labels: months.map(fmtSafra),
+      datasets: series.map(s => ({
+        label: s.label, data: s.data,
+        nomConv: s.nomConv, nomEnc: s.nomEnc,
+        borderColor: s.color, backgroundColor: s.color,
+        borderWidth: 2, pointHoverRadius: 5, tension: 0.3, spanGaps: true,
+        pointRadius: months.map((m, i) => i === partialIdx ? 4 : 3),
+        pointBackgroundColor: months.map((m, i) => i === partialIdx ? '#0d1117' : s.color),
+        pointBorderColor: s.color,
+        pointBorderWidth: months.map((m, i) => i === partialIdx ? 2 : 1),
+        segment: { borderDash: ctx => (partialIdx >= 0 && ctx.p1DataIndex === partialIdx) ? [6, 4] : undefined },
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 18 } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8b949e', boxWidth: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => {
+          const d = ctx.dataset, i = ctx.dataIndex;
+          const pct = ctx.parsed.y != null ? ctx.parsed.y.toFixed(2).replace('.', ',') + '%' : '–';
+          const enc = d.nomEnc ? d.nomEnc[i] : null;
+          return `${d.label}: ${pct}` + (enc != null ? `  ·  ${fmtCompact(enc)} encendidos` : '');
+        } } },
+        title: { display: true, text: `% Adoption — até ${adoptDias} dias do encendido${partialIdx >= 0 ? '  ·  ⋯ mês vigente (parcial)' : ''}`, color: '#58a6ff', font: { size: 12, weight: 700 } },
+      },
+      scales: {
+        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
+        y: { beginAtZero: false, grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => v < 0 ? '' : (Math.round(v * 10) / 10).toString().replace('.', ',') + '%' } },
+      },
+    },
+  };
+}
+
+function renderAdoption() {
+  if (!_ds_adoption) return;
+  const ccCol = 'cc' + adoptDias;
+  const safraSet = adoptSafraMonths();
+  const rows = _ds_adoption.filter(r => {
+    if (!safraSet.has(r.safra_enc)) return false;
+    for (const [field, vals] of Object.entries(adoptFilters)) {
+      if (!vals || vals.size === 0) continue;   // filtro aplica MESMO p/ a dimensão da quebra (permite excluir categorias, ex.: "Sem rating")
+      if (!vals.has(r[field])) return false;
+    }
+    return true;
+  });
+  const months = [...new Set(rows.map(r => r.safra_enc))].sort();
+  let series = [];
+  if (adoptBreak === '__total__') {
+    const bm = {}; months.forEach(m => bm[m] = [0, 0]);
+    rows.forEach(r => { const a = bm[r.safra_enc]; if (a) { a[0] += n(r[ccCol]); a[1] += n(r.n_enc); } });
+    series = [{
+      label: 'Total', color: '#58a6ff',
+      data:    months.map(m => bm[m][1] > 0 ? bm[m][0] / bm[m][1] * 100 : null),
+      nomConv: months.map(m => bm[m][0]),   // emitidos (≤N dias)
+      nomEnc:  months.map(m => bm[m][1]),   // encendidos (denominador)
+    }];
+  } else {
+    const cmap = ADOPT_COLORS[adoptBreak] || {};
+    const agg = {};
+    rows.forEach(r => {
+      let dim = r[adoptBreak]; if (dim == null || dim === '') dim = 'null';
+      (agg[dim] = agg[dim] || {});
+      (agg[dim][r.safra_enc] = agg[dim][r.safra_enc] || [0, 0]);
+      agg[dim][r.safra_enc][0] += n(r[ccCol]); agg[dim][r.safra_enc][1] += n(r.n_enc);
+    });
+    const ordered = (ADOPT_ORDERS[adoptBreak] || []).filter(d => agg[d]);
+    Object.keys(agg).forEach(d => { if (!ordered.includes(d)) ordered.push(d); });
+    series = ordered.map(d => ({
+      label: d, color: cmap[d] || '#8b949e',
+      data:    months.map(m => { const a = (agg[d] || {})[m]; return a && a[1] > 0 ? a[0] / a[1] * 100 : null; }),
+      nomConv: months.map(m => { const a = (agg[d] || {})[m]; return a ? a[0] : 0; }),
+      nomEnc:  months.map(m => { const a = (agg[d] || {})[m]; return a ? a[1] : 0; }),
+    }));
+  }
+  // mês vigente (parcial) = última safra existente na base
+  const curYM = _ds_adoption.reduce((mx, r) => r.safra_enc > mx ? r.safra_enc : mx, '');
+  const partialIdx = months.indexOf(curYM);
+
+  // KPI resumo VIVO (recalcula a cada render/refresh): adoption(N) vigente vs M-1, Total
+  const kpiEl = document.getElementById('adopt-kpi');
+  if (kpiEl) {
+    const adoptMonth = m => { let num = 0, den = 0; rows.forEach(r => { if (r.safra_enc === m) { num += n(r[ccCol]); den += n(r.n_enc); } }); return den > 0 ? num / den * 100 : null; };
+    const fmtp = v => v == null ? '–' : v.toFixed(2).replace('.', ',') + '%';
+    if (partialIdx >= 0) {
+      const curVal = adoptMonth(curYM);
+      const prevYM = months[partialIdx - 1];
+      const prevVal = prevYM ? adoptMonth(prevYM) : null;
+      let deltaHtml = '';
+      if (curVal != null && prevVal != null) {
+        const d = curVal - prevVal, cls = d >= 0 ? 'ak-pos' : 'ak-neg', arrow = d >= 0 ? '▲' : '▼';
+        deltaHtml = `<div class="ak-item"><span class="ak-lab">Δ vs M-1</span><span class="ak-delta ${cls}">${arrow} ${d >= 0 ? '+' : ''}${d.toFixed(2).replace('.', ',')} pp</span></div>`;
+      }
+      kpiEl.innerHTML =
+        `<div class="ak-item"><span class="ak-lab">Adoption vigente · ${fmtSafra(curYM)} · ≤${adoptDias}d (parcial)</span><span class="ak-val">${fmtp(curVal)}</span></div>`
+        + (prevYM ? `<div class="ak-item"><span class="ak-lab">M-1 · ${fmtSafra(prevYM)} · ≤${adoptDias}d</span><span class="ak-val prev">${fmtp(prevVal)}</span></div>` : '')
+        + deltaHtml;
+      kpiEl.style.display = '';
+    } else { kpiEl.style.display = 'none'; }
+  }
+
+  makeChart('adopt-chart', adoptLineConfig(months, series, partialIdx));
+}
+
+// ════════════════════════════════════════════════════════════════
 // TAB SWITCHING
 // ════════════════════════════════════════════════════════════════
 function showTab(tab) {
@@ -1367,8 +1662,9 @@ function showTab(tab) {
   if (pane) pane.classList.add('active');
   if (btn)  btn.classList.add('active');
 
+  // barra de filtros global não se aplica à aba Adoption (tem painel próprio)
   const fb = document.getElementById('filter-bar-section');
-  fb.style.display = '';
+  fb.style.display = (tab === 'adoption') ? 'none' : '';
   if (_ds_enc && _ds_emi) renderActiveTab();
   else if (!_loading) loadAllDatasets();
 }
@@ -1376,10 +1672,11 @@ function showTab(tab) {
 function renderActiveTab() {
   if (activeTab === 'emissoes')   renderEmissoes();
   if (activeTab === 'encendidos') renderEncendidos();
+  if (activeTab === 'adoption')   renderAdoption();
 }
 
 function onRefreshClick() {
-  _ds_enc = null; _ds_emi = null; _ds_diario = null; _ds_nprop_enc = null; _ds_nprop_emi = null;
+  _ds_enc = null; _ds_emi = null; _ds_diario = null; _ds_nprop_enc = null; _ds_nprop_emi = null; _ds_adoption = null;
   loadAllDatasets();
 }
 
@@ -1416,6 +1713,29 @@ try {
   if (dailyTcSel) dailyTcSel.addEventListener('change', onDailyMonthChange);
   const dailySgSel = document.getElementById('enc-daily-sg-sel');
   if (dailySgSel) dailySgSel.addEventListener('change', onDailyMonthChange);
+
+  // Aba % Adoption — controles próprios
+  const abreak = document.getElementById('adopt-break');
+  if (abreak) abreak.addEventListener('change', e => setAdoptBreak(e.target.value));
+  const asafra = document.getElementById('adopt-safra');
+  if (asafra) asafra.addEventListener('change', e => { adoptSafraN = +e.target.value; renderAdoption(); });
+  const adias = document.getElementById('adopt-dias');
+  if (adias) adias.addEventListener('input', e => {
+    adoptDias = +e.target.value;
+    const lbl = document.getElementById('adopt-dias-val'); if (lbl) lbl.textContent = adoptDias;
+    renderAdoption();
+  });
+  const abar = document.getElementById('adopt-filter-bar');
+  if (abar) {
+    abar.addEventListener('change', e => {
+      const cb = e.target.closest('input[type=checkbox][data-afield]');
+      if (cb) onAdoptFilterCheck(cb.dataset.afield, cb.dataset.aval, cb.checked);
+    });
+    abar.addEventListener('click', e => {
+      const sa = e.target.closest('[data-aaction="toggle-all"]');
+      if (sa) { e.preventDefault(); e.stopPropagation(); toggleAdoptAll(sa.dataset.afield); }
+    });
+  }
 
   buildFilterBar();
 

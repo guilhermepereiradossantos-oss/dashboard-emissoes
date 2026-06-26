@@ -166,6 +166,44 @@ GROUP BY ALL
 """,
 }
 
+# ── Dataset 'adoption' (aba "% Adoption") ──────────────────────────────────────
+# Grain: safra_enc x FLAG_TC x FLAG_NISE x rating_tc_grp x super_grupo x range_numero_propostas.
+# Medidas: n_enc (denominador = base de encendido) + cc0..cc40 = cumulativo de convertidos
+# por janela de dias (ccK = convertidos com DIAS_CONV <= K). O cliente faz adoption(N) =
+# SUM(ccN) / SUM(n_enc) por quebra/filtro, recalculando ao mover o slider (0..40).
+_ADOPT_MAXDIAS = 40
+_cc_cols = ",\n  ".join(
+    f'SUM(IF(FLAG_CONVERSAO = "1. Convertido" AND DIAS_CONV <= {k}, QTDE, 0)) AS cc{k}'
+    for k in range(_ADOPT_MAXDIAS + 1)
+)
+QUERIES["adoption"] = f"""
+SELECT
+  FORMAT_DATE("%Y-%m", DT_ENCENDIDO) AS safra_enc,
+  FLAG_TC, FLAG_NISE,
+  CASE
+    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers"
+    WHEN grupo_especial LIKE "%Mar Aberto%" THEN "Mar Aberto"
+    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav"
+    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
+    ELSE "BAU"
+  END AS super_grupo,
+  CASE
+    WHEN rating_tc = "A1" THEN "A1" WHEN rating_tc = "A2" THEN "A2" WHEN rating_tc = "A" THEN "A3"
+    WHEN rating_tc = "B1" THEN "B1" WHEN rating_tc = "B2" THEN "B2" WHEN rating_tc IN ("B","B3") THEN "B3"
+    WHEN rating_tc IN ("C","C1","C2","C3") THEN "C"
+    WHEN rating_tc IN ("D","E","F","G","J","J1","J2") THEN "D-J"
+    WHEN rating_tc IS NULL OR rating_tc = "Z" THEN "Sem rating"
+    ELSE "Outros" END AS rating_tc_grp,
+  range_numero_propostas,
+  SUM(QTDE) AS n_enc,
+  {_cc_cols}
+FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
+WHERE DT_ENCENDIDO >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MONTH)
+GROUP BY ALL
+"""
+COLUMNAR.add("adoption")  # muitas colunas cc* -> columnar economiza espaco
+NUM_COLS.update({"n_enc"} | {f"cc{k}" for k in range(_ADOPT_MAXDIAS + 1)})
+
 
 def run_bq(sql: str, dest_path: Path) -> None:
     """Roda query no BigQuery e salva resultado em JSON.
