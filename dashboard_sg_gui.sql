@@ -281,14 +281,6 @@ past AS (
     AND DT_CONV >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 5 MONTH), MONTH)
     AND DT_CONV <  CURRENT_DATE()
   GROUP BY ALL
-),
-
--- Ajuste manual: -15k TC Full distribuidos nos dias restantes do mes
-ajuste_cancel_tc_full AS (
-  SELECT
-    '1. TC Full' AS FLAG_TC, 'BAU' AS super_grupo, f.data_proj,
-    ROUND(-15000.0 / (DATE_DIFF(d.fim_mes, d.data_hoje, DAY) + 1)) AS proj_dia
-  FROM future_grid f CROSS JOIN datas d
 )
 
 SELECT FLAG_TC, super_grupo, CAST(dia AS STRING) AS dia, SUM(total) AS total, tipo
@@ -300,8 +292,6 @@ FROM (
   SELECT FLAG_TC, super_grupo, data_proj, proj_dia, 'proj' AS tipo FROM proj_organico WHERE super_grupo != 'BAU'
   UNION ALL
   SELECT FLAG_TC, super_grupo, data_proj, proj_dia, 'proj' AS tipo FROM ma_proj
-  UNION ALL
-  SELECT FLAG_TC, super_grupo, data_proj, proj_dia, 'proj' AS tipo FROM ajuste_cancel_tc_full
 )
 GROUP BY 1, 2, 3, 5
 ORDER BY FLAG_TC, super_grupo, dia

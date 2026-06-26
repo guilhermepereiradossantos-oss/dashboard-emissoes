@@ -44,7 +44,7 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # voltar a ser organica (escopo "minimo": mantidos ajustes manuais Python, spike_override e -15k).
 # Para reativar uma trava de TARGET: TARGET_TOTALS = {'2026-06': {'TC Full': <valor>}}
 TARGET_TOTALS = {}
-SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02'}
+SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02', '2026-06-25'}  # 25/06: snapshot dev ruim (Micro TC HIST degenerado)
 
 def fmt(n): return f"{int(round(n)):,}".replace(',', '.')
 
@@ -79,21 +79,8 @@ for row in csv.DictReader(io.StringIO(raw)):
 # 2a. AJUSTES MANUAIS (identico ao update_dashboard.py)
 # ============================================================
 cur_key = f'{year}-{month:02d}'
-if cur_key == '2026-06':
-    bau_mtc = proj_data['Micro TC']['BAU']
-    neighbors = [bau_mtc.get(f'2026-06-{d:02d}', 0) for d in [22, 23, 27, 28]]
-    avg_neighbor = sum(neighbors) / len([v for v in neighbors if v > 0]) if any(neighbors) else 0
-    for d in [24, 25, 26]:
-        dt = f'2026-06-{d:02d}'
-        if dt in bau_mtc: bau_mtc[dt] = avg_neighbor
-    print(f'  ADJ Micro TC BAU 24-26 -> avg {int(avg_neighbor):,}'.replace(',', '.'))
-    SELLERS_PATTERN_MAI = [2599, 226, 237, 340, 207, 171, 172, 105, 113]
-    sellers_mtc = proj_data['Micro TC']['Sellers']
-    for i, val in enumerate(SELLERS_PATTERN_MAI):
-        day = 17 + i
-        if day > 30: break
-        sellers_mtc[f'2026-06-{day:02d}'] = float(val)
-    print(f'  ADJ Micro TC Sellers 17-25 (Mai pattern, +{sum(SELLERS_PATTERN_MAI):,})'.replace(',', '.'))
+# 2a DESLIGADO (2026-06-26): ajustes manuais de Micro TC (BAU 24-26 / Sellers 17-25)
+# removidos a pedido do usuario -> projecao ORGANICA pura. (cur_key mantido; usado em 2b/secao 5.)
 
 # ============================================================
 # 2b. ESCALA PRA TARGET (identico)
@@ -119,39 +106,70 @@ if _cfg:
             print(f'  TARGET {tc}: real>=target; proj zerada')
 
 # ============================================================
-# 2c. PROJECAO VIVA (TC Full) — ancora no run-rate + decaimento suave
-#   Substitui o decaimento organico cru (cai cedo demais e descola do realizado)
-#   por: ancora = media dos ultimos N dias realizados; dias restantes decaem DECAY/dia.
-#   Reescala a proj organica de cada dia (preserva o mix de super_grupo).
-#   So TC Full por ora.
-#   TODO (melhorar depois): a linha tem que seguir a TENDENCIA DO MES (nao so a semana)
-#   e combinar com o shape historico — ver memoria project_projecao_viva.
+# 2c. SAZONALIDADE DIA-DA-SEMANA (+ nivel TC Full no run-rate do mes)
+#   Pedido do usuario (2026-06-26): a projecao organica nao tinha sazonalidade
+#   semanal (o hazard ignora weekday) -> fim de semana vinha igual a dia util, e o
+#   nivel do TC Full ficava ~12% acima do run-rate realizado.
+#   - Fatores DOW por TC: mediana diaria por dia-da-semana (ult. ~90d realizados,
+#     robusta a spikes de batch), normalizada p/ media 1.0.
+#   - TC Full: nivel-alvo do dia = run-rate do mes * fator_DOW(dia) (reescala a proj
+#     organica do dia preservando o mix de super_grupo). Derruba nivel e fds.
+#   - Micro TC: preserva a SOMA organica futura, so redistribui pelos fatores DOW
+#     (fds caem, dias uteis sobem; total ~igual — Micro ja esta no run-rate).
 # ============================================================
-LIVE_PROJ = {'TC Full': {'anchor_days': 3, 'decay': 0.05}}
-for tc, cfg in LIVE_PROJ.items():
-    real_by_day = defaultdict(float)
+def _median(xs):
+    s = sorted(xs); k = len(s)
+    if not k: return 0.0
+    return s[k // 2] if k % 2 else (s[k // 2 - 1] + s[k // 2]) / 2
+
+def dow_factors(tc):
+    """mediana diaria por weekday (0=Seg..6=Dom), ult. 90d realizados, normalizada mean=1."""
+    daily = defaultdict(float)
     for sg in actual_data[tc]:
         for d, v in actual_data[tc][sg].items():
-            if d.startswith(cur_key) and d < TODAY:
-                real_by_day[d] += v
-    real_days = sorted(real_by_day)
-    if not real_days:
-        continue
-    n = min(cfg['anchor_days'], len(real_days))
-    anchor = sum(real_by_day[d] for d in real_days[-n:]) / n
-    rem_days = [d for d in ALL_DAYS if d >= TODAY]
-    for i, d in enumerate(rem_days):
-        live_val = anchor * ((1 - cfg['decay']) ** i)
-        organic_total = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc])
-        if organic_total > 0:
-            f = live_val / organic_total
-            for sg in proj_data[tc]:
-                if d in proj_data[tc][sg]:
-                    proj_data[tc][sg][d] *= f
-        else:
-            proj_data[tc]['BAU'][d] = live_val
-    proj_rem = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in rem_days)
-    print(f'  LIVE {tc}: ancora={int(anchor):,} (ult.{n}d) decay={cfg["decay"]:.0%}/d -> proj_restante={int(proj_rem):,}'.replace(',', '.'))
+            daily[d] += v
+    cutoff = (date.today() - timedelta(days=90)).isoformat()
+    byw = defaultdict(list)
+    for d, v in daily.items():
+        if cutoff <= d < TODAY and v > 0:
+            byw[date.fromisoformat(d).weekday()].append(v)
+    med = {wd: _median(vs) for wd, vs in byw.items() if vs}
+    mean_med = sum(med.values()) / len(med) if med else 0
+    return {wd: med[wd] / mean_med for wd in med} if mean_med > 0 else {}
+
+def _apply_day_target(tc, d, target):
+    """forca a soma do dia d (todos SG) = target, reescalando a proj organica (preserva mix)."""
+    organic = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc])
+    if organic > 0:
+        f = target / organic
+        for sg in proj_data[tc]:
+            if d in proj_data[tc][sg]: proj_data[tc][sg][d] *= f
+    else:
+        proj_data[tc]['BAU'][d] = target
+
+rem_days = [d for d in ALL_DAYS if d >= TODAY]
+for tc in TC_KEYS:
+    fac = dow_factors(tc)
+    if not fac or not rem_days: continue
+    wd_of = lambda d: date.fromisoformat(d).weekday()
+    if tc == 'TC Full':
+        real_cur = [v for v in
+                    (sum(actual_data[tc][sg].get(d, 0) for sg in actual_data[tc])
+                     for d in ALL_DAYS if d < TODAY and d.startswith(cur_key)) if v > 0]
+        run_rate = sum(real_cur) / len(real_cur) if real_cur else 0
+        if run_rate <= 0: continue
+        for d in rem_days:
+            _apply_day_target(tc, d, run_rate * fac.get(wd_of(d), 1.0))
+        proj_rem = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in rem_days)
+        print(f'  DOW {tc}: run-rate={int(run_rate):,} -> proj_restante={int(proj_rem):,}'.replace(',', '.'))
+    else:
+        org_by_day = {d: sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc]) for d in rem_days}
+        total_org = sum(org_by_day.values())
+        wsum = sum(fac.get(wd_of(d), 1.0) for d in rem_days)
+        if total_org > 0 and wsum > 0:
+            for d in rem_days:
+                _apply_day_target(tc, d, total_org * fac.get(wd_of(d), 1.0) / wsum)
+        print(f'  DOW {tc}: redistribuido (soma organica preservada={int(total_org):,})'.replace(',', '.'))
 
 # ============================================================
 # 3. HISTORICO (snapshot LOCAL — nao toca producao)
