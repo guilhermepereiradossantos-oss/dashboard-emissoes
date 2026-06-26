@@ -184,6 +184,18 @@ for tc in TC_KEYS:
     proj_rem = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in rem_days)
     print(f'  DOW {tc}: anchor({mode})={int(anchor):,} -> proj_restante={int(proj_rem):,}'.replace(',', '.'))
 
+# 2d. CAP fino (pedido usuario 2026-06-26): NENHUM dia restante projeta mais que o
+# ultimo dia realizado ("nao faremos mais que ontem"). Aplica a TODOS os dias (fds incl.).
+last_real = max((d for d in ALL_DAYS if d < TODAY), default=None)
+if last_real:
+    for tc in TC_KEYS:
+        cap = sum(actual_data[tc][sg].get(last_real, 0) for sg in actual_data[tc])
+        if cap <= 0: continue
+        for d in rem_days:
+            cur = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc])
+            if cur > cap: _apply_day_target(tc, d, cap)
+    print(f'  CAP todos dias restantes <= ultimo realizado ({last_real})')
+
 # ============================================================
 # 3. HISTORICO (snapshot LOCAL — nao toca producao)
 # ============================================================
