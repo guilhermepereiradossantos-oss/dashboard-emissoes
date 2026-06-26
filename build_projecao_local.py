@@ -147,29 +147,42 @@ def _apply_day_target(tc, d, target):
     else:
         proj_data[tc]['BAU'][d] = target
 
+def _daily_real(tc):
+    """soma diaria realizada (todos SG), por dia < hoje."""
+    daily = defaultdict(float)
+    for sg in actual_data[tc]:
+        for d, v in actual_data[tc][sg].items():
+            if d < TODAY: daily[d] += v
+    return daily
+
+def month_runrate(tc):
+    """media diaria realizada do mes vigente (run-rate do mes)."""
+    daily = _daily_real(tc)
+    vals = [v for d, v in daily.items() if d.startswith(cur_key) and v > 0]
+    return sum(vals) / len(vals) if vals else 0
+
+def recent_runrate(tc, ndays=7):
+    """mediana das ultimas ndays diarias realizadas (robusta a spikes). Capta o
+    decaimento de fim de mes (ex.: Micro cai do começo p/ o fim)."""
+    daily = _daily_real(tc)
+    last = [daily[d] for d in sorted(daily)][-ndays:]
+    return _median(last) if last else 0
+
+# Ancora por TC: TC Full segue o run-rate do mes; Micro usa run-rate RECENTE
+# (mediana ult.7d) porque decai ao longo do mes — a media do mes superestima a cauda.
+ANCHOR_MODE = {'TC Full': 'month', 'Micro TC': 'recent'}
 rem_days = [d for d in ALL_DAYS if d >= TODAY]
 for tc in TC_KEYS:
     fac = dow_factors(tc)
     if not fac or not rem_days: continue
     wd_of = lambda d: date.fromisoformat(d).weekday()
-    if tc == 'TC Full':
-        real_cur = [v for v in
-                    (sum(actual_data[tc][sg].get(d, 0) for sg in actual_data[tc])
-                     for d in ALL_DAYS if d < TODAY and d.startswith(cur_key)) if v > 0]
-        run_rate = sum(real_cur) / len(real_cur) if real_cur else 0
-        if run_rate <= 0: continue
-        for d in rem_days:
-            _apply_day_target(tc, d, run_rate * fac.get(wd_of(d), 1.0))
-        proj_rem = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in rem_days)
-        print(f'  DOW {tc}: run-rate={int(run_rate):,} -> proj_restante={int(proj_rem):,}'.replace(',', '.'))
-    else:
-        org_by_day = {d: sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc]) for d in rem_days}
-        total_org = sum(org_by_day.values())
-        wsum = sum(fac.get(wd_of(d), 1.0) for d in rem_days)
-        if total_org > 0 and wsum > 0:
-            for d in rem_days:
-                _apply_day_target(tc, d, total_org * fac.get(wd_of(d), 1.0) / wsum)
-        print(f'  DOW {tc}: redistribuido (soma organica preservada={int(total_org):,})'.replace(',', '.'))
+    mode = ANCHOR_MODE.get(tc, 'month')
+    anchor = month_runrate(tc) if mode == 'month' else recent_runrate(tc, 7)
+    if anchor <= 0: continue
+    for d in rem_days:
+        _apply_day_target(tc, d, anchor * fac.get(wd_of(d), 1.0))
+    proj_rem = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in rem_days)
+    print(f'  DOW {tc}: anchor({mode})={int(anchor):,} -> proj_restante={int(proj_rem):,}'.replace(',', '.'))
 
 # ============================================================
 # 3. HISTORICO (snapshot LOCAL — nao toca producao)
