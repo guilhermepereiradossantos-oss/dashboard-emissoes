@@ -402,6 +402,35 @@ def upload_dataset(name: str, rows: list, doc_id: str = DOC_ID) -> dict:
     return put_dataset(name, rows, doc_id=doc_id)
 
 
+# ── Esconder o mês vigente das abas Emissões/Encendidos/Adoption até o encendido do
+#    mês "bater o batch" (senão a safra vigente vem ~vazia e polui/distorce os gráficos).
+#    A Projeção NÃO é afetada (projeta o mês vigente normalmente).
+BATCH_THRESHOLD = 0.25  # mês vigente entra nas abas v6 quando enc >= 25% do mês anterior
+EXCL_COL = {  # coluna de data p/ cortar o mês vigente incompleto, por dataset
+    "mensal_encendidos": "DT_ENCENDIDO", "diario": "DT_ENCENDIDO",
+    "nprop_enc": "DT_ENCENDIDO", "adoption": "DT_ENCENDIDO",
+    "mensal_emissoes": "DT_CONV", "nprop_emi": "DT_CONV",
+}
+
+def current_month_batched() -> bool:
+    """True se o encendido do mês vigente já >= BATCH_THRESHOLD do mês anterior (batch rodou)."""
+    sql = """
+SELECT
+  SUM(IF(DATE_TRUNC(DT_ENCENDIDO,MONTH)=DATE_TRUNC(CURRENT_DATE(),MONTH), QTDE, 0)) AS cur_enc,
+  SUM(IF(DATE_TRUNC(DT_ENCENDIDO,MONTH)=DATE_TRUNC(DATE_SUB(CURRENT_DATE(),INTERVAL 1 MONTH),MONTH), QTDE, 0)) AS prev_enc
+FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
+WHERE DT_ENCENDIDO >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+"""
+    p = TMP_DIR / "_batch_check.json"
+    run_bq(sql, p)
+    row = json.load(open(p, "r", encoding="utf-8"))[0]
+    cur = float(row.get("cur_enc") or 0); prev = float(row.get("prev_enc") or 0)
+    batched = prev > 0 and cur >= BATCH_THRESHOLD * prev
+    print(f"  [batch-check] enc vigente={int(cur):,} vs anterior={int(prev):,}"
+          f" -> {'BATCH OK (mostra mes vigente)' if batched else 'PRE-BATCH (esconde mes vigente das abas v6)'}".replace(",", "."))
+    return batched
+
+
 def main():
     # Push seletivo (one-off):
     #   python push_datasets_to_grid.py                 -> tudo (5 datasets -> DOC_ID, projecao -> PROJ_DOC_ID)
@@ -416,7 +445,11 @@ def main():
     overall_ok = True
 
     if not only_proj:
-        for name, sql in QUERIES.items():  # 5 datasets -> doc principal (Emissoes+Encendidos)
+        exclude_cur = not current_month_batched()  # esconde mês vigente das abas v6 até o batch
+        for name, sql in QUERIES.items():  # 6 datasets -> doc principal (Emissoes+Encendidos)
+            if exclude_cur and name in EXCL_COL:
+                sql = sql.replace("GROUP BY ALL",
+                                  f"  AND {EXCL_COL[name]} < DATE_TRUNC(CURRENT_DATE(), MONTH)\nGROUP BY ALL", 1)
             print(f"\n--- {name} ---")
             raw_path = TMP_DIR / f"{name}_raw.json"
 
