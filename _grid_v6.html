@@ -459,6 +459,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
         <option value="rating_tc_grp">Rating TC</option>
         <option value="super_grupo">Grupo Especial</option>
         <option value="range_numero_propostas">Range Nº Propostas</option>
+        <option value="FLAG_APP_ATIVO">App Ativo</option>
       </select>
       <label style="margin-left:8px">Safra:</label>
       <select class="daily-month-sel" id="adopt-safra">
@@ -556,6 +557,9 @@ const C_RATING = {
   'B1':         '#374D6E',
   'B2':         '#4A6796',
   'B3':         '#4C7FD6',
+  'C1':         '#C77B3C',
+  'C2':         '#9C5A1E',
+  'C3':         '#6E3D10',
   'C':          '#854A04',
   'D-J':        '#484F58',
   'Sem rating': '#808080',
@@ -1424,21 +1428,25 @@ const ADOPT_COLORS = {
   rating_tc_grp: C_RATING,
   super_grupo: C_SG,
   range_numero_propostas: C_NPROP,
+  FLAG_APP_ATIVO: C_APP,
 };
+const RATING_ORDER = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'C', 'D-J', 'Sem rating'];
 const ADOPT_ORDERS = {
   FLAG_TC: ['1. TC Full', '2. Micro TC'],
   FLAG_NISE: ['1. Bronze', '2. Silver', '3. Gold', '4. Platinum', '5. Nulo', '0. SELLER'],
-  rating_tc_grp: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C', 'D-J', 'Sem rating'],
+  rating_tc_grp: RATING_ORDER,
   super_grupo: ['BAU', 'Sellers', 'Mar Aberto', 'Only Nav', 'Cuentas Canceladas'],
   range_numero_propostas: ORDER_NPROP,
+  FLAG_APP_ATIVO: ORDER_APP,
 };
 // Dimensões filtráveis da aba (super_grupo é só quebra, sem filtro)
 const ADOPT_FILTER_DEFS = [
   { id: 'FLAG_TC',                label: 'Tipo TC',            values: ['1. TC Full', '2. Micro TC'] },
   { id: 'FLAG_NISE',             label: 'Nise',               values: ['1. Bronze', '2. Silver', '3. Gold', '4. Platinum', '5. Nulo', '0. SELLER'] },
-  { id: 'rating_tc_grp',         label: 'Rating TC',          values: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C', 'D-J', 'Sem rating'] },
+  { id: 'rating_tc_grp',         label: 'Rating TC',          values: RATING_ORDER },
   { id: 'super_grupo',           label: 'Grupo Especial',     values: ['BAU', 'Sellers', 'Mar Aberto', 'Only Nav', 'Cuentas Canceladas'] },
   { id: 'range_numero_propostas',label: 'Range Nº Propostas', values: ORDER_NPROP },
+  { id: 'FLAG_APP_ATIVO',        label: 'App Ativo',          values: ORDER_APP },
 ];
 let adoptBreak = '__total__', adoptDias = 40, adoptSafraN = 12;
 let adoptFilters = {};
