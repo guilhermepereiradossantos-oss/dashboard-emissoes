@@ -312,17 +312,18 @@ for key, yr, mo, is_cur in target_months:
                           if (is_cur or key >= FIRST_PROJ_MONTH)
                           else {tc: {} for tc in TC_KEYS})
 
-# 5b. mes VIGENTE: reescala HIST pra somar = realizado (curva-total cosmetica).
-#     meses FECHADOS NAO sao reescalados -> desvio Proj x Real fica honesto.
+# 5b. mes VIGENTE: a linha laranja nos dias JA REALIZADOS deve COLAR no realizado
+#     (nao na projecao logada). Substitui HIST[cur] pelo realizado diario dos dias
+#     passados; dias futuros usam PROJ. Antes: reescala por soma-do-mes-inteiro achatava
+#     a parte passada (f~0.11: HIST cobre o mes todo ~360k vs realizado 5d ~41k).
+#     Meses FECHADOS nao sao tocados -> desvio Proj x Real fica honesto.
 for tc in TC_KEYS:
-    hd = months_hist[cur_key].get(tc, {})
-    if not hd: continue
-    real_sum = sum(v for sg in actual_data[tc] for d, v in actual_data[tc][sg].items() if d.startswith(cur_key))
-    cur_sum  = sum(hd.values())
-    if cur_sum > 0 and real_sum > 0:
-        f = real_sum / cur_sum
-        for d in list(hd.keys()): hd[d] = int(round(hd[d] * f))
-        print(f'  HIST_SCALE {tc}: f={f:.3f}')
+    real_by_day = {}
+    for sg in actual_data[tc]:
+        for d, v in actual_data[tc][sg].items():
+            if d.startswith(cur_key) and d < TODAY:
+                real_by_day[d] = real_by_day.get(d, 0) + v
+    months_hist[cur_key][tc] = {d: int(round(v)) for d, v in real_by_day.items()}
 
 # 5c. fill one-off de junho (dias 01-02 = dia 03), em qualquer estado (vigente ou fechado)
 if JUN_FILL_KEY in months_hist:
