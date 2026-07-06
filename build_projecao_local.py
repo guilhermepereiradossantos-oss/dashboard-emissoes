@@ -172,29 +172,39 @@ def recent_runrate(tc, ndays=7):
 # (mediana ult.7d) porque decai ao longo do mes — a media do mes superestima a cauda.
 ANCHOR_MODE = {'TC Full': 'month', 'Micro TC': 'recent'}
 rem_days = [d for d in ALL_DAYS if d >= TODAY]
-for tc in TC_KEYS:
-    fac = dow_factors(tc)
-    if not fac or not rem_days: continue
-    wd_of = lambda d: date.fromisoformat(d).weekday()
-    mode = ANCHOR_MODE.get(tc, 'month')
-    anchor = month_runrate(tc) if mode == 'month' else recent_runrate(tc, 7)
-    if anchor <= 0: continue
-    for d in rem_days:
-        _apply_day_target(tc, d, anchor * fac.get(wd_of(d), 1.0))
-    proj_rem = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in rem_days)
-    print(f'  DOW {tc}: anchor({mode})={int(anchor):,} -> proj_restante={int(proj_rem):,}'.replace(',', '.'))
-
-# 2d. CAP fino (pedido usuario 2026-06-26): NENHUM dia restante projeta mais que o
-# ultimo dia realizado ("nao faremos mais que ontem"). Aplica a TODOS os dias (fds incl.).
-last_real = max((d for d in ALL_DAYS if d < TODAY), default=None)
-if last_real:
+# 2026-07-06: DESLIGADO. run-rate+DOW+cap achatavam a linha na cauda decrescente do
+# inicio do mes e ignoravam o pico pos-encendido, derrubando a projecao a cada realizado.
+# Volta ao shape ORGANICO (proj_template alinhado ao pico + proj_organico + ma_proj).
+APPLY_RUNRATE_DOW = False
+if APPLY_RUNRATE_DOW:
     for tc in TC_KEYS:
-        cap = sum(actual_data[tc][sg].get(last_real, 0) for sg in actual_data[tc])
-        if cap <= 0: continue
+        fac = dow_factors(tc)
+        if not fac or not rem_days: continue
+        wd_of = lambda d: date.fromisoformat(d).weekday()
+        mode = ANCHOR_MODE.get(tc, 'month')
+        anchor = month_runrate(tc) if mode == 'month' else recent_runrate(tc, 7)
+        if anchor <= 0: continue
         for d in rem_days:
-            cur = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc])
-            if cur > cap: _apply_day_target(tc, d, cap)
-    print(f'  CAP todos dias restantes <= ultimo realizado ({last_real})')
+            _apply_day_target(tc, d, anchor * fac.get(wd_of(d), 1.0))
+        proj_rem = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in rem_days)
+        print(f'  DOW {tc}: anchor({mode})={int(anchor):,} -> proj_restante={int(proj_rem):,}'.replace(',', '.'))
+    last_real = max((d for d in ALL_DAYS if d < TODAY), default=None)
+    if last_real:
+        for tc in TC_KEYS:
+            cap = sum(actual_data[tc][sg].get(last_real, 0) for sg in actual_data[tc])
+            if cap <= 0: continue
+            for d in rem_days:
+                cur = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc])
+                if cur > cap: _apply_day_target(tc, d, cap)
+        print(f'  CAP todos dias restantes <= ultimo realizado ({last_real})')
+
+# 2f. Clampa projecao diaria NEGATIVA a 0 (o hazard organico pode gerar incremento
+# negativo em alguns dias -> aparecia -8,5k no Micro). Piso em 0.
+for tc in TC_KEYS:
+    for sg in proj_data[tc]:
+        for d in list(proj_data[tc][sg]):
+            if proj_data[tc][sg][d] < 0:
+                proj_data[tc][sg][d] = 0
 
 # ============================================================
 # 3. HISTORICO (snapshot LOCAL — nao toca producao)
