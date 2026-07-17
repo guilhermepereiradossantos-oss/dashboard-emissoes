@@ -407,6 +407,10 @@ def upload_dataset(name: str, rows: list, doc_id: str = DOC_ID) -> dict:
 #    mês "bater o batch" (senão a safra vigente vem ~vazia e polui/distorce os gráficos).
 #    A Projeção NÃO é afetada (projeta o mês vigente normalmente).
 BATCH_THRESHOLD = 0.25  # mês vigente entra nas abas v6 quando enc >= 25% do mês anterior
+# Override manual: força mostrar ESTE mês vigente nas abas v6 mesmo PRE-BATCH.
+# Self-expira na virada de mês (só vale se == mês vigente); em outro mês volta ao batch normal.
+# Deixar None quando não precisar forçar.
+FORCE_SHOW_MONTH = "2026-07"
 EXCL_COL = {  # coluna de data p/ cortar o mês vigente incompleto, por dataset
     "mensal_encendidos": "DT_ENCENDIDO", "diario": "DT_ENCENDIDO",
     "nprop_enc": "DT_ENCENDIDO", "adoption": "DT_ENCENDIDO",
@@ -427,6 +431,10 @@ WHERE DT_ENCENDIDO >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MON
     row = json.load(open(p, "r", encoding="utf-8"))[0]
     cur = float(row.get("cur_enc") or 0); prev = float(row.get("prev_enc") or 0)
     batched = prev > 0 and cur >= BATCH_THRESHOLD * prev
+    if not batched and FORCE_SHOW_MONTH == time.strftime("%Y-%m"):
+        print(f"  [batch-check] enc vigente={int(cur):,} vs anterior={int(prev):,}"
+              f" -> PRE-BATCH, mas FORCE_SHOW_MONTH={FORCE_SHOW_MONTH} ativo -> MOSTRA mes vigente".replace(",", "."))
+        return True
     print(f"  [batch-check] enc vigente={int(cur):,} vs anterior={int(prev):,}"
           f" -> {'BATCH OK (mostra mes vigente)' if batched else 'PRE-BATCH (esconde mes vigente das abas v6)'}".replace(",", "."))
     return batched
