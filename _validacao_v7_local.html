@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Validação Rating V7 — Julho/2026 · TC Full (LOCAL)</title>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--bd:#21262d;--tx:#c9d1d9;--mut:#8b949e;--ac:#58a6ff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 "Segoe UI",Arial,sans-serif;padding:24px 32px}
+  h1{font-size:20px;margin:0 0 2px}
+  h2{font-size:15px;color:var(--ac);margin:26px 0 10px;border-bottom:1px solid var(--bd);padding-bottom:6px}
+  .sub{color:var(--mut);font-size:12px;margin-bottom:18px}
+  .warn{background:#3d2b00;border:1px solid #7a5600;color:#f5c500;padding:8px 12px;border-radius:6px;font-size:12px;margin:10px 0 4px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:16px}
+  .cap{font-size:12px;color:var(--mut);margin-bottom:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .row{display:flex;align-items:center;gap:8px;margin:5px 0}
+  .lab{width:74px;font-size:12px;color:var(--tx);flex:none;text-align:right}
+  .barwrap{flex:1;background:#0b0f14;border-radius:4px;height:20px;overflow:hidden;position:relative}
+  .bar{height:100%;border-radius:4px 0 0 4px;transition:width .3s}
+  .val{width:118px;flex:none;font-size:12px;color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
+  table{border-collapse:collapse;width:100%;margin-top:8px;font-size:12px}
+  th,td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--bd);font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--mut);font-weight:600}
+  .up{color:#3DFF91}.dn{color:#FF7B72}
+  .note{color:var(--mut);font-size:11px;margin-top:6px}
+</style>
+</head>
+<body>
+<h1>Validação Rating V7 — Julho/2026 · TC Full</h1>
+<div class="sub">Comparação V6 (rating atual do dash) × V7 (modelo novo, DE-PARA por cust via snapshot RBA jul/26). <b>Renderização LOCAL — nada publicado no Grid.</b></div>
+<div class="warn">⚠️ Escala de rating V7 do Full só tem A1·A2·B1·B2·B3·C1·C2 (não tem A3/C3/D-J). Não-cobertos no snapshot (~9,4%) caem em "Sem rating".</div>
+
+<h2>1 · Encendidos — distribuição por rating (share do nº de encendidos)</h2>
+<div class="grid2">
+  <div class="card"><div class="cap">V6 (atual)</div><div id="enc_v6"></div></div>
+  <div class="card"><div class="cap">V7 (novo)</div><div id="enc_v7"></div></div>
+</div>
+<table id="enc_tbl"></table>
+
+<h2>2 · Adoption (40 dias) — taxa de conversão por rating</h2>
+<div class="grid2">
+  <div class="card"><div class="cap">V6 (atual)</div><div id="ad_v6"></div></div>
+  <div class="card"><div class="cap">V7 (novo)</div><div id="ad_v7"></div></div>
+</div>
+<div class="note">Adoption = convertidos até 40d / encendidos, por rating. No V7 os buckets de risco alto somem (D-J/C3), e a adoption se concentra nos ratings existentes.</div>
+
+<h2>3 · Emissões — distribuição por rating (V7, cohort encendido+convertido em julho)</h2>
+<div class="card" style="max-width:620px"><div class="cap">V7 (novo) · ~250k conversões do cohort de julho</div><div id="emi_v7"></div></div>
+<div class="note">Cohort = encendido E convertido em jul/26 (coerente com "muda só encendido de julho"). "Sem rating" ~14% (spillover pré-julho ficaria fora do snapshot).</div>
+
+<script>
+const COL={A1:'#BF9000',A2:'#F5C500',A3:'#FFEE7A',B1:'#374D6E',B2:'#4A6796',B3:'#4C7FD6',C1:'#C77B3C',C2:'#9C5A1E',C3:'#6E3D10','D-J':'#484F58','Sem rating':'#808080'};
+const ORD=['A1','A2','A3','B1','B2','B3','C1','C2','C3','D-J','Sem rating'];
+const fmt=n=>n.toLocaleString('pt-BR');
+const pct=(a,b)=>b>0?(a/b*100):0;
+
+// ---- dados reais (jul/26 TC Full) ----
+const ENC_V6={A1:2378925,A2:1255400,B1:1553663,B2:1076476,B3:891941,C1:507658,C2:276083,C3:239620,'D-J':577521,'Sem rating':712270};
+const ENC_V7={A1:1938236,A2:1621066,B1:2103310,B2:1424385,B3:360006,C1:846432,C2:278920,'Sem rating':894599};
+// adoption: [cc40, n_enc]
+const AD_V6={A1:[32543,2378925],A2:[16327,1255400],B1:[25986,1553663],B2:[23466,1076476],B3:[26016,891941],C1:[22205,507658],C2:[14156,276083],C3:[14249,239620],'D-J':[57709,577521],'Sem rating':[11036,712270]};
+const AD_V7={A1:[36996,1938236],A2:[43632,1621066],B1:[50996,2103310],B2:[39878,1424385],B3:[8486,360006],C1:[27120,846432],C2:[7885,278920],'Sem rating':[35688,894655]};
+const EMI_V7={B1:50801,A2:43453,B2:39694,A1:36856,'Sem rating':35534,C1:27004,B3:8450,C2:7843};
+
+function renderShare(el,data){
+  const tot=Object.values(data).reduce((a,b)=>a+b,0);
+  const host=document.getElementById(el); host.innerHTML='';
+  ORD.filter(r=>data[r]!=null).forEach(r=>{
+    const v=data[r], p=pct(v,tot);
+    host.insertAdjacentHTML('beforeend',
+      `<div class="row"><span class="lab">${r}</span>
+       <span class="barwrap"><span class="bar" style="width:${p.toFixed(1)}%;background:${COL[r]}"></span></span>
+       <span class="val">${p.toFixed(1).replace('.',',')}% · ${fmt(v)}</span></div>`);
+  });
+}
+function renderRate(el,data){
+  const rates=ORD.filter(r=>data[r]!=null).map(r=>({r,rate:pct(data[r][0],data[r][1])}));
+  const mx=Math.max(...rates.map(x=>x.rate),1);
+  const host=document.getElementById(el); host.innerHTML='';
+  rates.forEach(({r,rate})=>{
+    host.insertAdjacentHTML('beforeend',
+      `<div class="row"><span class="lab">${r}</span>
+       <span class="barwrap"><span class="bar" style="width:${(rate/mx*100).toFixed(1)}%;background:${COL[r]}"></span></span>
+       <span class="val">${rate.toFixed(2).replace('.',',')}%</span></div>`);
+  });
+}
+renderShare('enc_v6',ENC_V6); renderShare('enc_v7',ENC_V7);
+renderRate('ad_v6',AD_V6);    renderRate('ad_v7',AD_V7);
+renderShare('emi_v7',EMI_V7);
+
+// tabela comparativa encendidos
+(function(){
+  const tv6=Object.values(ENC_V6).reduce((a,b)=>a+b,0), tv7=Object.values(ENC_V7).reduce((a,b)=>a+b,0);
+  let h='<tr><th>Rating</th><th>V6 share</th><th>V6 nº</th><th>V7 share</th><th>V7 nº</th><th>Δ share</th></tr>';
+  ORD.forEach(r=>{
+    if(ENC_V6[r]==null && ENC_V7[r]==null) return;
+    const p6=ENC_V6[r]?pct(ENC_V6[r],tv6):null, p7=ENC_V7[r]?pct(ENC_V7[r],tv7):null;
+    const d=(p7||0)-(p6||0), cls=d>0?'up':d<0?'dn':'';
+    h+=`<tr><td>${r}</td><td>${p6==null?'—':p6.toFixed(1).replace('.',',')+'%'}</td><td>${ENC_V6[r]?fmt(ENC_V6[r]):'—'}</td>`
+     +`<td>${p7==null?'—':p7.toFixed(1).replace('.',',')+'%'}</td><td>${ENC_V7[r]?fmt(ENC_V7[r]):'—'}</td>`
+     +`<td class="${cls}">${(d>=0?'+':'')+d.toFixed(1).replace('.',',')} pp</td></tr>`;
+  });
+  h+=`<tr><td><b>Total</b></td><td></td><td><b>${fmt(tv6)}</b></td><td></td><td><b>${fmt(tv7)}</b></td><td></td></tr>`;
+  document.getElementById('enc_tbl').innerHTML=h;
+})();
+</script>
+</body>
+</html>

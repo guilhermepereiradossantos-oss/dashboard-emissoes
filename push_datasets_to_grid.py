@@ -82,11 +82,11 @@ SELECT
     ELSE "BAU"
   END AS super_grupo,
   CASE
-    WHEN rating_tc = "A1" THEN "A1" WHEN rating_tc = "A2" THEN "A2" WHEN rating_tc = "A" THEN "A3"
-    WHEN rating_tc = "B1" THEN "B1" WHEN rating_tc = "B2" THEN "B2" WHEN rating_tc IN ("B","B3") THEN "B3"
-    WHEN rating_tc IN ("C","C1","C2","C3") THEN "C"
-    WHEN rating_tc IN ("D","E","F","G","J","J1","J2") THEN "D-J"
-    WHEN rating_tc IS NULL OR rating_tc = "Z" THEN "Sem rating"
+    WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
+    WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
+    WHEN rating_v7 IN ("C","C1","C2","C3") THEN rating_v7
+    WHEN rating_v7 IN ("D","E","F","G","J","J1","J2") THEN "D-J"
+    WHEN rating_v7 IS NULL OR rating_v7 = "Z" THEN "Sem rating"
     ELSE "Outros" END AS rating_tc_grp,
   SUM(QTDE) AS n_enc,
   SUM(IF(FLAG_REENCENDIDO = "1. Primeiro Encendido", QTDE, 0)) AS n_primo,
@@ -113,11 +113,11 @@ SELECT
     ELSE "BAU"
   END AS super_grupo,
   CASE
-    WHEN rating_tc = "A1" THEN "A1" WHEN rating_tc = "A2" THEN "A2" WHEN rating_tc = "A" THEN "A3"
-    WHEN rating_tc = "B1" THEN "B1" WHEN rating_tc = "B2" THEN "B2" WHEN rating_tc IN ("B","B3") THEN "B3"
-    WHEN rating_tc IN ("C","C1","C2","C3") THEN "C"
-    WHEN rating_tc IN ("D","E","F","G","J","J1","J2") THEN "D-J"
-    WHEN rating_tc IS NULL OR rating_tc = "Z" THEN "Sem rating"
+    WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
+    WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
+    WHEN rating_v7 IN ("C","C1","C2","C3") THEN rating_v7
+    WHEN rating_v7 IN ("D","E","F","G","J","J1","J2") THEN "D-J"
+    WHEN rating_v7 IS NULL OR rating_v7 = "Z" THEN "Sem rating"
     ELSE "Outros" END AS rating_tc_grp,
   SUM(QTDE) AS n_conv,
   SUM(soma_limite) AS soma_limite
@@ -188,14 +188,15 @@ SELECT
     ELSE "BAU"
   END AS super_grupo,
   CASE
-    WHEN rating_tc = "A1" THEN "A1" WHEN rating_tc = "A2" THEN "A2" WHEN rating_tc = "A" THEN "A3"
-    WHEN rating_tc = "B1" THEN "B1" WHEN rating_tc = "B2" THEN "B2" WHEN rating_tc IN ("B","B3") THEN "B3"
-    WHEN rating_tc IN ("C","C1","C2","C3") THEN rating_tc
-    WHEN rating_tc IN ("D","E","F","G","J","J1","J2") THEN "D-J"
-    WHEN rating_tc IS NULL OR rating_tc = "Z" THEN "Sem rating"
+    WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
+    WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
+    WHEN rating_v7 IN ("C","C1","C2","C3") THEN rating_v7
+    WHEN rating_v7 IN ("D","E","F","G","J","J1","J2") THEN "D-J"
+    WHEN rating_v7 IS NULL OR rating_v7 = "Z" THEN "Sem rating"
     ELSE "Outros" END AS rating_tc_grp,
   range_numero_propostas,
   COALESCE(FLAG_APP_ATIVO, "Sem App") AS FLAG_APP_ATIVO,
+  (FLAG_CANAL_AQUISICAO = "EA - MP") AS flag_ea,
   SUM(QTDE) AS n_enc,
   {_cc_cols}
 FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`

@@ -469,6 +469,8 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
       </select>
       <label style="margin-left:14px">Dias até conversão: <span id="adopt-dias-val">40</span></label>
       <input type="range" id="adopt-dias" min="0" max="40" value="40">
+      <label style="margin-left:14px">Efeito EA:</label>
+      <button class="filter-btn" id="adopt-ea-toggle" title="Incluir ou remover o efeito de Emissão Automática (canal EA - MP)">Com EA</button>
     </div>
 
     <!-- Filtros da aba (multi-select; o filtro da dimensão em "Quebra por" é desabilitado) -->
@@ -514,7 +516,7 @@ const FILTER_DEFS = [
   { id: 'super_grupo',                   label: 'Super Grupo',
     values: ['BAU','Sellers','Mar Aberto','Only Nav','Cuentas Canceladas'] },
   { id: 'rating_tc_grp',                 label: 'Rating TC',
-    values: ['A1','A2','A3','B1','B2','B3','C','D-J','Sem rating'] },
+    values: ['A1','A2','A3','B1','B2','B3','C1','C2','C3','C','D-J','Sem rating'] },
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -1102,7 +1104,7 @@ function renderEmissoes() {
   makeChart('em-chart-nise',   shareChartConfig(emiRows, 'safra_conv', months, 'FLAG_NISE',              C_NISE,   'n_conv'));
   makeChart('em-chart-canal',  shareChartConfig(emiRows, 'safra_conv', months, 'canal_aquisicao',         C_CANAL,  'n_conv', ORDER_CANAL, 'Sem Canal'));
   makeChart('em-chart-nprop',  shareChartConfig(filtrar(_ds_nprop_emi, 'emi'), 'safra_conv', months, 'range_numero_propostas',  C_NPROP,  'n_conv', ORDER_NPROP));
-  makeChart('em-chart-rating', shareChartConfig(emiRows, 'safra_conv', months, 'rating_tc_grp',           C_RATING, 'n_conv'));
+  makeChart('em-chart-rating', shareChartConfig(emiRows, 'safra_conv', months, 'rating_tc_grp',           C_RATING, 'n_conv', RATING_ORDER));
 
   // Evolution table — pair emi rows for n_conv with enc rows for adoption denominator
   buildEvolTableEmi('em-evol-table-wrap', byConv, byEnc, months, cur);
@@ -1191,7 +1193,7 @@ function renderEncendidos() {
   makeChart('enc-chart-nise',   shareChartConfig(encRows, 'safra_enc', months, 'FLAG_NISE',              C_NISE,   'n_enc'));
   makeChart('enc-chart-sg',     shareChartConfig(encRows, 'safra_enc', months, 'FLAG_APP_ATIVO',         C_APP,    'n_enc', ORDER_APP, 'Sem App'));
   makeChart('enc-chart-nprop',  shareChartConfig(filtrar(_ds_nprop_enc, 'enc'), 'safra_enc', months, 'range_numero_propostas',  C_NPROP,  'n_enc', ORDER_NPROP));
-  makeChart('enc-chart-rating', shareChartConfig(encRows, 'safra_enc', months, 'rating_tc_grp',           C_RATING, 'n_enc'));
+  makeChart('enc-chart-rating', shareChartConfig(encRows, 'safra_enc', months, 'rating_tc_grp',           C_RATING, 'n_enc', RATING_ORDER));
 
   // Daily month selector
   const sel = document.getElementById('enc-daily-month-sel');
@@ -1450,6 +1452,7 @@ const ADOPT_FILTER_DEFS = [
 ];
 let adoptBreak = '__total__', adoptDias = 40, adoptSafraN = 12;
 let adoptFilters = {};
+let adoptExclEA = false;   // false = Com EA (inclui tudo); true = Sem EA (remove canal 'EA - MP')
 
 function adoptSafraMonths() {
   if (!_ds_adoption) return new Set();
@@ -1595,6 +1598,7 @@ function renderAdoption() {
   const safraSet = adoptSafraMonths();
   const rows = _ds_adoption.filter(r => {
     if (!safraSet.has(r.safra_enc)) return false;
+    if (adoptExclEA && String(r.flag_ea) === 'true') return false;   // Sem EA: remove canal 'EA - MP'
     for (const [field, vals] of Object.entries(adoptFilters)) {
       if (!vals || vals.size === 0) continue;   // filtro aplica MESMO p/ a dimensão da quebra (permite excluir categorias, ex.: "Sem rating")
       if (!vals.has(r[field])) return false;
@@ -1732,6 +1736,13 @@ try {
   if (adias) adias.addEventListener('input', e => {
     adoptDias = +e.target.value;
     const lbl = document.getElementById('adopt-dias-val'); if (lbl) lbl.textContent = adoptDias;
+    renderAdoption();
+  });
+  const aea = document.getElementById('adopt-ea-toggle');
+  if (aea) aea.addEventListener('click', () => {
+    adoptExclEA = !adoptExclEA;
+    aea.textContent = adoptExclEA ? 'Sem EA' : 'Com EA';
+    aea.classList.toggle('has-active', adoptExclEA);
     renderAdoption();
   });
   const abar = document.getElementById('adopt-filter-bar');
