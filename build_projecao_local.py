@@ -207,6 +207,31 @@ for tc in TC_KEYS:
                 proj_data[tc][sg][d] = 0
 
 # ============================================================
+# 2g. AJUSTE PONTUAL (2026-07-27, info do usuario) — *** NAO RECORRENTE ***
+#   Encendido de SELLERS previsto p/ ~28/07: Full 420k + Micro 78k. Faltam ~5 dias -> soma
+#   as conversoes esperadas (curva seller recente, cumulativa D0..D3) aos dias restantes.
+#   D0 domina (EA de seller + rapidos). *** REMOVER apos julho/26 OU quando o encendido real
+#   entrar na base *** (senao conta dobrado). Curva jun-jul/26: Full 1.92/2.44/2.83/3.18 ;
+#   Micro 6.15/8.26/9.06/9.58 (cumulativo %). Se a data mudar, ajustar 'data_enc'.
+SELLER_ENC_ONEOFF = {
+    'data_enc': '2026-07-28',
+    'TC Full':  {'n': 420000, 'inc': [0.0192, 0.0052, 0.0039, 0.0035]},  # incrementais D0,D1,D2,D3
+    'Micro TC': {'n':  78000, 'inc': [0.0615, 0.0211, 0.0080, 0.0052]},
+}
+if SELLER_ENC_ONEOFF and SELLER_ENC_ONEOFF['data_enc'][:7] == cur_key:
+    _d0 = date.fromisoformat(SELLER_ENC_ONEOFF['data_enc'])
+    for tc in TC_KEYS:
+        _cfg = SELLER_ENC_ONEOFF[tc]
+        _add = 0.0
+        for i, frac in enumerate(_cfg['inc']):
+            dd = (_d0 + timedelta(days=i)).isoformat()
+            if dd[:7] != cur_key or dd < TODAY:
+                continue
+            proj_data[tc]['Sellers'][dd] += _cfg['n'] * frac
+            _add += _cfg['n'] * frac
+        print(f"  [ONE-OFF seller enc] {tc}: +{int(round(_add)):,}".replace(',', '.'))
+
+# ============================================================
 # 3. HISTORICO (snapshot LOCAL — nao toca producao)
 # ============================================================
 historico = {}
