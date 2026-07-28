@@ -957,12 +957,65 @@ const barLabelsPlugin = {
   }
 };
 
+// ── Drag-to-sum: clicar numa célula e arrastar sobre outras da MESMA barra soma os % (e nominal) ──
+let _dragCard = null;
+function _dragCardEl() {
+  if (_dragCard) return _dragCard;
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;z-index:99999;pointer-events:none;display:none;background:#161b22;'
+    + 'border:1px solid #58a6ff;border-radius:6px;padding:6px 10px;font:12px "Segoe UI",Arial;'
+    + 'color:#c9d1d9;box-shadow:0 4px 14px rgba(0,0,0,.55);white-space:nowrap';
+  document.body.appendChild(d); _dragCard = d; return d;
+}
+function enableDragSum(chart) {
+  const cv = chart.canvas;
+  let start = null;
+  const seg = (evt) => {
+    const els = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+    return (els && els.length) ? { ds: els[0].datasetIndex, idx: els[0].index } : null;
+  };
+  const show = (evt, cur) => {
+    if (!start || !cur || cur.idx !== start.idx) return;
+    const i = start.idx, a = Math.min(start.ds, cur.ds), b = Math.max(start.ds, cur.ds);
+    let pct = 0, nom = 0; const labs = [];
+    for (let k = a; k <= b; k++) {
+      const dk = chart.data.datasets[k];
+      if (!dk || dk.hidden) continue;
+      pct += n(dk.data[i]) || 0;
+      nom += (dk.nominal && n(dk.nominal[i])) || 0;
+      labs.push(dk.label);
+    }
+    if (!labs.length) return;
+    const rng = labs.length > 1 ? `${labs[0]}…${labs[labs.length - 1]} (${labs.length})` : labs[0];
+    const card = _dragCardEl();
+    card.innerHTML = `<b>${chart.data.labels[i]}</b> · ${rng}<br>`
+      + `<span style="color:#58a6ff;font-weight:700">${pct.toFixed(1).replace('.', ',')}%</span>`
+      + (nom ? ` · ${fmt(nom)}` : '');
+    card.style.left = (evt.clientX + 14) + 'px';
+    card.style.top = (evt.clientY + 14) + 'px';
+    card.style.display = 'block';
+  };
+  const end = () => { start = null; if (_dragCard) _dragCard.style.display = 'none'; };
+  cv.addEventListener('mousedown', (e) => { start = seg(e); if (start) show(e, start); });
+  cv.addEventListener('mousemove', (e) => { if (start) show(e, seg(e)); });
+  cv.addEventListener('mouseup', end);
+  cv.addEventListener('mouseleave', end);
+}
+
 function makeChart(id, config) {
   const canvas = document.getElementById(id);
   if (!canvas) return null;
   const existing = Chart.getChart(canvas);
   if (existing) existing.destroy();
-  try { return new Chart(canvas, config); } catch(e) { console.warn('[Chart]', id, e); return null; }
+  try {
+    const c = new Chart(canvas, config);
+    // drag-to-sum só nos gráficos de SHARE (marca única: y.max === 112, data em %)
+    try {
+      const sc = config.options && config.options.scales;
+      if (config.type === 'bar' && sc && sc.y && sc.y.max === 112) enableDragSum(c);
+    } catch(e) {}
+    return c;
+  } catch(e) { console.warn('[Chart]', id, e); return null; }
 }
 
 // `order` (opcional): ordem custom dos segmentos (1º = base do empilhamento).

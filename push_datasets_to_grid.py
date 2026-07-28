@@ -60,7 +60,7 @@ SIGNED_THRESHOLD_MB = 20
 
 # Datasets que sobem em json_columnar (coluna 1x + dados em arrays) p/ economizar ~62%.
 # Os demais continuam json_rows. O HTML (fromColumnar) aceita os dois formatos.
-COLUMNAR = {"mensal_encendidos", "mensal_emissoes"}
+COLUMNAR = {"mensal_encendidos", "mensal_emissoes", "nprop_enc", "nprop_emi"}
 
 # Caso de "string -> numero" depois de bq query --format=prettyjson
 NUM_COLS = {"n_enc", "n_primo", "n_reenc", "n_conv", "soma_limite"}
@@ -144,11 +144,28 @@ WHERE DT_ENCENDIDO >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MO
 GROUP BY ALL
 ORDER BY dia_enc
 """,
-    # Datasets dedicados (pizza Nº Propostas) — pequenos, respondem só a Safra + Tipo TC.
+    # Datasets Nº Propostas — enriquecidos c/ dims-chave p/ reagir aos filtros do dash
+    # (NISE, Rating TC, Super Grupo, Canal, Tipo TC, Safra). NAO carregam Reencendido/Uso CC/
+    # App/Cancel (decisao de peso do usuario 28/07). Columnar. Front (filtrar) reage sozinho.
     "nprop_enc": """
 SELECT
   FORMAT_DATE("%Y-%m", DT_ENCENDIDO) AS safra_enc,
-  FLAG_TC, range_numero_propostas,
+  FLAG_TC, FLAG_NISE,
+  FLAG_CANAL_AQUISICAO AS canal_aquisicao,
+  CASE
+    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers"
+    WHEN grupo_especial LIKE "%Mar Aberto%" THEN "Mar Aberto"
+    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav"
+    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
+    ELSE "BAU" END AS super_grupo,
+  CASE
+    WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
+    WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
+    WHEN rating_v7 IN ("C","C1","C2","C3") THEN rating_v7
+    WHEN rating_v7 IN ("D","E","F","G","J","J1","J2") THEN "D-J"
+    WHEN rating_v7 IS NULL OR rating_v7 = "Z" THEN "Sem rating"
+    ELSE "Outros" END AS rating_tc_grp,
+  range_numero_propostas,
   SUM(QTDE) AS n_enc
 FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
 WHERE DT_ENCENDIDO >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MONTH)
@@ -157,7 +174,22 @@ GROUP BY ALL
     "nprop_emi": """
 SELECT
   FORMAT_DATE("%Y-%m", DT_CONV) AS safra_conv,
-  FLAG_TC, range_numero_propostas,
+  FLAG_TC, FLAG_NISE,
+  FLAG_CANAL_AQUISICAO AS canal_aquisicao,
+  CASE
+    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers"
+    WHEN grupo_especial LIKE "%Mar Aberto%" THEN "Mar Aberto"
+    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav"
+    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
+    ELSE "BAU" END AS super_grupo,
+  CASE
+    WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
+    WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
+    WHEN rating_v7 IN ("C","C1","C2","C3") THEN rating_v7
+    WHEN rating_v7 IN ("D","E","F","G","J","J1","J2") THEN "D-J"
+    WHEN rating_v7 IS NULL OR rating_v7 = "Z" THEN "Sem rating"
+    ELSE "Outros" END AS rating_tc_grp,
+  range_numero_propostas,
   SUM(QTDE) AS n_conv
 FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
 WHERE FLAG_CONVERSAO = "1. Convertido"
