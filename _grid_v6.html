@@ -451,7 +451,9 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 
     <!-- Controles próprios da aba (independentes da barra global) -->
     <div class="daily-controls">
-      <label>Quebra por:</label>
+      <label>Modo:</label>
+      <button class="filter-btn" id="adopt-mode-toggle" title="Safra = cohort (convertidos até N dias ÷ encendidos da safra). Mês = fluxo (convertidos no mês ÷ encendidos no mês) — tira o efeito do atraso no encendido.">Adoption Safra</button>
+      <label style="margin-left:8px">Quebra por:</label>
       <select class="daily-month-sel" id="adopt-break">
         <option value="__total__" selected>Total</option>
         <option value="FLAG_TC">Tipo TC</option>
@@ -681,6 +683,8 @@ function filtrar(rows, datasetKind) {
 // ════════════════════════════════════════════════════════════════
 function buildFilterBar() {
   const container = document.getElementById('filter-bar-buttons');
+  const _ob = container.querySelector('.filter-btn.open');      // preserva o dropdown aberto
+  const _openField = _ob ? _ob.dataset.field : null;            // ao rebuildar (não fecha a lista)
   container.querySelectorAll('.filter-btn').forEach(el => el.remove());
   const rightEl = container.querySelector('.filter-bar-right');
 
@@ -688,6 +692,7 @@ function buildFilterBar() {
     const btn = document.createElement('button');
     btn.className = 'filter-btn';
     btn.dataset.field = def.id;
+    if (def.id === _openField) btn.classList.add('open');   // reabre o dropdown que estava aberto
 
     const sel = activeFilters[def.id];
     const selCount = sel ? sel.size : 0;
@@ -1506,6 +1511,7 @@ const ADOPT_FILTER_DEFS = [
 let adoptBreak = '__total__', adoptDias = 40, adoptSafraN = 12;
 let adoptFilters = {};
 let adoptExclEA = false;   // false = Com EA (inclui tudo); true = Sem EA (remove canal 'EA - MP')
+let adoptMode = 'safra';   // 'safra' = cohort (cc/n_enc por safra); 'mes' = fluxo (n_conv mês ÷ n_enc mês)
 
 function adoptSafraMonths() {
   if (!_ds_adoption) return new Set();
@@ -1517,6 +1523,8 @@ function adoptSafraMonths() {
 function buildAdoptFilters() {
   const bar = document.getElementById('adopt-filter-bar');
   if (!bar) return;
+  const _ob = bar.querySelector('.afilter-btn.open');            // preserva o dropdown aberto
+  const _openField = _ob ? _ob.dataset.afield : null;            // ao rebuildar (não fecha a lista)
   bar.querySelectorAll('.afilter-btn').forEach(el => el.remove());
   ADOPT_FILTER_DEFS.forEach(def => {
     const sel = adoptFilters[def.id];
@@ -1524,6 +1532,7 @@ function buildAdoptFilters() {
     const btn = document.createElement('button');
     btn.className = 'filter-btn afilter-btn' + (selCount > 0 ? ' has-active' : '');
     btn.dataset.afield = def.id;
+    if (def.id === _openField) btn.classList.add('open');   // reabre o dropdown que estava aberto
     btn.innerHTML = `<span>${def.label}</span>${selCount > 0 ? `<span class="fb-count">${selCount}</span>` : ''}<span class="fb-arrow">▾</span>`;
     const dd = document.createElement('div'); dd.className = 'filter-dropdown';
     const hdr = document.createElement('div'); hdr.className = 'fd-header';
@@ -1635,7 +1644,7 @@ function adoptLineConfig(months, series, partialIdx) {
           const enc = d.nomEnc ? d.nomEnc[i] : null;
           return `${d.label}: ${pct}` + (enc != null ? `  ·  ${fmtCompact(enc)} encendidos` : '');
         } } },
-        title: { display: true, text: `% Adoption — até ${adoptDias} dias do encendido${partialIdx >= 0 ? '  ·  ⋯ mês vigente (parcial)' : ''}`, color: '#58a6ff', font: { size: 12, weight: 700 } },
+        title: { display: true, text: (adoptMode === 'mes' ? '% Adoption Mês — convertidos no mês ÷ encendidos no mês' : `% Adoption — até ${adoptDias} dias do encendido`) + (partialIdx >= 0 ? '  ·  ⋯ mês vigente (parcial)' : ''), color: '#58a6ff', font: { size: 12, weight: 700 } },
       },
       scales: {
         x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
@@ -1647,6 +1656,7 @@ function adoptLineConfig(months, series, partialIdx) {
 
 function renderAdoption() {
   if (!_ds_adoption) return;
+  if (adoptMode === 'mes') { renderAdoptionMes(); return; }
   const ccCol = 'cc' + adoptDias;
   const safraSet = adoptSafraMonths();
   const rows = _ds_adoption.filter(r => {
@@ -1713,6 +1723,72 @@ function renderAdoption() {
     } else { kpiEl.style.display = 'none'; }
   }
 
+  makeChart('adopt-chart', adoptLineConfig(months, series, partialIdx));
+}
+
+// Adoption MÊS (fluxo): convertidos no mês (n_conv por safra_conv) ÷ encendidos no mês
+// (n_enc por safra_enc). Tira o efeito do atraso do encendido. Fonte = mensal_enc/emi (têm
+// todas as dims de quebra/filtro menos range); se a quebra/filtro for range, usa nprop.
+// Slider de dias e toggle EA NÃO se aplicam aqui (mensal não tem cc por dia nem flag_ea).
+function renderAdoptionMes() {
+  const safraSet = adoptSafraMonths();
+  const rangeSel = adoptFilters['range_numero_propostas'];
+  const useNprop = (adoptBreak === 'range_numero_propostas') || (rangeSel && rangeSel.size > 0);
+  const encDs = useNprop ? _ds_nprop_enc : _ds_enc;
+  const emiDs = useNprop ? _ds_nprop_emi : _ds_emi;
+  if (!encDs || !emiDs) return;
+  const pass = (r) => {
+    for (const [f, vals] of Object.entries(adoptFilters)) {
+      if (!vals || vals.size === 0) continue;
+      if (!(f in r)) continue;                 // dim ausente na fonte (ex.: App no nprop) → ignora
+      if (!vals.has(r[f])) return false;
+    }
+    return true;
+  };
+  const enc = encDs.filter(r => safraSet.has(r.safra_enc) && pass(r));
+  const emi = emiDs.filter(r => safraSet.has(r.safra_conv) && pass(r));
+  const months = [...new Set(enc.map(r => r.safra_enc))].sort();
+  let series = [];
+  if (adoptBreak === '__total__') {
+    const den = {}, num = {};
+    enc.forEach(r => den[r.safra_enc] = (den[r.safra_enc] || 0) + n(r.n_enc));
+    emi.forEach(r => num[r.safra_conv] = (num[r.safra_conv] || 0) + n(r.n_conv));
+    series = [{
+      label: 'Total', color: '#58a6ff',
+      data:    months.map(m => den[m] > 0 ? (num[m] || 0) / den[m] * 100 : null),
+      nomConv: months.map(m => num[m] || 0),
+      nomEnc:  months.map(m => den[m] || 0),
+    }];
+  } else {
+    const cmap = ADOPT_COLORS[adoptBreak] || {};
+    const den = {}, num = {};
+    enc.forEach(r => { let d = r[adoptBreak]; if (d == null || d === '') d = 'null'; (den[d] = den[d] || {}); den[d][r.safra_enc] = (den[d][r.safra_enc] || 0) + n(r.n_enc); });
+    emi.forEach(r => { let d = r[adoptBreak]; if (d == null || d === '') d = 'null'; (num[d] = num[d] || {}); num[d][r.safra_conv] = (num[d][r.safra_conv] || 0) + n(r.n_conv); });
+    const dims = new Set([...Object.keys(den), ...Object.keys(num)]);
+    const ordered = (ADOPT_ORDERS[adoptBreak] || []).filter(d => dims.has(d));
+    dims.forEach(d => { if (!ordered.includes(d)) ordered.push(d); });
+    series = ordered.map(d => ({
+      label: d, color: cmap[d] || '#8b949e',
+      data:    months.map(m => { const dv = (den[d] || {})[m]; const nv = (num[d] || {})[m]; return dv > 0 ? (nv || 0) / dv * 100 : null; }),
+      nomConv: months.map(m => (num[d] || {})[m] || 0),
+      nomEnc:  months.map(m => (den[d] || {})[m] || 0),
+    }));
+  }
+  const curYM = _ds_adoption.reduce((mx, r) => r.safra_enc > mx ? r.safra_enc : mx, '');
+  const partialIdx = months.indexOf(curYM);
+  const kpiEl = document.getElementById('adopt-kpi');
+  if (kpiEl) {
+    const totFor = m => { let dd = 0, nn = 0; enc.forEach(r => { if (r.safra_enc === m) dd += n(r.n_enc); }); emi.forEach(r => { if (r.safra_conv === m) nn += n(r.n_conv); }); return dd > 0 ? nn / dd * 100 : null; };
+    const fmtp = v => v == null ? '–' : v.toFixed(2).replace('.', ',') + '%';
+    if (partialIdx >= 0) {
+      const curVal = totFor(curYM), prevYM = months[partialIdx - 1], prevVal = prevYM ? totFor(prevYM) : null;
+      let dh = '';
+      if (curVal != null && prevVal != null) { const dd = curVal - prevVal, cls = dd >= 0 ? 'ak-pos' : 'ak-neg', ar = dd >= 0 ? '▲' : '▼'; dh = `<div class="ak-item"><span class="ak-lab">Δ vs M-1</span><span class="ak-delta ${cls}">${ar} ${dd >= 0 ? '+' : ''}${dd.toFixed(2).replace('.', ',')} pp</span></div>`; }
+      kpiEl.innerHTML = `<div class="ak-item"><span class="ak-lab">Adoption mês · ${fmtSafra(curYM)} (parcial)</span><span class="ak-val">${fmtp(curVal)}</span></div>`
+        + (prevYM ? `<div class="ak-item"><span class="ak-lab">M-1 · ${fmtSafra(prevYM)}</span><span class="ak-val prev">${fmtp(prevVal)}</span></div>` : '') + dh;
+      kpiEl.style.display = '';
+    } else { kpiEl.style.display = 'none'; }
+  }
   makeChart('adopt-chart', adoptLineConfig(months, series, partialIdx));
 }
 
@@ -1796,6 +1872,16 @@ try {
     adoptExclEA = !adoptExclEA;
     aea.textContent = adoptExclEA ? 'Sem EA' : 'Com EA';
     aea.classList.toggle('has-active', adoptExclEA);
+    renderAdoption();
+  });
+  const amode = document.getElementById('adopt-mode-toggle');
+  if (amode) amode.addEventListener('click', () => {
+    adoptMode = (adoptMode === 'mes') ? 'safra' : 'mes';
+    amode.textContent = (adoptMode === 'mes') ? 'Adoption Mês' : 'Adoption Safra';
+    amode.classList.toggle('has-active', adoptMode === 'mes');
+    // no modo Mês o slider de dias e o toggle EA não se aplicam → cinza
+    const dias = document.getElementById('adopt-dias'); if (dias) dias.disabled = (adoptMode === 'mes');
+    if (aea) { aea.disabled = (adoptMode === 'mes'); aea.style.opacity = (adoptMode === 'mes') ? '.45' : ''; }
     renderAdoption();
   });
   const abar = document.getElementById('adopt-filter-bar');
