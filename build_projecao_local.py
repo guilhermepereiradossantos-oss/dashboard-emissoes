@@ -213,11 +213,9 @@ for tc in TC_KEYS:
 #   D0 domina (EA de seller + rapidos). *** REMOVER apos julho/26 OU quando o encendido real
 #   entrar na base *** (senao conta dobrado). Curva jun-jul/26: Full 1.92/2.44/2.83/3.18 ;
 #   Micro 6.15/8.26/9.06/9.58 (cumulativo %). Se a data mudar, ajustar 'data_enc'.
-SELLER_ENC_ONEOFF = {
-    'data_enc': '2026-07-28',
-    'TC Full':  {'n': 420000, 'inc': [0.0192, 0.0052, 0.0039, 0.0035]},  # incrementais D0,D1,D2,D3
-    'Micro TC': {'n':  78000, 'inc': [0.0615, 0.0211, 0.0080, 0.0052]},
-}
+# DESATIVADO 2026-07-28: o encendido real de seller ENTROU NA BASE (27-28/07: Full ~378k,
+# Micro ~65k) -> o modelo nativo (proj_organico) ja captura. Reativar contaria DOBRADO.
+SELLER_ENC_ONEOFF = None
 if SELLER_ENC_ONEOFF and SELLER_ENC_ONEOFF['data_enc'][:7] == cur_key:
     _d0 = date.fromisoformat(SELLER_ENC_ONEOFF['data_enc'])
     for tc in TC_KEYS:
