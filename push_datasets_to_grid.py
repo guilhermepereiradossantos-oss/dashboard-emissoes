@@ -45,6 +45,7 @@ CURL_CMD = shutil.which("curl") or shutil.which("curl.exe") or "curl.exe"
 
 DOC_ID = "01KVDVV9XG2ZJ53YEEQRT1E704"        # doc Emissoes + Encendidos (5 datasets)
 PROJ_DOC_ID = "01KVWX9C5JAFHN4QCKP4HZCKB5"   # doc Projecao TCMP (so o dataset 'projecao')
+LIM_DOC_ID  = "01KYRJTVSJEFPBZV41XY0X36H4"   # doc Limite TCMP (datasets limite_enc, limite_conv)
 # Projeto de EXECUCAO/billing dos jobs BQ. Usar o furyid do usuario (nao o meli-bi-data
 # compartilhado) p/ evitar "max jobs queued per project" na fila lotada do projeto comum.
 # Os jobs leem meli-bi-data.* cross-project normalmente.
@@ -473,6 +474,49 @@ WHERE DT_ENCENDIDO >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MON
     return batched
 
 
+# ============================================================
+# Datasets do doc Limite TCMP (limite_enc por safra de encendido; limite_conv por mes de emissao/DT_CONV).
+# Janela dinamica: mes YoY (12m atras) + do 1o mes do ano corrente ate o mes vigente.
+# rating_v7 (C puro -> C1). Grao inclui FLAG_CONVERSAO/REENCENDIDO/APP p/ os filtros do dashboard.
+# ============================================================
+_LIM_RAT = """CASE WHEN rating_v7='A1' THEN 'A1' WHEN rating_v7='A2' THEN 'A2' WHEN rating_v7='A' THEN 'A3'
+    WHEN rating_v7='B1' THEN 'B1' WHEN rating_v7='B2' THEN 'B2' WHEN rating_v7 IN ('B','B3') THEN 'B3'
+    WHEN rating_v7 IN ('C','C1') THEN 'C1' WHEN rating_v7='C2' THEN 'C2' WHEN rating_v7='C3' THEN 'C3'
+    WHEN rating_v7 IN ('D','E','F','G','J','J1','J2') THEN 'D-J'
+    WHEN rating_v7 IS NULL OR rating_v7='Z' THEN 'Sem rating' ELSE 'Outros' END"""
+_LIM_WIN = """({dt} >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(),MONTH), INTERVAL 12 MONTH)
+       AND {dt} < DATE_SUB(DATE_TRUNC(CURRENT_DATE(),MONTH), INTERVAL 11 MONTH))
+   OR ({dt} >= DATE_TRUNC(CURRENT_DATE(),YEAR)
+       AND {dt} < DATE_ADD(DATE_TRUNC(CURRENT_DATE(),MONTH), INTERVAL 1 MONTH))"""
+LIM_QUERIES = {
+    "limite_enc": f"""
+SELECT
+  FORMAT_DATE('%Y-%m', DT_ENCENDIDO) AS safra,
+  FLAG_TC, FLAG_NISE,
+  {_LIM_RAT} AS rating,
+  FLAG_CONVERSAO, FLAG_REENCENDIDO,
+  COALESCE(FLAG_APP_ATIVO,'Sem App') AS FLAG_APP_ATIVO,
+  SUM(QTDE) AS n, ROUND(SUM(soma_limite)) AS soma_limite
+FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
+WHERE {_LIM_WIN.format(dt='DT_ENCENDIDO')}
+GROUP BY 1,2,3,4,5,6,7
+""",
+    "limite_conv": f"""
+SELECT
+  FORMAT_DATE('%Y-%m', DT_CONV) AS safra,
+  FLAG_TC, FLAG_NISE,
+  {_LIM_RAT} AS rating,
+  FLAG_REENCENDIDO,
+  COALESCE(FLAG_APP_ATIVO,'Sem App') AS FLAG_APP_ATIVO,
+  SUM(QTDE) AS n, ROUND(SUM(soma_limite)) AS soma_limite
+FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
+WHERE ({_LIM_WIN.format(dt='DT_CONV')})
+  AND FLAG_CONVERSAO='1. Convertido'
+GROUP BY 1,2,3,4,5,6
+""",
+}
+
+
 def main():
     # Push seletivo (one-off):
     #   python push_datasets_to_grid.py                 -> tudo (5 datasets -> DOC_ID, projecao -> PROJ_DOC_ID)
@@ -480,13 +524,14 @@ def main():
     #   python push_datasets_to_grid.py projecao --no-rebuild  -> so projecao reusando _proj_data.json
     args = [a for a in sys.argv[1:]]
     only_proj = "projecao" in args
+    only_lim = "limite" in args
     rebuild_proj = "--no-rebuild" not in args
 
     print(f"[push_datasets] Start {time.strftime('%Y-%m-%d %H:%M:%S')}"
           + (f" (SO projecao, rebuild={rebuild_proj})" if only_proj else ""))
     overall_ok = True
 
-    if not only_proj:
+    if not only_proj and not only_lim:
         exclude_cur = not current_month_batched()  # esconde mês vigente das abas v6 até o batch
         for name, sql in QUERIES.items():  # 6 datasets -> doc principal (Emissoes+Encendidos)
             if exclude_cur and name in EXCL_COL:
@@ -516,6 +561,33 @@ def main():
             if not res["ok"]:
                 print(f"  Error body: {res['body']}")
                 overall_ok = False
+
+    # datasets de Limite (limite_enc, limite_conv) -> doc LIM_DOC_ID (Limite TCMP)
+    if not only_proj:
+        for name, sql in LIM_QUERIES.items():
+            print(f"\n--- {name} --> {LIM_DOC_ID} ---")
+            raw_path = TMP_DIR / f"{name}_raw.json"
+            t0 = time.time()
+            try:
+                run_bq(sql, raw_path)
+            except Exception as e:
+                print(f"  [FAIL] bq query: {e}")
+                overall_ok = False
+                continue
+            t_bq = time.time() - t0
+            rows = to_numbers(json.load(open(raw_path, "r", encoding="utf-8")))
+            print(f"  rows={len(rows):,}  bq_time={t_bq:.1f}s")
+            t0 = time.time()
+            res = upload_dataset(name, rows, doc_id=LIM_DOC_ID)
+            status = "[OK]" if res["ok"] else "[FAIL]"
+            print(f"  {status} upload http={res['http']}  size={res['size_mb']} MB  up_time={time.time()-t0:.1f}s")
+            if not res["ok"]:
+                print(f"  Error body: {res['body']}")
+                overall_ok = False
+
+    if only_lim:
+        print(f"\n[push_datasets] End {time.strftime('%Y-%m-%d %H:%M:%S')} | overall={'OK' if overall_ok else 'FAIL'}")
+        return
 
     # dataset projecao (bundle pos-processado pelo builder local) -> doc PROJ_DOC_ID (satelite Projecao)
     print(f"\n--- projecao --> {PROJ_DOC_ID} ---")
