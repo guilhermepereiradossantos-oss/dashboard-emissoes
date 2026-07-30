@@ -64,7 +64,7 @@ SIGNED_THRESHOLD_MB = 20
 COLUMNAR = {"mensal_encendidos", "mensal_emissoes", "nprop_enc", "nprop_emi"}
 
 # Caso de "string -> numero" depois de bq query --format=prettyjson
-NUM_COLS = {"n_enc", "n_primo", "n_reenc", "n_conv", "soma_limite"}
+NUM_COLS = {"n_enc", "n_primo", "n_reenc", "n_conv", "soma_limite", "soma_maxsaldo"}
 
 QUERIES = {
     "mensal_encendidos": """
@@ -496,7 +496,8 @@ SELECT
   {_LIM_RAT} AS rating,
   FLAG_CONVERSAO, FLAG_REENCENDIDO,
   COALESCE(FLAG_APP_ATIVO,'Sem App') AS FLAG_APP_ATIVO,
-  SUM(QTDE) AS n, ROUND(SUM(soma_limite)) AS soma_limite
+  SUM(QTDE) AS n, ROUND(SUM(soma_limite)) AS soma_limite,
+  ROUND(SUM(max_saldo_r)) AS soma_maxsaldo
 FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
 WHERE {_LIM_WIN.format(dt='DT_ENCENDIDO')}
 GROUP BY 1,2,3,4,5,6,7
@@ -508,7 +509,8 @@ SELECT
   {_LIM_RAT} AS rating,
   FLAG_REENCENDIDO,
   COALESCE(FLAG_APP_ATIVO,'Sem App') AS FLAG_APP_ATIVO,
-  SUM(QTDE) AS n, ROUND(SUM(soma_limite)) AS soma_limite
+  SUM(QTDE) AS n, ROUND(SUM(soma_limite)) AS soma_limite,
+  ROUND(SUM(max_saldo_r)) AS soma_maxsaldo
 FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
 WHERE ({_LIM_WIN.format(dt='DT_CONV')})
   AND FLAG_CONVERSAO='1. Convertido'
