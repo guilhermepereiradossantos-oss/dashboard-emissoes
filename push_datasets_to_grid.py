@@ -537,6 +537,13 @@ def main():
         exclude_cur = not current_month_batched()  # esconde mês vigente das abas v6 até o batch
         for name, sql in QUERIES.items():  # 6 datasets -> doc principal (Emissoes+Encendidos)
             if exclude_cur and name in EXCL_COL:
+                # Mês vigente escondido (pre-batch): (1) estende a janela 1 mês a mais p/ trás
+                # (12->13 meses) p/ manter o YoY do ÚLTIMO mês exibido — senão o comparativo YoY
+                # some cedo demais (ex.: em ago pre-batch o último mês é jul/26 mas jul/25 já
+                # teria caído). Quando o mês vigente entra no batch, volta a 12 meses e o mês
+                # YoY antigo cai exatamente quando a barra do mês novo aparece.
+                # (2) corta o mês vigente (~vazio) das abas v6.
+                sql = sql.replace("INTERVAL 12 MONTH", "INTERVAL 13 MONTH", 1)
                 sql = sql.replace("GROUP BY ALL",
                                   f"  AND {EXCL_COL[name]} < DATE_TRUNC(CURRENT_DATE(), MONTH)\nGROUP BY ALL", 1)
             print(f"\n--- {name} ---")
