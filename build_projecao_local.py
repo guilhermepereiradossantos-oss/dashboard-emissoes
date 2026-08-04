@@ -223,6 +223,23 @@ if SELLER_ENC_ONEOFF and SELLER_ENC_ONEOFF['data_enc'][:7] == cur_key:
 #   Aplicado DEPOIS do clamp 2f (sem negativos) e do 2g, entao o total do mes vigente
 #   bate o alvo exatamente. Escala a curva organica remanescente preservando o shape.
 # ============================================================
+# 2h. SMOOTH TC Full agosto/26 (guidance do usuario 2026-08-04): remove o SPIKE ARTIFICIAL
+#   dos dias ~17-19 (vinham ~44-50k/dia, ~95% de BAU=proj_template replicando o pico do mes
+#   anterior) que esvaziava os demais dias uteis p/ <10k. Redistribui a projecao FUTURA de
+#   TC Full pelos dias restantes usando o padrao dia-da-semana realizado (dow_factors: dias
+#   uteis altos, fds baixos), preservando a soma futura; o TARGET (abaixo) re-fixa o total.
+#   *** PONTUAL: so TC Full, so '2026-08' (self-expira). Rever na virada de mes. ***
+if cur_key == '2026-08':
+    _sm_tc = 'TC Full'
+    _sm_fac = dow_factors(_sm_tc)
+    _sm_rem = [d for d in ALL_DAYS if d >= TODAY]
+    _sm_fut = sum(proj_data[_sm_tc][sg].get(d, 0) for sg in proj_data[_sm_tc] for d in _sm_rem)
+    _sm_wsum = sum(_sm_fac.get(date.fromisoformat(d).weekday(), 1.0) for d in _sm_rem)
+    if _sm_fac and _sm_rem and _sm_fut > 0 and _sm_wsum > 0:
+        for d in _sm_rem:
+            _apply_day_target(_sm_tc, d, _sm_fut * _sm_fac.get(date.fromisoformat(d).weekday(), 1.0) / _sm_wsum)
+        print(f'  [SMOOTH {_sm_tc} ago] spike removido; {int(_sm_fut):,} redistribuido por {len(_sm_rem)} dias via DOW')
+
 _tgt_cfg = TARGET_TOTALS.get(cur_key)
 if _tgt_cfg:
     for tc in TC_KEYS:
