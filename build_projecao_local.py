@@ -43,7 +43,12 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # 2026-06-25: TARGET fixo de TC Full (325k) DESLIGADO a pedido do usuario para a projecao
 # voltar a ser organica (escopo "minimo": mantidos ajustes manuais Python, spike_override e -15k).
 # Para reativar uma trava de TARGET: TARGET_TOTALS = {'2026-06': {'TC Full': <valor>}}
-TARGET_TOTALS = {}
+# 2026-08-04: guidance do usuario — agosto deve fechar um pouco ABAIXO de julho (driver:
+#   aumento dos 1os encendidos foi menor este mes, mas nao descola tanto do mes anterior).
+#   Alvo = julho realizado - delta: TC Full 499.404-10k=489.404 ; Micro TC 143.389-7k=136.389.
+#   Escala a curva organica remanescente (bloco 2b) preservando o shape. *** PONTUAL ***:
+#   so vale p/ cur_key '2026-08' (self-expira na virada); rever/remover em setembro.
+TARGET_TOTALS = {'2026-08': {'TC Full': 489404, 'Micro TC': 136389}}
 SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02', '2026-06-25'}  # 25/06: snapshot dev ruim (Micro TC HIST degenerado)
 
 def fmt(n): return f"{int(round(n)):,}".replace(',', '.')
@@ -83,27 +88,11 @@ cur_key = f'{year}-{month:02d}'
 # removidos a pedido do usuario -> projecao ORGANICA pura. (cur_key mantido; usado em 2b/secao 5.)
 
 # ============================================================
-# 2b. ESCALA PRA TARGET (identico)
-# ============================================================
-_cfg = TARGET_TOTALS.get(cur_key)
-if _cfg:
-    for tc in TC_KEYS:
-        target = _cfg.get(tc)
-        if not target: continue
-        real_so_far = sum(v for sg in actual_data[tc] for d, v in actual_data[tc][sg].items() if d.startswith(cur_key))
-        proj_raw = sum(v for sg in proj_data[tc] for d, v in proj_data[tc][sg].items() if d.startswith(cur_key))
-        proj_target = target - real_so_far
-        if proj_raw > 0 and proj_target > 0:
-            factor = proj_target / proj_raw
-            for sg in proj_data[tc]:
-                for d in list(proj_data[tc][sg].keys()):
-                    if d.startswith(cur_key): proj_data[tc][sg][d] *= factor
-            print(f'  TARGET {tc}: real={int(real_so_far):,} + proj_raw={int(proj_raw):,} -> alvo={int(proj_target):,} (f={factor:.4f})')
-        elif proj_target <= 0:
-            for sg in proj_data[tc]:
-                for d in list(proj_data[tc][sg].keys()):
-                    if d.startswith(cur_key): proj_data[tc][sg][d] = 0
-            print(f'  TARGET {tc}: real>=target; proj zerada')
+# 2b. ESCALA PRA TARGET — MOVIDA p/ depois do clamp 2f (e do 2g).
+#   Bug corrigido 2026-08-04: rodando aqui (antes do 2f), a escala tocava tambem os dias
+#   com projecao NEGATIVA; o 2f depois zerava esses dias e RE-INFLAVA o total acima do alvo
+#   (ex.: alvo 454.437 virava 479.373). Agora o TARGET e o ULTIMO ajuste sobre proj_data,
+#   aplicado sobre valores ja clampados -> o total bate o alvo exatamente. Ver bloco pos-2g.
 
 # ============================================================
 # 2c. SAZONALIDADE DIA-DA-SEMANA (+ nivel TC Full no run-rate do mes)
@@ -228,6 +217,31 @@ if SELLER_ENC_ONEOFF and SELLER_ENC_ONEOFF['data_enc'][:7] == cur_key:
             proj_data[tc]['Sellers'][dd] += _cfg['n'] * frac
             _add += _cfg['n'] * frac
         print(f"  [ONE-OFF seller enc] {tc}: +{int(round(_add)):,}".replace(',', '.'))
+
+# ============================================================
+# 2b (reposicionado). ESCALA PRA TARGET — ULTIMO ajuste sobre proj_data.
+#   Aplicado DEPOIS do clamp 2f (sem negativos) e do 2g, entao o total do mes vigente
+#   bate o alvo exatamente. Escala a curva organica remanescente preservando o shape.
+# ============================================================
+_tgt_cfg = TARGET_TOTALS.get(cur_key)
+if _tgt_cfg:
+    for tc in TC_KEYS:
+        target = _tgt_cfg.get(tc)
+        if not target: continue
+        real_so_far = sum(v for sg in actual_data[tc] for d, v in actual_data[tc][sg].items() if d.startswith(cur_key))
+        proj_raw = sum(v for sg in proj_data[tc] for d, v in proj_data[tc][sg].items() if d.startswith(cur_key))
+        proj_target = target - real_so_far
+        if proj_raw > 0 and proj_target > 0:
+            factor = proj_target / proj_raw
+            for sg in proj_data[tc]:
+                for d in list(proj_data[tc][sg].keys()):
+                    if d.startswith(cur_key): proj_data[tc][sg][d] *= factor
+            print(f'  TARGET {tc}: real={int(real_so_far):,} + proj_raw={int(proj_raw):,} -> alvo_proj={int(proj_target):,} (f={factor:.4f}) -> total={int(target):,}')
+        elif proj_target <= 0:
+            for sg in proj_data[tc]:
+                for d in list(proj_data[tc][sg].keys()):
+                    if d.startswith(cur_key): proj_data[tc][sg][d] = 0
+            print(f'  TARGET {tc}: real>=target; proj zerada')
 
 # ============================================================
 # 3. HISTORICO (snapshot LOCAL — nao toca producao)
