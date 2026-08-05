@@ -519,6 +519,27 @@ GROUP BY 1,2,3,4,5,6
 }
 
 
+# ============================================================
+# FIX 2026-08-05: fallback rating_v7 -> rating_tc (V6).
+# Para julho + TC Full, a coluna rating_v7 (DE-PARA da RBA de propostas) e NULL p/ quem nao
+# esta na base de oferta (Sellers, Cuentas Canceladas, parte de BAU/Mar Aberto) -> caiam TODOS
+# em 'Sem rating', inflando o bucket (~1,33M) e distorcendo os graficos de Rating de encendidos,
+# emitidos, adoption, nprop e limite/nivel. Correto (ver reference_classificacao_tcfull_v7):
+# usar o V6 quando o V7 nao existe; 'Sem rating' so quando AMBOS sao null (ex.: Only Nav ~704k).
+# Validado 05/08 (julho Full): recupera ~616k (Sellers 389k, Cuentas Canceladas 145k, BAU 63k...).
+# `rating_v7` so aparece dentro do CASE de rating em cada query -> replace global e seguro.
+# Para nao-julho/nao-Full a base ja tem rating_v7 = rating_tc -> COALESCE e no-op.
+def _rating_v6_fallback(sql: str) -> str:
+    return sql.replace("rating_v7", "COALESCE(rating_v7, rating_tc)")
+
+for _qk in QUERIES:
+    if "rating_v7" in QUERIES[_qk]:
+        QUERIES[_qk] = _rating_v6_fallback(QUERIES[_qk])
+for _qk in LIM_QUERIES:
+    if "rating_v7" in LIM_QUERIES[_qk]:
+        LIM_QUERIES[_qk] = _rating_v6_fallback(LIM_QUERIES[_qk])
+
+
 def main():
     # Push seletivo (one-off):
     #   python push_datasets_to_grid.py                 -> tudo (5 datasets -> DOC_ID, projecao -> PROJ_DOC_ID)
