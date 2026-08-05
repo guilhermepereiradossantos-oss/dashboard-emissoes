@@ -594,7 +594,18 @@ def main():
 
     # datasets de Limite (limite_enc, limite_conv) -> doc LIM_DOC_ID (Limite TCMP)
     if not only_proj:
+        # Janela YoY dinamica (mesma regra do v6): enquanto o mes vigente NAO bateu o batch de
+        # encendido (pre-batch), esconde o mes vigente E recua o YoY 1 mes, p/ manter o comparativo
+        # do ULTIMO mes exibido. Ex.: ago pre-batch -> mostra Jul/25 (YoY) + Jan..Jul/26 (esconde ago;
+        # YoY vira Jul/25 em vez de Ago/25). Quando ago bate o batch, volta ao padrao (Ago/25 + ..Ago/26).
+        _lim_prebatch = not current_month_batched()
         for name, sql in LIM_QUERIES.items():
+            if _lim_prebatch:
+                sql = (sql
+                    .replace("INTERVAL 12 MONTH", "INTERVAL 13 MONTH")
+                    .replace("INTERVAL 11 MONTH", "INTERVAL 12 MONTH")
+                    .replace("DATE_ADD(DATE_TRUNC(CURRENT_DATE(),MONTH), INTERVAL 1 MONTH)",
+                             "DATE_TRUNC(CURRENT_DATE(),MONTH)"))
             print(f"\n--- {name} --> {LIM_DOC_ID} ---")
             raw_path = TMP_DIR / f"{name}_raw.json"
             t0 = time.time()
