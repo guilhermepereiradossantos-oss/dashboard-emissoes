@@ -380,6 +380,18 @@ for key, yr, mo, is_cur in target_months:
 if JUN_FILL_KEY in months_hist:
     apply_jun_fill(months_hist[JUN_FILL_KEY])
 
+# 5d. (RESTAURADO 2026-08-06, pedido do usuario) — NAO mexer na linha laranja dos dias JA
+#     REALIZADOS do mes VIGENTE. Snapshots antigos logavam projecao defasada (ex.: 04-05/08
+#     vinham ~8k vs realizado ~14k) e a linha nao pode contradizer a barra de um dia que ja
+#     aconteceu. Entao: mes vigente, dias < hoje => HIST (linha laranja) = REALIZADO diario.
+#     Dias >= hoje seguem a projecao logada; meses FECHADOS ficam com HIST cru (intactos).
+_cur_key = target_months[0][0]
+if _cur_key in months_hist:
+    for tc in TC_KEYS:
+        for D, v in _daily_real(tc).items():   # _daily_real ja filtra d < TODAY
+            if D.startswith(_cur_key):
+                months_hist[_cur_key][tc][D] = int(round(v))
+
 # ============================================================
 # 6. SALVA _proj_data.json
 # ============================================================
