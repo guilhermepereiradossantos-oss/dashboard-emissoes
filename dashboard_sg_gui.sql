@@ -89,7 +89,12 @@ nao_conv_sod AS (
 spike_override AS (
   SELECT * FROM UNNEST([
     STRUCT('2026-06' AS ym, '1. TC Full'  AS FLAG_TC, 11 AS forced_peak_day),
-    STRUCT('2026-06',       '2. Micro TC',            11)
+    STRUCT('2026-06',       '2. Micro TC',            11),
+    -- 2026-08 (info do usuario 12/08): encendido/batch esperado ~13/08 -> pico de conversao
+    -- logo apos (D+1..D+2). Full converte mais devagar (pico ~15), Micro D0-heavy (pico ~14).
+    -- Antes o pico caia em ~17-19 (dia historico), adiantado vs o batch real. *** PONTUAL ago. ***
+    STRUCT('2026-08',       '1. TC Full',             15),
+    STRUCT('2026-08',       '2. Micro TC',            14)
   ])
 ),
 april_daily_bcp AS (
