@@ -380,17 +380,12 @@ for key, yr, mo, is_cur in target_months:
 if JUN_FILL_KEY in months_hist:
     apply_jun_fill(months_hist[JUN_FILL_KEY])
 
-# 5d. (RESTAURADO 2026-08-06, pedido do usuario) — NAO mexer na linha laranja dos dias JA
-#     REALIZADOS do mes VIGENTE. Snapshots antigos logavam projecao defasada (ex.: 04-05/08
-#     vinham ~8k vs realizado ~14k) e a linha nao pode contradizer a barra de um dia que ja
-#     aconteceu. Entao: mes vigente, dias < hoje => HIST (linha laranja) = REALIZADO diario.
-#     Dias >= hoje seguem a projecao logada; meses FECHADOS ficam com HIST cru (intactos).
-_cur_key = target_months[0][0]
-if _cur_key in months_hist:
-    for tc in TC_KEYS:
-        for D, v in _daily_real(tc).items():   # _daily_real ja filtra d < TODAY
-            if D.startswith(_cur_key):
-                months_hist[_cur_key][tc][D] = int(round(v))
+# 5d. REMOVIDO DE NOVO (2026-08-12, a pedido enfatico do usuario). NAO sobrescrever a linha
+#     laranja do mes vigente com o REALIZADO dos dias passados. A linha deve manter a PROJECAO
+#     LOGADA (build_months_hist_entry, dos snapshots) tambem nos dias passados, p/ revelar o
+#     desvio vs as barras realizadas. Mesma decisao de 2026-07-26. *** NAO reintroduzir. ***
+#     (O 08-06 tinha reintroduzido isso p/ matar um 8k defasado; a solucao correta NAO e copiar
+#     o realizado — se um snapshot antigo ficar defasado, usar SKIP_HIST_SNAPSHOTS, nao overlay.)
 
 # ============================================================
 # 6. SALVA _proj_data.json
