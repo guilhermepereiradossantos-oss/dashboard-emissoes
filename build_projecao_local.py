@@ -43,11 +43,13 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # 2026-06-25: TARGET fixo de TC Full (325k) DESLIGADO a pedido do usuario para a projecao
 # voltar a ser organica (escopo "minimo": mantidos ajustes manuais Python, spike_override e -15k).
 # Para reativar uma trava de TARGET: TARGET_TOTALS = {'2026-06': {'TC Full': <valor>}}
-# 2026-08-04: guidance do usuario — agosto deve fechar um pouco ABAIXO de julho (driver:
-#   aumento dos 1os encendidos foi menor este mes, mas nao descola tanto do mes anterior).
-#   Alvo = julho realizado - delta: TC Full 499.404-10k=489.404 ; Micro TC 143.389-7k=136.389.
-#   Escala a curva organica remanescente (bloco 2b) preservando o shape. *** PONTUAL ***:
-#   so vale p/ cur_key '2026-08' (self-expira na virada); rever/remover em setembro.
+# 2026-08-04: guidance do usuario — agosto abaixo de julho (placeholder 489.404/136.389).
+# 2026-08-14: liguei/desliguei/RELIGUEI. A projecao ORGANICA (sem trava) deu Full ~570k /
+#   Micro ~164k (ACIMA de julho) — o usuario REJEITOU: agosto deve fechar ABAIXO de julho
+#   porque NAO se repete o efeito pontual da entrada do novo modelo (CHA) que impulsionou julho.
+#   Reaplico o alvo julho -10k/-7k: TC Full 499.404-10k=489.404 ; Micro TC 143.389-7k=136.389.
+#   O shape organico + spike_override(pico pos-batch) + blend seguem; o TARGET so escala o TOTAL.
+#   *** PONTUAL agosto; self-expira na virada. Se o usuario der outro numero, atualizar aqui. ***
 TARGET_TOTALS = {'2026-08': {'TC Full': 489404, 'Micro TC': 136389}}
 SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02', '2026-06-25'}  # 25/06: snapshot dev ruim (Micro TC HIST degenerado)
 
