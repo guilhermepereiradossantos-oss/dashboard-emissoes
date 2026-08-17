@@ -43,12 +43,12 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # 2026-06-25: TARGET fixo de TC Full (325k) DESLIGADO a pedido do usuario para a projecao
 # voltar a ser organica (escopo "minimo": mantidos ajustes manuais Python, spike_override e -15k).
 # Para reativar uma trava de TARGET: TARGET_TOTALS = {'2026-06': {'TC Full': <valor>}}
-# 2026-08-17: TARGET DESLIGADO em definitivo a pedido do usuario — "tire o valor fixo, faca a
-#   projecao com base nos resultados que ja temos e como voce sempre faz". Agora o batch de agosto
-#   completou e ja converteu o grosso (pico D0-D3 no realizado), entao a ORGANICA se ancora no
-#   comportamento REAL do cohort de agosto (nao mais extrapolacao de julho como em 14/08). Sem
-#   trava de total. Tambem removi o blend (2h) e o spike_override 2026-08 -> projecao organica padrao.
-TARGET_TOTALS = {}
+# 2026-08-17 (2): RELIGADO. A organica deu Full ~532k / Micro ~161k (ACIMA de julho, pois o
+#   cohort de agosto converteu forte no realizado). O usuario REJEITOU de forma enfatica: DECISAO
+#   DE NEGOCIO = agosto fecha ABAIXO de julho ("ja falei que vamos fazer menos que o mes passado").
+#   Nao re-litigar. Alvo = julho -10k/-7k: TC Full 499.404-10k=489.404 ; Micro TC 143.389-7k=136.389.
+#   *** PONTUAL agosto; self-expira na virada. Se o usuario der outro numero, atualizar aqui. ***
+TARGET_TOTALS = {'2026-08': {'TC Full': 489404, 'Micro TC': 136389}}
 SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02', '2026-06-25'}  # 25/06: snapshot dev ruim (Micro TC HIST degenerado)
 
 def fmt(n): return f"{int(round(n)):,}".replace(',', '.')
