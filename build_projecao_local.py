@@ -43,12 +43,16 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # 2026-06-25: TARGET fixo de TC Full (325k) DESLIGADO a pedido do usuario para a projecao
 # voltar a ser organica (escopo "minimo": mantidos ajustes manuais Python, spike_override e -15k).
 # Para reativar uma trava de TARGET: TARGET_TOTALS = {'2026-06': {'TC Full': <valor>}}
-# 2026-08-17 (2): RELIGADO. A organica deu Full ~532k / Micro ~161k (ACIMA de julho, pois o
-#   cohort de agosto converteu forte no realizado). O usuario REJEITOU de forma enfatica: DECISAO
-#   DE NEGOCIO = agosto fecha ABAIXO de julho ("ja falei que vamos fazer menos que o mes passado").
-#   Nao re-litigar. Alvo = julho -10k/-7k: TC Full 499.404-10k=489.404 ; Micro TC 143.389-7k=136.389.
-#   *** PONTUAL agosto; self-expira na virada. Se o usuario der outro numero, atualizar aqui. ***
-TARGET_TOTALS = {'2026-08': {'TC Full': 489404, 'Micro TC': 136389}}
+# 2026-08-17 (3): TARGET OFF de novo. O problema real nao era so o total, era o SHAPE: o template
+#   replicava o nivel SUSTENTADO de julho (~24k/dia), irreal p/ agosto pos-pico. O realizado mostra
+#   o pico ja passou (Full 40k/36k em 14-15 -> ja ~14k em 16). Trava de total sobre um shape errado
+#   so mascarava. Solucao no bloco 2i: cauda = run-rate recente DECAINDO (ancora no dado real).
+#   Isso derruba o total p/ ABAIXO de julho naturalmente, sem precisar de valor fixo.
+#   2026-08-17 (4): Full fica ~419k (-16% vs jul) so com a cauda 2i — abaixo de julho, otimo.
+#   MICRO com a cauda da ~152k (+6% vs jul): ja converteu 89k ate o dia 17, entao nem decaindo
+#   fecha abaixo de julho sozinho. Decisao do usuario = abaixo de julho nos DOIS -> travo SO o
+#   Micro em 136.389 (o 2b escala a cauda ja decaida). Full segue livre (sem trava). *** PONTUAL. ***
+TARGET_TOTALS = {'2026-08': {'Micro TC': 136389}}
 SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02', '2026-06-25'}  # 25/06: snapshot dev ruim (Micro TC HIST degenerado)
 
 def fmt(n): return f"{int(round(n)):,}".replace(',', '.')
@@ -217,6 +221,24 @@ if SELLER_ENC_ONEOFF and SELLER_ENC_ONEOFF['data_enc'][:7] == cur_key:
             proj_data[tc]['Sellers'][dd] += _cfg['n'] * frac
             _add += _cfg['n'] * frac
         print(f"  [ONE-OFF seller enc] {tc}: +{int(round(_add)):,}".replace(',', '.'))
+
+# ============================================================
+# 2i. CAUDA REALISTA POS-PICO (2026-08-17, pedido do usuario). O pico do batch (13-16) JA passou
+#   (Full 40k/36k em 14-15 -> ja ~14k em 16). O proj_template sustentava o nivel de JULHO (~24k/dia),
+#   irreal p/ agosto pos-pico (julho ficou alto o mes todo pela novidade do modelo). Substituo a
+#   projecao dos dias RESTANTES por um decaimento ancorado no run-rate recente (mediana ult.7d,
+#   robusta ao spike do pico): daily = anchor * DECAY^i. Ancora o total ABAIXO de julho, data-driven.
+#   *** PONTUAL agosto; self-expira na virada (so roda p/ cur_key '2026-08'). ***
+if cur_key == '2026-08':
+    _rem = sorted(d for d in ALL_DAYS if d >= TODAY)
+    _DECAY = 0.97
+    for tc in TC_KEYS:
+        _anchor = recent_runrate(tc, 7)
+        if _anchor <= 0:
+            continue
+        for i, d in enumerate(_rem):
+            _apply_day_target(tc, d, _anchor * (_DECAY ** i))
+        print(f'  [CAUDA {tc}] anchor(recent7)={int(_anchor):,} decay={_DECAY} sobre {len(_rem)} dias')
 
 # ============================================================
 # 2b (reposicionado). ESCALA PRA TARGET — ULTIMO ajuste sobre proj_data.
