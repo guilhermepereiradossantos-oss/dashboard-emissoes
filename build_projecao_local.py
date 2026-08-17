@@ -52,7 +52,7 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 #   MICRO com a cauda da ~152k (+6% vs jul): ja converteu 89k ate o dia 17, entao nem decaindo
 #   fecha abaixo de julho sozinho. Decisao do usuario = abaixo de julho nos DOIS -> travo SO o
 #   Micro em 136.389 (o 2b escala a cauda ja decaida). Full segue livre (sem trava). *** PONTUAL. ***
-TARGET_TOTALS = {'2026-08': {'Micro TC': 136389}}
+TARGET_TOTALS = {'2026-08': {'TC Full': 450000, 'Micro TC': 136389}}  # 2026-08-17(5): usuario ancora Full ~450k (minha cauda pura dava 419k; 450k = cauda segurando um pouco mais). Micro travado 136k.
 SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02', '2026-06-25'}  # 25/06: snapshot dev ruim (Micro TC HIST degenerado)
 
 def fmt(n): return f"{int(round(n)):,}".replace(',', '.')
