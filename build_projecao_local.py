@@ -43,14 +43,12 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 # 2026-06-25: TARGET fixo de TC Full (325k) DESLIGADO a pedido do usuario para a projecao
 # voltar a ser organica (escopo "minimo": mantidos ajustes manuais Python, spike_override e -15k).
 # Para reativar uma trava de TARGET: TARGET_TOTALS = {'2026-06': {'TC Full': <valor>}}
-# 2026-08-04: guidance do usuario — agosto abaixo de julho (placeholder 489.404/136.389).
-# 2026-08-14: liguei/desliguei/RELIGUEI. A projecao ORGANICA (sem trava) deu Full ~570k /
-#   Micro ~164k (ACIMA de julho) — o usuario REJEITOU: agosto deve fechar ABAIXO de julho
-#   porque NAO se repete o efeito pontual da entrada do novo modelo (CHA) que impulsionou julho.
-#   Reaplico o alvo julho -10k/-7k: TC Full 499.404-10k=489.404 ; Micro TC 143.389-7k=136.389.
-#   O shape organico + spike_override(pico pos-batch) + blend seguem; o TARGET so escala o TOTAL.
-#   *** PONTUAL agosto; self-expira na virada. Se o usuario der outro numero, atualizar aqui. ***
-TARGET_TOTALS = {'2026-08': {'TC Full': 489404, 'Micro TC': 136389}}
+# 2026-08-17: TARGET DESLIGADO em definitivo a pedido do usuario — "tire o valor fixo, faca a
+#   projecao com base nos resultados que ja temos e como voce sempre faz". Agora o batch de agosto
+#   completou e ja converteu o grosso (pico D0-D3 no realizado), entao a ORGANICA se ancora no
+#   comportamento REAL do cohort de agosto (nao mais extrapolacao de julho como em 14/08). Sem
+#   trava de total. Tambem removi o blend (2h) e o spike_override 2026-08 -> projecao organica padrao.
+TARGET_TOTALS = {}
 SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02', '2026-06-25'}  # 25/06: snapshot dev ruim (Micro TC HIST degenerado)
 
 def fmt(n): return f"{int(round(n)):,}".replace(',', '.')
@@ -225,26 +223,9 @@ if SELLER_ENC_ONEOFF and SELLER_ENC_ONEOFF['data_enc'][:7] == cur_key:
 #   Aplicado DEPOIS do clamp 2f (sem negativos) e do 2g, entao o total do mes vigente
 #   bate o alvo exatamente. Escala a curva organica remanescente preservando o shape.
 # ============================================================
-# 2h. ATENUA (nao remove) o pico de TC Full em ago/26 (guidance do usuario 2026-08-04):
-#   os dias ~17-19 vinham ~44-50k/dia (~95% BAU=proj_template) esvaziando os demais dias
-#   uteis p/ <10k. O usuario quer MANTER o pico, mas tirar parte do volume dele p/ levantar
-#   os dias uteis (>10k). Solucao = BLEND entre o shape ORGANICO (com pico) e o shape DOW
-#   (plano), preservando a soma futura; o TARGET (abaixo) re-fixa o total do mes.
-#   _BLEND=1 -> organico puro (pico cheio, base <10k) ; _BLEND=0 -> plano (sem pico).
-#   0.5 = parcial (pico atenuado + base acima de 10k). *** PONTUAL: so TC Full, so '2026-08'. ***
-if cur_key == '2026-08':
-    _sm_tc = 'TC Full'
-    _BLEND = 0.5
-    _sm_fac = dow_factors(_sm_tc)
-    _sm_rem = [d for d in ALL_DAYS if d >= TODAY]
-    _sm_fut = sum(proj_data[_sm_tc][sg].get(d, 0) for sg in proj_data[_sm_tc] for d in _sm_rem)
-    _sm_wsum = sum(_sm_fac.get(date.fromisoformat(d).weekday(), 1.0) for d in _sm_rem)
-    if _sm_fac and _sm_rem and _sm_fut > 0 and _sm_wsum > 0:
-        for d in _sm_rem:
-            _org_d = sum(proj_data[_sm_tc][sg].get(d, 0) for sg in proj_data[_sm_tc])
-            _flat_d = _sm_fut * _sm_fac.get(date.fromisoformat(d).weekday(), 1.0) / _sm_wsum
-            _apply_day_target(_sm_tc, d, _BLEND * _org_d + (1 - _BLEND) * _flat_d)
-        print(f'  [BLEND {_sm_tc} ago] pico atenuado (blend={_BLEND}); soma preservada={int(_sm_fut):,}')
+# 2h. REMOVIDO (2026-08-17) — era o blend que atenuava o pico de TC Full em ago (pontual de
+#   quando o pico era projetado/artificial). Com o batch ja realizado e o TARGET desligado, a
+#   projecao volta ao ORGANICO padrao (sem blend). Ver comentario do TARGET_TOTALS.
 
 _tgt_cfg = TARGET_TOTALS.get(cur_key)
 if _tgt_cfg:

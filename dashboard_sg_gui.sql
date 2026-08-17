@@ -90,10 +90,10 @@ spike_override AS (
   SELECT * FROM UNNEST([
     STRUCT('2026-06' AS ym, '1. TC Full'  AS FLAG_TC, 11 AS forced_peak_day),
     STRUCT('2026-06',       '2. Micro TC',            11),
-    -- 2026-08 (info do usuario 12/08): encendido/batch esperado ~13/08 -> pico de conversao
-    -- logo apos (D+1..D+2). Full converte mais devagar (pico ~15), Micro D0-heavy (pico ~14).
-    -- Antes o pico caia em ~17-19 (dia historico), adiantado vs o batch real. *** PONTUAL ago. ***
-    STRUCT('2026-08',       '1. TC Full',             15),
+    -- 2026-08-17: batch de agosto ja aconteceu (~13-14) e o pico D0-D3 esta REALIZADO. Ancoro o
+    -- pico do template no dia 14 (passado) p/ o futuro virar so CAUDA/decaimento, evitando o
+    -- artefato de um 2o pico no "dia historico" (~18). NAO e trava de total (isso e o TARGET, off).
+    STRUCT('2026-08',       '1. TC Full',             14),
     STRUCT('2026-08',       '2. Micro TC',            14)
   ])
 ),
