@@ -528,8 +528,14 @@ GROUP BY 1,2,3,4,5,6
 #   o rating novo (ago D-J cai de 11,4% -> ~5,7%, corrige o excesso), historico segue no V6.
 #   O CASE de rating em cada query e escrito com o token `rating_v7` -> troco o token pela fonte
 #   nova num replace unico (vale p/ mensal_*, nprop_*, adoption, limite_*). rating_v7 aposentado.
+#   2026-08-18 (2): usuario apontou que o rating_tc_new de JUNHO esta ruim (D-J 16,9% no TC Full,
+#   nao deveria) — backfill de jun mal feito. jul/ago estao bons (D-J 5,7%). Entao rating_tc_new
+#   vale so p/ encendidos de JUL/26 em diante; jun e antes usam V6 (rating_tc). Corte por
+#   DT_ENCENDIDO (coluna do rating = do encendido; existe em todas as queries da base).
 def _rating_v6_fallback(sql: str) -> str:
-    return sql.replace("rating_v7", "COALESCE(rating_tc_new, rating_tc)")
+    return sql.replace(
+        "rating_v7",
+        "IF(DT_ENCENDIDO >= DATE '2026-07-01', COALESCE(rating_tc_new, rating_tc), rating_tc)")
 
 for _qk in QUERIES:
     if "rating_v7" in QUERIES[_qk]:
