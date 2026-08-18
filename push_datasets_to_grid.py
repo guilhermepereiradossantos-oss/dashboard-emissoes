@@ -520,17 +520,16 @@ GROUP BY 1,2,3,4,5,6
 
 
 # ============================================================
-# FIX 2026-08-05: fallback rating_v7 -> rating_tc (V6).
-# Para julho + TC Full, a coluna rating_v7 (DE-PARA da RBA de propostas) e NULL p/ quem nao
-# esta na base de oferta (Sellers, Cuentas Canceladas, parte de BAU/Mar Aberto) -> caiam TODOS
-# em 'Sem rating', inflando o bucket (~1,33M) e distorcendo os graficos de Rating de encendidos,
-# emitidos, adoption, nprop e limite/nivel. Correto (ver reference_classificacao_tcfull_v7):
-# usar o V6 quando o V7 nao existe; 'Sem rating' so quando AMBOS sao null (ex.: Only Nav ~704k).
-# Validado 05/08 (julho Full): recupera ~616k (Sellers 389k, Cuentas Canceladas 145k, BAU 63k...).
-# `rating_v7` so aparece dentro do CASE de rating em cada query -> replace global e seguro.
-# Para nao-julho/nao-Full a base ja tem rating_v7 = rating_tc -> COALESCE e no-op.
+# FONTE DO RATING (2026-08-18): usar rating_tc_new onde existe, cair no rating_tc (V6) senao.
+#   Historico: 08-05 usava COALESCE(rating_v7, rating_tc) (rating_v7 = DE-PARA so de jul/Full).
+#   Agora o usuario pediu a coluna nova `rating_tc_new` (re-rating oficial). Validado 08-18:
+#   rating_tc_new so existe de JUN/26 em diante (100% nula antes) -> NAO da p/ usar sozinha
+#   (zeraria o rating do historico). Entao: COALESCE(rating_tc_new, rating_tc). Efeito: Jun+ usa
+#   o rating novo (ago D-J cai de 11,4% -> ~5,7%, corrige o excesso), historico segue no V6.
+#   O CASE de rating em cada query e escrito com o token `rating_v7` -> troco o token pela fonte
+#   nova num replace unico (vale p/ mensal_*, nprop_*, adoption, limite_*). rating_v7 aposentado.
 def _rating_v6_fallback(sql: str) -> str:
-    return sql.replace("rating_v7", "COALESCE(rating_v7, rating_tc)")
+    return sql.replace("rating_v7", "COALESCE(rating_tc_new, rating_tc)")
 
 for _qk in QUERIES:
     if "rating_v7" in QUERIES[_qk]:
