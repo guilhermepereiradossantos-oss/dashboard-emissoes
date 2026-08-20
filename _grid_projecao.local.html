@@ -4,9 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Projeção TCMP — TC Brasil</title>
-<script src="/d/_assets/grid-sdk.js"></script>
-<!-- Chart.js da lib local do Grid (sem fallback CDN — CSP bloqueia externos). -->
-<script src="/d/_libs/chart.min.js" onerror="window.__CHART_LOAD_FAILED=true;console.error('[Projecao] Chart.js (/d/_libs/chart.min.js) nao carregou.');"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+window.Grid = {
+  configure: function(){},
+  dataset: function(name){
+    return {
+      load: function(){
+        return fetch('_proj_data.json').then(function(r){ return r.json(); }).then(function(data){
+          return [{ bundle: JSON.stringify(data) }];
+        });
+      }
+    };
+  }
+};
+</script>
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
