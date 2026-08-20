@@ -100,7 +100,8 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 /* CHARTS */
 .chart-wrap{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:18px 18px 12px;margin-bottom:16px}
 .chart-title{font-size:12px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
-.chart-inner{position:relative;height:460px}
+.chart-inner{position:relative;height:460px;overflow-x:auto;overflow-y:hidden}
+.chart-scroll-inner{position:relative;height:100%;width:100%}
 .chart-inner-sm{position:relative;height:400px}
 .charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 .charts-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
@@ -234,6 +235,9 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 .cmp-chip:hover{background:#30363d;color:#e6edf3}
 .cmp-chip input{accent-color:#A855F7;cursor:pointer}
 .cmp-chip.active{background:rgba(168,85,247,.14);border-color:#A855F7;color:#D9B8FF}
+.lookback-input{width:74px;background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 8px;border-radius:6px;font-size:12px;font-family:inherit}
+.lookback-input:focus{outline:none;border-color:#58a6ff}
+.lookback-input::placeholder{color:#6e7681}
 /* Gráfico estica para preencher a coluna ao lado do painel de filtros */
 .chart-section>.chart-wrap{flex:1;min-width:0;margin-bottom:0}
 
@@ -282,7 +286,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
       <div class="kpi-card comp"><div class="kpi-label" id="kl-plan">Proj. Final vs Plano</div><div class="kpi-value" id="kv-plan-val">—</div><div class="kpi-sub" id="kv-plan-label">Plano —</div><div class="cmp-delta" id="kv-plan-delta" style="margin-top:4px"></div></div>
     </div>
     <div class="chart-section">
-      <div class="chart-wrap"><div class="chart-inner"><canvas id="chartProj"></canvas></div></div>
+      <div class="chart-wrap"><div class="chart-inner"><div class="chart-scroll-inner" id="chart-scroll-inner"><canvas id="chartProj"></canvas></div></div></div>
       <div class="filter-panel">
         <div class="fp-title">Grupos encendidos</div>
         <div class="fp-items" id="fp-proj"></div>
@@ -319,9 +323,13 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 
   let ACTIVE_MONTH, TODAY, ALL_DAYS, LABELS, ACTUAL_DATA, PROJ_DATA, HIST_PROJ_DATA;
   let ACTIVE_TC = 'TC Full';
-  // Meses extras sobrepostos no grafico diario (overlay), alem do ACTIVE_MONTH.
+  // Meses extras sobrepostos no grafico diario (overlay-linha, curva "justa"), alem do ACTIVE_MONTH.
   let COMPARE_MONTHS = [];
   const COMPARE_COLORS = ['#A855F7', '#22D3EE', '#F472B6', '#FACC15', '#34D399'];
+  // Lookback: cola os ultimos N dias de um mes FECHADO como barras antes do diario do
+  // mes ativo (ex.: ultimos 15 dias de julho + agosto inteiro, num so grafico continuo).
+  let LOOKBACK_MONTH = null, LOOKBACK_DAYS = 0;
+  let CHART_DAYS = [], CHART_LABELS = [];
   function syncMonth(mk){
     ACTIVE_MONTH   = mk;
     const m        = MONTHS_META[mk];
@@ -331,6 +339,21 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     ACTUAL_DATA    = MONTHS_ACTUAL[mk] || {};
     PROJ_DATA      = MONTHS_PROJ[mk]   || {};
     HIST_PROJ_DATA = MONTHS_HIST[mk]   || {};
+    syncChartRange();
+  }
+  // ultimos N dias do LOOKBACK_MONTH (se fizer sentido cronologicamente vir antes do ativo)
+  function lookbackPrefix(){
+    if(!LOOKBACK_MONTH || LOOKBACK_DAYS <= 0 || LOOKBACK_MONTH >= ACTIVE_MONTH) return {days:[], labels:[]};
+    const meta = MONTHS_META[LOOKBACK_MONTH]; if(!meta) return {days:[], labels:[]};
+    const n = Math.min(LOOKBACK_DAYS, meta.allDays.length);
+    return { days: meta.allDays.slice(-n), labels: meta.labels.slice(-n) };
+  }
+  // CHART_DAYS/LABELS = prefixo do lookback + dias do mes ativo (so pro GRAFICO; os KPIs
+  // continuam usando ALL_DAYS/LABELS, escopados so no mes ativo).
+  function syncChartRange(){
+    const pre    = lookbackPrefix();
+    CHART_DAYS   = pre.days.concat(ALL_DAYS);
+    CHART_LABELS = pre.labels.concat(LABELS);
   }
 
   function fmt(n){ return Math.round(n).toLocaleString('pt-BR'); }
@@ -388,13 +411,34 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     const v = ACTIVE_TC === 'Total' ? sumTc('TC Full') + sumTc('Micro TC') : sumTc(ACTIVE_TC);
     return v > 0 ? v : null;
   }
+  // media diaria (dias>0) de um mes qualquer, usando monthDayTotal (respeita ACTIVE_TC)
+  function monthAvg(mk){
+    const meta = MONTHS_META[mk]; if(!meta) return 0;
+    const vals = meta.allDays.map(d => monthDayTotal(mk, d)).filter(v => v != null && v > 0);
+    return vals.length ? vals.reduce((a,b)=>a+b,0) / vals.length : 0;
+  }
+  // media diaria REALIZADA do mes ativo (so dias < hoje — nao mistura com projecao)
+  function activeAvg(){
+    const vals = ALL_DAYS.filter(d => d < TODAY).map(d => monthDayTotal(ACTIVE_MONTH, d)).filter(v => v != null && v > 0);
+    return vals.length ? vals.reduce((a,b)=>a+b,0) / vals.length : 0;
+  }
+  // fator que reescala o mes comparado pro MESMO nivel medio do mes ativo — sem isso,
+  // um mes com volume geral menor sempre parece "mais baixo" mesmo se o formato/pico
+  // relativo for parecido (pedido do usuario: comparacao "justa", nao valor bruto).
+  function fairFactor(mk){
+    const a = activeAvg(), m = monthAvg(mk);
+    return (a > 0 && m > 0) ? (a / m) : 1;
+  }
   // serie alinhada por POSICAO no mes (dia 1, dia 2, ...), nao por data — permite sobrepor
-  // meses de tamanhos diferentes no mesmo eixo X do mes ativo.
+  // meses de tamanhos diferentes no mesmo eixo X do mes ativo. Reescalada por fairFactor.
   function overlaySeries(mk){
     const meta = MONTHS_META[mk]; if(!meta) return ALL_DAYS.map(()=>null);
+    const factor = fairFactor(mk);
     return ALL_DAYS.map((_, i) => {
       const d = meta.allDays[i];
-      return d ? monthDayTotal(mk, d) : null;
+      if(!d) return null;
+      const v = monthDayTotal(mk, d);
+      return v != null ? v * factor : null;
     });
   }
 
@@ -404,7 +448,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     afterDraw(chart){
       const {ctx, scales:{x,y}} = chart;
       if(!x||!y) return;
-      const ti = ALL_DAYS.indexOf(TODAY);
+      const ti = CHART_DAYS.indexOf(TODAY);
       if(ti < 0) return;
       const x0 = ti-1 >= 0 ? x.getPixelForValue(ti-1) : x.left;
       const x1 = x.getPixelForValue(ti);
@@ -423,8 +467,8 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
       if(!x||!y) return;
       const bars = data.datasets.filter(ds => ds.type==='bar' && !ds.hidden);
       let prevOv = false;
-      for(let i=0;i<ALL_DAYS.length;i++){
-        if(ALL_DAYS[i] >= TODAY){ prevOv=false; continue; }
+      for(let i=0;i<CHART_DAYS.length;i++){
+        if(CHART_DAYS[i] >= TODAY){ prevOv=false; continue; }
         let total=0; bars.forEach(ds=>{ const v=ds.data[i]; if(v!=null) total+=v; });
         if(total<=0){ prevOv=false; continue; }
         const xPos=x.getPixelForValue(i), yTot=y.getPixelForValue(total);
@@ -449,7 +493,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
           filter:function(item){
             const v=item.dataset.data[item.dataIndex];
             if(v==null||v===0) return false;
-            if(ALL_DAYS[item.dataIndex] >= TODAY) return item.dataset.type==='line';
+            if(CHART_DAYS[item.dataIndex] >= TODAY) return item.dataset.type==='line';
             return true;
           },
           callbacks:{ label:(ctx)=>`  ${ctx.dataset.label}: ${fmt(ctx.raw)}` }
@@ -465,13 +509,18 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
   }
 
   function buildDatasets(selectedSGs){
+    const prefixLen = CHART_DAYS.length - ALL_DAYS.length; // dias do lookback colados antes
     const bars = BAR_ORDER.map(sg => ({
       type:'bar', label:sg,
-      data: ALL_DAYS.map(d => d >= TODAY ? null : (tcVal(ACTUAL_DATA, sg, d) || null)),
+      data: CHART_DAYS.map((d,i) => {
+        if(i < prefixLen) return tcVal(MONTHS_ACTUAL[LOOKBACK_MONTH], sg, d) || null; // dia do mes lookback (ja fechado, sempre real)
+        return d >= TODAY ? null : (tcVal(ACTUAL_DATA, sg, d) || null);
+      }),
       backgroundColor:SG_COLORS[sg], borderColor:SG_COLORS[sg], borderWidth:0, borderRadius:2,
       stack:'actual', hidden:!selectedSGs.includes(sg), order:3
     }));
-    const projLine = ALL_DAYS.map(d => {
+    const projLine = CHART_DAYS.map((d,i) => {
+      if(i < prefixLen) return monthDayTotal(LOOKBACK_MONTH, d);
       if(d < TODAY){ const v=histVal(d); return (v>0)?v:null; }
       const v = selectedSGs.reduce((s,sg)=> s + tcVal(PROJ_DATA, sg, d), 0);
       return v>0?v:null;
@@ -482,10 +531,11 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
       pointRadius:3, pointHoverRadius:5, pointBackgroundColor:'#FF7F11', pointBorderColor:'#0d1117',
       fill:false, tension:.35, spanGaps:true, order:1
     });
+    const pad = new Array(prefixLen).fill(null); // linhas de comparacao nao cobrem o prefixo do lookback
     COMPARE_MONTHS.forEach((mk, i) => {
       const color = COMPARE_COLORS[i % COMPARE_COLORS.length];
       bars.push({
-        type:'line', label:(MONTHS_META[mk]||{}).label || mk, data: overlaySeries(mk),
+        type:'line', label:((MONTHS_META[mk]||{}).label || mk) + ' (ajustado)', data: pad.concat(overlaySeries(mk)),
         borderColor:color, backgroundColor:'transparent', borderWidth:2,
         borderDash:[6,3], pointRadius:0, pointHoverRadius:4, pointBackgroundColor:color,
         fill:false, tension:.3, spanGaps:true, order:2
@@ -494,13 +544,23 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     return bars;
   }
 
+  // com lookback, o grafico pode passar de ~50-60 colunas — em vez de espremer tudo em
+  // 100% da largura (barras ilegiveis), da uma largura fixa em px e deixa o wrapper
+  // rolar horizontalmente (.chart-inner tem overflow-x:auto). Sem lookback, 100% normal.
+  function applyChartWidth(){
+    const inner = document.getElementById('chart-scroll-inner'); if(!inner) return;
+    const n = CHART_DAYS.length;
+    inner.style.width = (n > 31) ? Math.max(760, n * 22) + 'px' : '100%';
+  }
+
   let chart = null;
   function makeChart(){
     const sel = getSelectedSGs();
     const all = sel.length ? sel : SG_ORDER.slice();
+    applyChartWidth();
     if(chart){ chart.destroy(); chart = null; }
     chart = new Chart(document.getElementById('chartProj'), {
-      data:{ labels:LABELS, datasets:buildDatasets(all) },
+      data:{ labels:CHART_LABELS, datasets:buildDatasets(all) },
       options: baseOptions(),
       plugins:[todayPlugin, dataLabelPlugin]
     });
@@ -511,7 +571,9 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     const sel = getSelectedSGs();
     BAR_ORDER.forEach((sg,i)=>{ chart.data.datasets[i].hidden = !sel.includes(sg); });
     const projIdx = BAR_ORDER.length;
-    chart.data.datasets[projIdx].data = ALL_DAYS.map(d => {
+    const prefixLen = CHART_DAYS.length - ALL_DAYS.length;
+    chart.data.datasets[projIdx].data = CHART_DAYS.map((d,i) => {
+      if(i < prefixLen) return monthDayTotal(LOOKBACK_MONTH, d);
       if(d < TODAY){ const v=histVal(d); return (v>0)?v:null; }
       const v = sel.reduce((s,sg)=> s + tcVal(PROJ_DATA, sg, d), 0);
       return v>0?v:null;
@@ -685,13 +747,17 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
         + `<button class="month-btn current${mk===ACTIVE_MONTH?' active':''}" data-month="${mk}" onclick="Proj.setMonth('${mk}')">${MONTHS_META[mk].label}</button>`);
     // Safras fechadas em LISTA SUSPENSA (mais recente primeiro)
     if(closed.length){
-      const activeClosed = closed.includes(ACTIVE_MONTH) ? ACTIVE_MONTH : '';
+      const activeClosed = closed.includes(ACTIVE_MONTH) ? ACTIVE_MONTH
+                          : (closed.includes(LOOKBACK_MONTH) ? LOOKBACK_MONTH : '');
       html += `<span class="safra-div"></span><span class="safra-grp-lab">Fechadas</span>`
-        + `<select class="daily-month-sel" id="proj-closed-sel" onchange="Proj.setMonth(this.value)">`
+        + `<select class="daily-month-sel" id="proj-closed-sel" onchange="Proj.selectClosedMonth(this.value)">`
         + `<option value="" ${activeClosed?'':'selected'} disabled>Selecionar…</option>`
         + closed.slice().reverse().map(mk =>
             `<option value="${mk}" ${mk===activeClosed?'selected':''}>${MONTHS_META[mk].label}</option>`).join('')
-        + `</select>`;
+        + `</select>`
+        + `<input type="number" class="lookback-input" id="proj-lookback-input" min="0" max="31" `
+        + `placeholder="dias antes" value="${LOOKBACK_DAYS||''}" oninput="Proj.setLookbackDays(this.value)" `
+        + `title="Cola os ultimos N dias do mes fechado selecionado antes do diario do mes ativo">`;
     }
     sel.innerHTML = html;
   }
@@ -727,6 +793,32 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     if(ci >= 0) COMPARE_MONTHS.splice(ci, 1); // mes ativo nao pode tambem ser overlay
     renderCompareSelector();
     makeChart(); updateKPIs();
+  }
+
+  // clique num mes de "Fechadas": se ha dias-antes configurado, NAO troca o mes ativo —
+  // so cola os ultimos N dias desse mes como prefixo do grafico do mes ativo (ex.: ver
+  // os ultimos 15 dias de julho antes do diario de agosto vigente). Sem dias-antes,
+  // comportamento antigo (abre o mes fechado sozinho, com seu proprio KPI).
+  function selectClosedMonth(mk){
+    if(!mk || !MONTHS_META[mk]) return;
+    if(LOOKBACK_DAYS > 0){
+      LOOKBACK_MONTH = mk;
+      syncChartRange();
+      renderMonthSelector();
+      makeChart();
+    } else {
+      setMonth(mk);
+    }
+  }
+
+  function setLookbackDays(v){
+    const n = parseInt(v, 10);
+    LOOKBACK_DAYS = (Number.isFinite(n) && n > 0) ? n : 0;
+    const selEl = document.getElementById('proj-closed-sel');
+    const mk = selEl && selEl.value;
+    LOOKBACK_MONTH = (LOOKBACK_DAYS > 0 && mk && MONTHS_META[mk]) ? mk : null;
+    syncChartRange();
+    makeChart();
   }
 
   function setTc(tc){
@@ -766,7 +858,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     initialized = true;
   }
 
-  window.Proj = { init, toggleSG, selectAll, selectNone, setMonth, setTc, toggleCompare };
+  window.Proj = { init, toggleSG, selectAll, selectNone, setMonth, setTc, toggleCompare, selectClosedMonth, setLookbackDays };
 })();
 </script>
 
