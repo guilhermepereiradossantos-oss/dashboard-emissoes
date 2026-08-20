@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comparativo Semanal — TC Brasil</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+window.Grid = {
+  configure: function(){},
+  dataset: function(name){
+    return {
+      load: function(){
+        return fetch('_proj_data.json').then(function(r){ return r.json(); }).then(function(data){
+          return [{ bundle: JSON.stringify(data) }];
+        });
+      }
+    };
+  }
+};
+</script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
+
+.header{background:#161b22;border-bottom:1px solid #21262d;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.header h1{font-size:18px;font-weight:700;color:#58a6ff;letter-spacing:-.3px}
+.header-meta{font-size:11px;color:#8b949e;margin-top:2px}
+.btn-back{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-back:hover{background:#30363d;color:#e6edf3;border-color:#58a6ff}
+
+.container{max-width:2000px;margin:0 auto;padding:20px 24px 48px}
+
+.method-note{background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:10px 16px;font-size:12px;color:#9aa6b6;line-height:1.5;margin-bottom:18px}
+.method-note b{color:#58a6ff}
+
+.controls{display:flex;gap:28px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.ctrl-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ctrl-label{font-size:10px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.8px;flex-shrink:0}
+.tc-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.3px}
+.tc-btn:hover{background:#30363d;color:#e6edf3}
+.tc-btn.active{background:#3DFF91;border-color:#3DFF91;color:#0d1117}
+.cmp-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.3px;display:inline-flex;align-items:center;gap:6px}
+.cmp-btn:hover{background:#30363d;color:#e6edf3}
+.cmp-btn .dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.4}
+.cmp-btn.active{color:#0d1117}
+.cmp-btn.active .dot{opacity:1;background:#0d1117}
+
+.chart-wrap{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:18px 18px 12px;margin-bottom:16px}
+.chart-inner{position:relative;height:520px}
+
+.legend-row{display:flex;gap:18px;flex-wrap:wrap;padding-top:10px;border-top:1px solid #21262d;margin-top:4px}
+.leg-item{display:flex;align-items:center;gap:7px;font-size:12px;color:#8b949e}
+.leg-line{display:inline-block;width:22px;height:3px;border-radius:2px}
+.leg-line.dashed{background:repeating-linear-gradient(90deg,currentColor 0 6px,transparent 6px 9px)}
+
+.bq-unavail{background:rgba(245,197,0,.08);border:1px solid rgba(245,197,0,.3);border-radius:8px;padding:10px 16px;font-size:13px;color:#F5C500;margin-bottom:16px;display:none}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0d1117}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>📅 Comparativo Semanal — Projeção TCMP</h1>
+    <div class="header-meta">Mês vigente × mesmos dias-da-semana de meses anteriores · TC Full &amp; Micro TC · MercadoLivre</div>
+  </div>
+  <div class="header-right">
+    <a class="btn-back" href="https://grid.adminml.com/d/01KVWX9P01ZH59AFSEFJ31A91Q/view" target="_blank">← Voltar ao menu</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="method-note">
+    <b>Como alinhar os meses:</b> cada dia do mês vigente é comparado com o dia de <b>mesmo dia-da-semana
+    e mesma posição ordinal</b> no mês selecionado — ex.: o <b>3º sábado</b> de agosto é comparado com o
+    <b>3º sábado</b> de julho, não com "dia 15" de cada mês. Valores dos meses comparados são sempre o
+    <b>realizado real</b> daquele dia (nunca reescalado).
+  </div>
+
+  <div id="bq-unavail" class="bq-unavail">Dataset "projecao" indisponível — publique o dashboard de Projeção primeiro.</div>
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Tipo TC</span>
+      <div class="ctrl-group" id="tc-selector"></div>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Comparar com</span>
+      <div class="ctrl-group" id="cmp-selector"></div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-inner"><canvas id="chartSemanal"></canvas></div>
+    <div class="legend-row" id="legend-row"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  let PROJ_BUNDLE = null;
+  let SG_ORDER, MONTHS_META, MONTHS_ACTUAL, MONTHS_PROJ;
+  let ACTIVE_TC = 'TC Full';
+  let ACTIVE = null;          // mes vigente (base do eixo X)
+  let ALL_DAYS = [], LABELS = [], TODAY = null;
+  let SELECTED_CMP = [];      // meses fechados escolhidos para sobrepor
+  const CMP_COLORS = ['#A855F7', '#22D3EE', '#F472B6', '#FACC15', '#34D399'];
+  const VIG_COLOR = '#58a6ff';
+
+  function bindBundle(b){
+    PROJ_BUNDLE   = b;
+    SG_ORDER      = b.sg_order;
+    MONTHS_META   = b.META;
+    MONTHS_ACTUAL = b.ACTUAL;
+    MONTHS_PROJ   = b.PROJ;
+    ACTIVE        = b.active_month;
+    const m       = MONTHS_META[ACTIVE];
+    ALL_DAYS      = m.allDays;
+    LABELS        = m.labels;
+    TODAY         = m.todayStr;
+  }
+
+  function fmt(n){ return Math.round(n).toLocaleString('pt-BR'); }
+
+  // total do dia `d` (todos SG, respeitando ACTIVE_TC) de um mes qualquer — ACTUAL antes
+  // do "hoje" daquele mes, PROJ dali em diante (so importa pro mes vigente; comparados
+  // sao sempre fechados, entao caem sempre em ACTUAL = valor realmente realizado).
+  function dayValue(mk, d){
+    const meta = MONTHS_META[mk]; if(!meta || !d) return null;
+    const src = d < meta.todayStr ? MONTHS_ACTUAL[mk] : MONTHS_PROJ[mk];
+    if(!src) return null;
+    const sumTc = (tc) => SG_ORDER.reduce((s,sg)=> s + (src?.[tc]?.[sg]?.[d]||0), 0);
+    const v = ACTIVE_TC === 'Total' ? sumTc('TC Full') + sumTc('Micro TC') : sumTc(ACTIVE_TC);
+    return v > 0 ? v : null;
+  }
+
+  // mapa weekday(JS getDay, 0=Dom..6=Sab) -> lista de dias do mes, em ordem crescente.
+  // a posicao na lista = a ordinal (0=1o daquele weekday no mes, 1=2o, ...).
+  const _wdCache = {};
+  function weekdayMap(mk){
+    if(_wdCache[mk]) return _wdCache[mk];
+    const meta = MONTHS_META[mk]; const byWd = {};
+    (meta ? meta.allDays : []).forEach(d => {
+      const wd = new Date(d+'T00:00:00').getDay();
+      (byWd[wd] = byWd[wd] || []).push(d);
+    });
+    return (_wdCache[mk] = byWd);
+  }
+  // dado um dia `d` do mes `fromMk`, acha o dia de MESMO weekday e MESMA ordinal no mes `toMk`.
+  // null se `toMk` nao tiver essa ordinal daquele weekday (ex.: vigente tem 5o sabado, toMk so tem 4).
+  function equivalentDay(fromMk, d, toMk){
+    const wd = new Date(d+'T00:00:00').getDay();
+    const fromList = weekdayMap(fromMk)[wd] || [];
+    const idx = fromList.indexOf(d);
+    if(idx < 0) return null;
+    const toList = weekdayMap(toMk)[wd] || [];
+    return toList[idx] || null;
+  }
+
+  // Plugin: linha vertical "HOJE"
+  const todayPlugin = {
+    id:'todayLineSemanal',
+    afterDraw(chart){
+      const {ctx, scales:{x,y}} = chart;
+      if(!x||!y) return;
+      const ti = ALL_DAYS.indexOf(TODAY);
+      if(ti < 0) return;
+      const x0 = ti-1 >= 0 ? x.getPixelForValue(ti-1) : x.left;
+      const x1 = x.getPixelForValue(ti);
+      const xL = (x0+x1)/2;
+      ctx.save(); ctx.beginPath(); ctx.moveTo(xL,y.top); ctx.lineTo(xL,y.bottom);
+      ctx.strokeStyle='rgba(248,81,73,.5)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.fillStyle='rgba(248,81,73,.85)'; ctx.font='bold 10px Segoe UI, Arial';
+      ctx.textAlign='center'; ctx.fillText('HOJE', xL, y.top-5); ctx.restore();
+    }
+  };
+
+  function buildDatasets(){
+    const lastRealIdx = ALL_DAYS.reduce((acc,d,i)=> d < TODAY ? i : acc, -1);
+    const vigRealized = ALL_DAYS.map((d,i) => (d < TODAY || i === lastRealIdx) ? dayValue(ACTIVE, d) : null);
+    const vigProjected = ALL_DAYS.map((d,i) => (d >= TODAY || i === lastRealIdx) ? dayValue(ACTIVE, d) : null);
+    const ds = [
+      {
+        type:'line', label: (MONTHS_META[ACTIVE]||{}).label || ACTIVE,
+        data: vigRealized, borderColor:VIG_COLOR, backgroundColor:'rgba(88,166,255,.18)',
+        borderWidth:2.5, pointRadius:0, pointHoverRadius:4, fill:true, tension:0, spanGaps:false, order:1
+      },
+      {
+        type:'line', label:(MONTHS_META[ACTIVE]||{}).label + ' (projeção)',
+        data: vigProjected, borderColor:VIG_COLOR, backgroundColor:'rgba(88,166,255,.06)',
+        borderWidth:2, borderDash:[5,4], pointRadius:0, pointHoverRadius:4, fill:true, tension:0, spanGaps:false, order:1
+      }
+    ];
+    SELECTED_CMP.forEach((mk, i) => {
+      const color = CMP_COLORS[i % CMP_COLORS.length];
+      const data = ALL_DAYS.map(d => {
+        const eq = equivalentDay(ACTIVE, d, mk);
+        return eq ? dayValue(mk, eq) : null;
+      });
+      ds.push({
+        type:'line', label:(MONTHS_META[mk]||{}).label || mk, data,
+        borderColor:color, backgroundColor:'transparent', borderWidth:2,
+        borderDash:[6,3], pointRadius:0, pointHoverRadius:4, pointBackgroundColor:color,
+        fill:false, tension:0, spanGaps:true, order:2
+      });
+    });
+    return ds;
+  }
+
+  let chart = null;
+  function makeChart(){
+    if(chart){ chart.destroy(); chart = null; }
+    chart = new Chart(document.getElementById('chartSemanal'), {
+      data:{ labels:LABELS, datasets:buildDatasets() },
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:300},
+        interaction:{mode:'index', intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:'#1c2128', borderColor:'#30363d', borderWidth:1,
+            titleColor:'#e6edf3', bodyColor:'#8b949e', padding:10, cornerRadius:8,
+            filter:(item)=> item.raw != null,
+            callbacks:{ label:(ctx)=>`  ${ctx.dataset.label}: ${fmt(ctx.raw)}` }
+          }
+        },
+        scales:{
+          x:{ grid:{color:'rgba(255,255,255,.03)'}, ticks:{color:'#6e7681',font:{size:10},maxRotation:45}, border:{color:'#21262d'} },
+          y:{ beginAtZero:true, grid:{color:'rgba(255,255,255,.05)'},
+              ticks:{color:'#6e7681',font:{size:10}, callback:v=> v>=1000 ? (v/1000).toFixed(0)+'k' : v},
+              border:{color:'#21262d', dash:[3,3]} }
+        }
+      },
+      plugins:[todayPlugin]
+    });
+    renderLegend();
+  }
+
+  function renderLegend(){
+    const wrap = document.getElementById('legend-row'); if(!wrap) return;
+    let html = `<div class="leg-item"><span class="leg-line" style="background:${VIG_COLOR}"></span> ${(MONTHS_META[ACTIVE]||{}).label} (realizado)</div>`
+             + `<div class="leg-item"><span class="leg-line dashed" style="color:${VIG_COLOR}"></span> ${(MONTHS_META[ACTIVE]||{}).label} (projeção)</div>`;
+    SELECTED_CMP.forEach((mk,i) => {
+      const color = CMP_COLORS[i % CMP_COLORS.length];
+      html += `<div class="leg-item"><span class="leg-line dashed" style="color:${color}"></span> ${(MONTHS_META[mk]||{}).label}</div>`;
+    });
+    wrap.innerHTML = html;
+  }
+
+  function renderTcSelector(){
+    const sel = document.getElementById('tc-selector'); if(!sel) return;
+    const opts = ['TC Full', 'Micro TC', 'Total'];
+    sel.innerHTML = opts.map(tc =>
+      `<button class="tc-btn${tc===ACTIVE_TC?' active':''}" onclick="Semanal.setTc('${tc}')">${tc}</button>`
+    ).join('');
+  }
+
+  function renderCmpSelector(){
+    const sel = document.getElementById('cmp-selector'); if(!sel) return;
+    const keys = Object.keys(MONTHS_META).sort().reverse().filter(mk => mk !== ACTIVE);
+    sel.innerHTML = keys.map(mk => {
+      const i = SELECTED_CMP.indexOf(mk);
+      const on = i >= 0;
+      const color = on ? CMP_COLORS[i % CMP_COLORS.length] : '#8b949e';
+      return `<button class="cmp-btn${on?' active':''}" style="${on?`background:${color};border-color:${color}`:''}" onclick="Semanal.toggleCmp('${mk}')">`
+        + `<span class="dot"></span>${MONTHS_META[mk].label}</button>`;
+    }).join('');
+  }
+
+  function toggleCmp(mk){
+    const i = SELECTED_CMP.indexOf(mk);
+    if(i >= 0) SELECTED_CMP.splice(i, 1); else SELECTED_CMP.push(mk);
+    renderCmpSelector();
+    makeChart();
+  }
+
+  function setTc(tc){
+    ACTIVE_TC = tc;
+    renderTcSelector();
+    makeChart();
+  }
+
+  let initialized = false, loading = false;
+  async function init(){
+    if(initialized || loading) return;
+    if(!PROJ_BUNDLE){
+      if(typeof Grid === 'undefined' || typeof Grid.dataset !== 'function'){
+        console.warn('[Semanal] Grid indisponivel');
+        document.getElementById('bq-unavail').style.display = 'block';
+        return;
+      }
+      loading = true;
+      try {
+        const rows = await Grid.dataset('projecao').load();
+        if(!Array.isArray(rows) || !rows.length || !rows[0].bundle) throw new Error('dataset projecao vazio');
+        bindBundle(JSON.parse(rows[0].bundle));
+      } catch(e){
+        console.error('[Semanal] erro ao carregar dataset projecao:', e);
+        document.getElementById('bq-unavail').style.display = 'block';
+        loading = false;
+        return;
+      }
+      loading = false;
+    }
+    renderTcSelector();
+    renderCmpSelector();
+    makeChart();
+    initialized = true;
+  }
+
+  window.Semanal = { init, toggleCmp, setTc };
+})();
+</script>
+
+<script>
+/* Grid: only allow approved Grid domains to open unsandboxed tabs */
+(function(){
+  var allowedHosts = ["figma.com", "www.figma.com", "furydocs.io", "zeroheight.com", "google.com", "docs.google.com", "meet.google.com", "grid.adminml.com", "grid-artifacts.adminml.com", "mercadolibre.atlassian.net", "mercadolibre-opsgenie.atlassian.net", "app.datadoghq.com", "grafana-service.furycloud.io", "web.furycloud.io", "nasdaq-meli.app.opsgenie.com", "meli.enterprise.slack.com"];
+  var allowedSuffixes = [".adminml.com", ".atlassian.net", ".google.com", ".furycloud.io", ".melioffice.com", ".melisystems.com"];
+  var allowedPathPrefixes = {"github.com": ["/melisource/"], "www.github.com": ["/melisource/"]};
+  function normalizeUrl(rawUrl){
+    try { return new URL(String(rawUrl || ""), window.location.href); } catch (_err) { return null; }
+  }
+  function isAllowedUrl(rawUrl){
+    var parsed = normalizeUrl(rawUrl);
+    if(!parsed) return false;
+    if(parsed.protocol === "slack:") return true;
+    if(parsed.protocol !== "https:") return false;
+    var h = (parsed.hostname || "").toLowerCase();
+    if(!h) return false;
+    if(allowedHosts.indexOf(h) !== -1) return true;
+    for(var i=0;i<allowedSuffixes.length;i++){ if(h.endsWith(allowedSuffixes[i])) return true; }
+    var prefixes = allowedPathPrefixes[h];
+    if(prefixes){ for(var j=0;j<prefixes.length;j++){ if(parsed.pathname.indexOf(prefixes[j])===0) return true; } }
+    return false;
+  }
+  document.addEventListener('click', function(ev){
+    var a = ev.target && ev.target.closest ? ev.target.closest('a[target="_blank"]') : null;
+    if(!a) return;
+    if(!isAllowedUrl(a.getAttribute('href'))){ /* deixa o Grid tratar (sandbox) */ }
+  }, true);
+})();
+</script>
+
+<script>
+try {
+  if (typeof Grid !== 'undefined' && typeof Grid.configure === 'function') {
+    // Le o dataset "projecao" do doc da Projecao TCMP (cross-document): NAO usar o docId
+    // deste proprio doc (window.GRID.docId) -- o dataset "projecao" vive lá, nao aqui.
+    try { Grid.configure({ docId: '01KVWX9C5JAFHN4QCKP4HZCKB5' }); } catch(e) {}
+  }
+  if (typeof Chart !== 'undefined') {
+    Chart.defaults.color = '#8b949e';
+    Chart.defaults.font.family = "'Segoe UI', system-ui, Arial";
+  }
+  if (window.Semanal && typeof window.Semanal.init === 'function') window.Semanal.init();
+  else console.error('[Semanal] window.Semanal não definido');
+} catch(e) { console.error('[Semanal] init error:', e); }
+</script>
+</body>
+</html>
