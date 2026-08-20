@@ -112,6 +112,11 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
   }
 
   function fmt(n){ return Math.round(n).toLocaleString('pt-BR'); }
+  function rgba(hex, a){
+    const h = hex.replace('#','');
+    const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
 
   // total do dia `d` (todos SG, respeitando ACTIVE_TC) de um mes qualquer — ACTUAL antes
   // do "hoje" daquele mes, PROJ dali em diante (so importa pro mes vigente; comparados
@@ -190,9 +195,9 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
       });
       ds.push({
         type:'line', label:(MONTHS_META[mk]||{}).label || mk, data,
-        borderColor:color, backgroundColor:'transparent', borderWidth:2,
+        borderColor:color, backgroundColor:rgba(color, .12), borderWidth:2,
         borderDash:[6,3], pointRadius:0, pointHoverRadius:4, pointBackgroundColor:color,
-        fill:false, tension:0, spanGaps:true, order:2
+        fill:true, tension:0, spanGaps:true, order:2
       });
     });
     return ds;
