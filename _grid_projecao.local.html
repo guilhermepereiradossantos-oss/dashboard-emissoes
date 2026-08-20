@@ -73,7 +73,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 .pill:hover{background:rgba(255,90,90,.1);border-color:rgba(255,90,90,.3);color:#FF5A5A}
 
 /* CONTAINER */
-.container{max-width:1760px;margin:0 auto;padding:20px 24px 48px}
+.container{max-width:2400px;margin:0 auto;padding:20px 24px 48px}
 
 /* SECTION */
 .section-hdr{display:flex;align-items:center;gap:10px;margin:24px 0 12px}
@@ -424,34 +424,19 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     const v = ACTIVE_TC === 'Total' ? sumTc('TC Full') + sumTc('Micro TC') : sumTc(ACTIVE_TC);
     return v > 0 ? v : null;
   }
-  // media diaria (dias>0) de um mes qualquer, usando monthDayTotal (respeita ACTIVE_TC)
-  function monthAvg(mk){
-    const meta = MONTHS_META[mk]; if(!meta) return 0;
-    const vals = meta.allDays.map(d => monthDayTotal(mk, d)).filter(v => v != null && v > 0);
-    return vals.length ? vals.reduce((a,b)=>a+b,0) / vals.length : 0;
-  }
-  // media diaria REALIZADA do mes ativo (so dias < hoje — nao mistura com projecao)
-  function activeAvg(){
-    const vals = ALL_DAYS.filter(d => d < TODAY).map(d => monthDayTotal(ACTIVE_MONTH, d)).filter(v => v != null && v > 0);
-    return vals.length ? vals.reduce((a,b)=>a+b,0) / vals.length : 0;
-  }
-  // fator que reescala o mes comparado pro MESMO nivel medio do mes ativo — sem isso,
-  // um mes com volume geral menor sempre parece "mais baixo" mesmo se o formato/pico
-  // relativo for parecido (pedido do usuario: comparacao "justa", nao valor bruto).
-  function fairFactor(mk){
-    const a = activeAvg(), m = monthAvg(mk);
-    return (a > 0 && m > 0) ? (a / m) : 1;
-  }
   // serie alinhada por POSICAO no mes (dia 1, dia 2, ...), nao por data — permite sobrepor
-  // meses de tamanhos diferentes no mesmo eixo X do mes ativo. Reescalada por fairFactor.
+  // meses de tamanhos diferentes no mesmo eixo X do mes ativo. VALOR BRUTO (sem reescala):
+  // uma tentativa anterior reescalava cada mes pela sua propria media (fairFactor), mas isso
+  // usava um fator DIFERENTE por mes -> podia INVERTER a ordem real (um mes com pico bruto
+  // menor aparecia mais alto que outro com pico bruto maior, so por ter media menor). O
+  // usuario apontou o caso: pico bruto de julho ~105k > qualquer dia de junho, mas com o
+  // fator antigo a curva de junho aparecia ACIMA da de julho. Correto e comparar bruto —
+  // se nenhum mes chegou perto do pico do mes ativo, a curva TEM que mostrar isso.
   function overlaySeries(mk){
     const meta = MONTHS_META[mk]; if(!meta) return ALL_DAYS.map(()=>null);
-    const factor = fairFactor(mk);
     return ALL_DAYS.map((_, i) => {
       const d = meta.allDays[i];
-      if(!d) return null;
-      const v = monthDayTotal(mk, d);
-      return v != null ? v * factor : null;
+      return d ? monthDayTotal(mk, d) : null;
     });
   }
 
@@ -548,22 +533,33 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     COMPARE_MONTHS.forEach((mk, i) => {
       const color = COMPARE_COLORS[i % COMPARE_COLORS.length];
       bars.push({
-        type:'line', label:((MONTHS_META[mk]||{}).label || mk) + ' (ajustado)', data: pad.concat(overlaySeries(mk)),
+        // tension:0 (reta ponto-a-ponto) — com bezier, a curva podia "vazar" pra cima
+        // perto de um pico de poucos dias de distancia, sugerindo um valor mais alto do
+        // que o ponto real do dia (o usuario notou isso: dia com valor baixo parecia
+        // "quase no topo" so pela suavizacao puxando na direcao do pico vizinho).
+        type:'line', label:(MONTHS_META[mk]||{}).label || mk, data: pad.concat(overlaySeries(mk)),
         borderColor:color, backgroundColor:'transparent', borderWidth:2,
         borderDash:[6,3], pointRadius:0, pointHoverRadius:4, pointBackgroundColor:color,
-        fill:false, tension:.3, spanGaps:true, order:2
+        fill:false, tension:0, spanGaps:true, order:2
       });
     });
     return bars;
   }
 
-  // com lookback, o grafico pode passar de ~50-60 colunas — em vez de espremer tudo em
-  // 100% da largura (barras ilegiveis), da uma largura fixa em px e deixa o wrapper
-  // rolar horizontalmente (.chart-inner tem overflow-x:auto). Sem lookback, 100% normal.
+  // com lookback, o grafico pode passar de ~50-60 colunas. Usa SEMPRE o maximo entre a
+  // largura real disponivel no container (pra nao sobrar espaco vazio a direita, o
+  // usuario apontou isso) e o minimo legivel por coluna — so estoura esse piso (e ai
+  // rola horizontal via .chart-inner{overflow-x:auto}) se a largura disponivel nao for
+  // suficiente pra manter as colunas legiveis.
+  const MIN_PX_PER_DAY = 16;
   function applyChartWidth(){
-    const inner = document.getElementById('chart-scroll-inner'); if(!inner) return;
+    const outer = document.querySelector('.chart-inner');
+    const inner = document.getElementById('chart-scroll-inner');
+    if(!inner || !outer) return;
     const n = CHART_DAYS.length;
-    inner.style.width = (n > 31) ? Math.max(760, n * 22) + 'px' : '100%';
+    if(n <= 31){ inner.style.width = '100%'; return; }
+    const avail = outer.clientWidth;
+    inner.style.width = Math.max(avail, n * MIN_PX_PER_DAY) + 'px';
   }
 
   let chart = null;
@@ -870,6 +866,18 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     updateKPIs();
     initialized = true;
   }
+
+  // reagir a resize da janela/painel (ex.: usuario maximiza a janela) sem precisar
+  // reclicar em nada — refaz a largura do wrapper e avisa o Chart.js pra remedir.
+  let resizeT = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(() => {
+      if(!chart) return;
+      applyChartWidth();
+      chart.resize();
+    }, 150);
+  });
 
   window.Proj = { init, toggleSG, selectAll, selectNone, setMonth, setTc, toggleCompare, selectClosedMonth, setLookbackDays };
 })();
