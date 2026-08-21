@@ -242,6 +242,29 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 .tc-btn{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.3px}
 .tc-btn:hover{background:#30363d;color:#e6edf3}
 .tc-btn.active{background:#3DFF91;border-color:#3DFF91;color:#0d1117}
+/* ===== Comparativo com meses anteriores (faixa histórica + acumulado) ===== */
+.cmp-note{background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:10px 15px;font-size:12px;color:#9aa6b6;line-height:1.55;margin-bottom:14px}
+.cmp-note b{color:#58a6ff}
+.cmp-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.cmp-selector{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cmp-mo{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:4px 13px;border-radius:20px;font-size:11.5px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.cmp-mo:hover{background:#30363d;color:#e6edf3}
+.cmp-mo .dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.35}
+.cmp-mo.active{color:#0d1117}
+.cmp-mo.active .dot{opacity:1;background:rgba(13,17,23,.6)}
+.chart-inner-cmp{position:relative;height:420px}
+.legend-row{display:flex;gap:18px;flex-wrap:wrap;padding-top:11px;border-top:1px solid #21262d;margin-top:11px}
+.leg-item{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#8b949e}
+.leg-line{display:inline-block;width:22px;height:3px;border-radius:2px;flex-shrink:0}
+.leg-line.dashed{background:repeating-linear-gradient(90deg,currentColor 0 6px,transparent 6px 9px)}
+.leg-sw{display:inline-block;width:14px;height:12px;border-radius:3px;flex-shrink:0}
+/* cards de leitura da faixa histórica */
+.ins-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:11px;margin-top:14px}
+.ins-card{background:#0f141b;border:1px solid #21262d;border-left:3px solid var(--ic,#58a6ff);border-radius:9px;padding:11px 13px}
+.ins-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ic,#58a6ff);margin-bottom:5px}
+.ins-txt{font-size:12px;color:#c9d1d9;line-height:1.55}
+.ins-txt b{color:#e6edf3}
+.ins-txt .num{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ic,#58a6ff)}
 .lookback-input{width:74px;background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 8px;border-radius:6px;font-size:12px;font-family:inherit}
 .lookback-input:focus{outline:none;border-color:#58a6ff}
 .lookback-input::placeholder{color:#6e7681}
@@ -299,6 +322,32 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
         </div>
         <div class="fp-legend"><div class="fp-leg-item"><span class="fp-line solid"></span> Proj. hoje</div></div>
       </div>
+    </div>
+
+    <!-- ══ COMPARATIVO COM MESES ANTERIORES ══ -->
+    <div class="section-hdr"><h2>Comparativo com meses anteriores</h2></div>
+    <div class="cmp-note">
+      Cada dia é comparado com o dia de <b>mesmo dia-da-semana e mesma posição ordinal</b> nos meses
+      selecionados (3º sábado × 3º sábado), sempre com o <b>realizado bruto</b>. A cor dos meses segue a
+      ordem cronológica (frio = mais antigo → quente = mais recente) e <b>●</b> marca o dia real do
+      encendido (lote) de cada mês.
+    </div>
+    <div class="cmp-controls">
+      <span class="proj-ctrl-label">Meses comparados</span>
+      <div class="cmp-selector" id="cmp-month-selector"></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Faixa histórica × <span id="env-title">mês vigente</span></div>
+      <div class="chart-inner-cmp"><canvas id="chartEnvelope"></canvas></div>
+      <div class="legend-row" id="env-legend"></div>
+      <div class="ins-grid" id="env-insights"></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Corrida acumulada do mês (pace)</div>
+      <div class="chart-inner-cmp"><canvas id="chartCumul"></canvas></div>
+      <div class="legend-row" id="cum-legend"></div>
     </div>
   </div>
 
@@ -672,21 +721,21 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     const cb = labelEl.querySelector('input'); cb.checked = !cb.checked;
     labelEl.querySelector('.sg-dot').classList.toggle('off', !cb.checked);
     labelEl.querySelector('.sg-name').classList.toggle('off', !cb.checked);
-    rebuildLines(); updateKPIs();
+    rebuildLines(); updateKPIs(); renderCmp();
   }
   function selectAll(){
     document.querySelectorAll('#fp-proj input').forEach(cb=>{
       cb.checked=true; const it=cb.closest('.sg-item');
       it.querySelector('.sg-dot').classList.remove('off'); it.querySelector('.sg-name').classList.remove('off');
     });
-    rebuildLines(); updateKPIs();
+    rebuildLines(); updateKPIs(); renderCmp();
   }
   function selectNone(){
     document.querySelectorAll('#fp-proj input').forEach(cb=>{
       cb.checked=false; const it=cb.closest('.sg-item');
       it.querySelector('.sg-dot').classList.add('off'); it.querySelector('.sg-name').classList.add('off');
     });
-    rebuildLines(); updateKPIs();
+    rebuildLines(); updateKPIs(); renderCmp();
   }
 
   function renderFilterPanel(){
@@ -739,7 +788,11 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     if(!mk || !MONTHS_META[mk]) return;
     syncMonth(mk);
     renderMonthSelector(); // mantem pill vigente + dropdown de fechadas em sincronia
-    makeChart(); updateKPIs();
+    // o mes ativo nao pode tambem ser um dos comparados (viraria linha contra si mesma)
+    const ci = CMP_MONTHS.indexOf(mk);
+    if(ci >= 0) CMP_MONTHS.splice(ci, 1);
+    renderCmpMonthSelector();
+    makeChart(); updateKPIs(); renderCmp();
   }
 
   // clique num mes de "Fechadas": se ha dias-antes configurado, NAO troca o mes ativo —
@@ -771,8 +824,340 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
   function setTc(tc){
     if(!TC_OPTIONS.includes(tc)) return;
     ACTIVE_TC = tc;
-    makeChart(); updateKPIs();
+    makeChart(); updateKPIs(); renderCmp();
     document.querySelectorAll('#proj-tc-selector .tc-btn').forEach(b=> b.classList.toggle('active', b.dataset.tc===tc));
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     COMPARATIVO COM MESES ANTERIORES  (2026-08-21)
+     Dois gráficos abaixo do diário, escolhidos pelo usuário a partir do mockup:
+       (A) Faixa histórica (mín–máx + mediana) × mês vigente, com cards de leitura
+       (B) Corrida acumulada (pace), com ● no dia do encendido de cada mês
+     Alinhamento: MESMO dia-da-semana + MESMA ordinal (3º sáb × 3º sáb), nunca
+     "dia 15 × dia 15". Valores sempre BRUTOS (nunca reescalados) — reescalar por
+     média invertia a ordem real entre meses.
+     Escopo: seguem o Tipo TC e os Grupos selecionados; usam o mês ativo como eixo
+     e ignoram o lookback do gráfico de barras (têm eixo próprio).
+     ══════════════════════════════════════════════════════════════════════════ */
+  let CMP_MONTHS = [];                       // meses sobrepostos, ordem cronológica
+  // rampa fria→quente = cronologia (mais antigo frio, mais recente quente)
+  const CMP_COLORS = ['#3F6DA1','#2E9FBF','#22D3EE','#FACC15','#F97316'];
+  const VIG_COLOR = '#58a6ff', ABOVE_COLOR = '#3DFF91', BELOW_COLOR = '#FF5A5A';
+  const WD_ABBR = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  let chartEnv = null, chartCum = null;
+
+  const cmpKeysAsc = () => Object.keys(MONTHS_META).sort().filter(k => k !== ACTIVE_MONTH);
+  const cmpColorOf = mk => mk === ACTIVE_MONTH
+      ? VIG_COLOR : CMP_COLORS[Math.max(0, CMP_MONTHS.indexOf(mk)) % CMP_COLORS.length];
+  const wdOf = d => new Date(d+'T00:00:00').getDay();
+  const brDate = iso => iso ? iso.slice(8,10)+'/'+iso.slice(5,7) : '—';
+  function rgbaOf(hex,a){ const h=hex.replace('#','');
+    return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`; }
+
+  // total do dia num mês qualquer, respeitando Tipo TC + Grupos selecionados
+  function cmpDayTotal(mk, d, sgs){
+    const meta = MONTHS_META[mk]; if(!meta || !d) return null;
+    const src = d < meta.todayStr ? MONTHS_ACTUAL[mk] : MONTHS_PROJ[mk];
+    if(!src) return null;
+    const sumTc = tc => sgs.reduce((s,sg)=> s + (src?.[tc]?.[sg]?.[d]||0), 0);
+    const v = ACTIVE_TC === 'Total' ? sumTc('TC Full') + sumTc('Micro TC') : sumTc(ACTIVE_TC);
+    return v > 0 ? v : null;
+  }
+
+  // ---- alinhamento weekday + ordinal ----
+  const _wdCache = {};
+  function wdMapOf(mk){
+    if(_wdCache[mk]) return _wdCache[mk];
+    const m = {};
+    (MONTHS_META[mk]?.allDays || []).forEach(d => { const w = wdOf(d); (m[w] = m[w]||[]).push(d); });
+    return (_wdCache[mk] = m);
+  }
+  // dia de `toMk` com mesmo weekday e mesma ordinal que o dia `d` do mês ativo
+  function equivalentDay(d, toMk){
+    const w = wdOf(d);
+    const i = (wdMapOf(ACTIVE_MONTH)[w] || []).indexOf(d);
+    if(i < 0) return null;
+    return (wdMapOf(toMk)[w] || [])[i] || null;   // null se o mês não tem essa ordinal
+  }
+
+  // ---- encendido (vem do bundle; ausente = sem marcador, sem quebrar) ----
+  const encOf = mk => ((PROJ_BUNDLE && PROJ_BUNDLE.ENCENDIDO || {})[ACTIVE_TC] || {})[mk] || null;
+  function encIndexOf(mk){
+    const e = encOf(mk); if(!e) return -1;
+    if(mk === ACTIVE_MONTH) return ALL_DAYS.indexOf(e.dia);
+    return ALL_DAYS.findIndex(d => equivalentDay(d, mk) === e.dia);
+  }
+
+  const cmpXLabels = () => ALL_DAYS.map(d => [dm(d), WD_ABBR[wdOf(d)]]);
+  const CMP_LINE = {type:'line', pointRadius:0, pointHoverRadius:4, tension:0, fill:false, spanGaps:true};
+
+  function cmpBaseOptions(){
+    return {
+      responsive:true, maintainAspectRatio:false, animation:{duration:250},
+      interaction:{mode:'index', intersect:false},
+      plugins:{ legend:{display:false},
+        tooltip:{ backgroundColor:'#1c2128', borderColor:'#30363d', borderWidth:1,
+          titleColor:'#e6edf3', bodyColor:'#8b949e', padding:10, cornerRadius:8,
+          filter:i=> i.raw != null,
+          callbacks:{ label:ctx=>`  ${ctx.dataset.label}: ${fmt(ctx.raw)}` } } },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.03)'}, ticks:{color:'#6e7681',font:{size:9},maxRotation:0,autoSkip:false}, border:{color:'#21262d'} },
+        y:{ beginAtZero:true, grid:{color:'rgba(255,255,255,.05)'},
+            ticks:{color:'#6e7681',font:{size:10}, callback:v=> v>=1000 ? (v/1000).toFixed(0)+'k' : v},
+            border:{color:'#21262d', dash:[3,3]} }
+      }
+    };
+  }
+  // linha vertical HOJE (eixo próprio do comparativo = ALL_DAYS)
+  const cmpTodayPlugin = {
+    id:'cmpTodayLine',
+    afterDraw(chart){
+      const {ctx, scales:{x,y}} = chart; if(!x||!y) return;
+      const ti = ALL_DAYS.indexOf(TODAY); if(ti < 0) return;
+      const xL = ti-1 >= 0 ? (x.getPixelForValue(ti-1)+x.getPixelForValue(ti))/2 : x.left;
+      ctx.save(); ctx.beginPath(); ctx.moveTo(xL,y.top); ctx.lineTo(xL,y.bottom);
+      ctx.strokeStyle='rgba(248,81,73,.5)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.fillStyle='rgba(248,81,73,.85)'; ctx.font='bold 9px Segoe UI, Arial';
+      ctx.textAlign='center'; ctx.fillText('HOJE', xL, y.top-4); ctx.restore();
+    }
+  };
+  // mês vigente separado em realizado/projeção (1 ponto de emenda p/ não quebrar a linha)
+  function vigSplit(sgs){
+    let lastReal = -1;
+    ALL_DAYS.forEach((d,i)=>{ if(d < TODAY) lastReal = i; });
+    return {
+      lastReal,
+      real: ALL_DAYS.map((d,i)=> (d < TODAY || i === lastReal) ? cmpDayTotal(ACTIVE_MONTH,d,sgs) : null),
+      proj: ALL_DAYS.map((d,i)=> (d >= TODAY || i === lastReal) ? cmpDayTotal(ACTIVE_MONTH,d,sgs) : null)
+    };
+  }
+
+  // ══════ (A) faixa histórica ══════
+  function buildEnvelope(sgs){
+    const med=[], lo=[], hi=[], who=[];
+    ALL_DAYS.forEach(d=>{
+      const pairs = CMP_MONTHS.map(k=>{
+        const eq = equivalentDay(d,k); const v = eq ? cmpDayTotal(k,eq,sgs) : null;
+        return v==null ? null : [k,v];
+      }).filter(Boolean).sort((a,b)=> a[1]-b[1]);
+      if(!pairs.length){ med.push(null); lo.push(null); hi.push(null); who.push(null); return; }
+      const n = pairs.length;
+      med.push(n%2 ? pairs[(n-1)/2][1] : (pairs[n/2-1][1]+pairs[n/2][1])/2);
+      lo.push(pairs[0][1]); hi.push(pairs[n-1][1]);
+      who.push({maxMk:pairs[n-1][0], minMk:pairs[0][0]});
+    });
+    return {med, lo, hi, who};
+  }
+
+  function makeEnvelopeChart(){
+    const cv = document.getElementById('chartEnvelope'); if(!cv) return;
+    const sgs = getSelectedSGs(); const use = sgs.length ? sgs : SG_ORDER.slice();
+    const {med, lo, hi, who} = buildEnvelope(use);
+    const {real, proj} = vigSplit(use);
+    const el = document.getElementById('env-title');
+    if(el) el.textContent = (MONTHS_META[ACTIVE_MONTH]||{}).label || ACTIVE_MONTH;
+
+    // COR = desvio vs faixa (informação nova). A altura já mostra magnitude, então
+    // colorir por intensidade seria redundante — aqui verde = superou o máx histórico,
+    // vermelho = ficou abaixo do mín.
+    const ptColor = [], ptRadius = [];
+    ALL_DAYS.forEach((d,i)=>{
+      const v = cmpDayTotal(ACTIVE_MONTH,d,use);
+      if(v==null || hi[i]==null || d >= TODAY){ ptColor.push(VIG_COLOR); ptRadius.push(0); return; }
+      if(v > hi[i]){ ptColor.push(ABOVE_COLOR); ptRadius.push(4.5); }
+      else if(v < lo[i]){ ptColor.push(BELOW_COLOR); ptRadius.push(4.5); }
+      else { ptColor.push(VIG_COLOR); ptRadius.push(0); }
+    });
+    const hasBand = hi.some(v=> v!=null);
+    const ds = [];
+    if(hasBand){
+      // ordem importa: 'hi' preenche até o índice do 'lo' (fill:1)
+      ds.push({...CMP_LINE, label:'Máx. histórico', data:hi, borderColor:'rgba(139,148,158,.35)',
+               borderWidth:1, backgroundColor:'rgba(139,148,158,.13)', fill:1, order:5});
+      ds.push({...CMP_LINE, label:'Mín. histórico', data:lo, borderColor:'rgba(139,148,158,.35)', borderWidth:1, order:5});
+      ds.push({...CMP_LINE, label:'Mediana histórica', data:med, borderColor:'#8b949e', borderWidth:1.8, borderDash:[4,3], order:4});
+    }
+    ds.push({...CMP_LINE, label:(MONTHS_META[ACTIVE_MONTH]||{}).label, data:real, borderColor:VIG_COLOR,
+             borderWidth:3.2, order:1, pointRadius:ptRadius, pointBackgroundColor:ptColor,
+             pointBorderColor:'#0d1117', pointBorderWidth:1.5, pointHoverRadius:6});
+    ds.push({...CMP_LINE, label:(MONTHS_META[ACTIVE_MONTH]||{}).label+' (proj.)', data:proj,
+             borderColor:VIG_COLOR, borderWidth:2.4, borderDash:[5,4], order:1});
+
+    const o = cmpBaseOptions();
+    o.plugins.tooltip.callbacks.afterBody = items => {
+      const i = items[0].dataIndex, w = who[i]; if(!w) return '';
+      const out = [`  ─ máx: ${MONTHS_META[w.maxMk].label} · mín: ${MONTHS_META[w.minMk].label}`];
+      const v = cmpDayTotal(ACTIVE_MONTH, ALL_DAYS[i], use);
+      if(v!=null && hi[i]!=null && ALL_DAYS[i] < TODAY){
+        if(v > hi[i]) out.push(`  ▲ acima do máx histórico (+${fmt(v-hi[i])})`);
+        else if(v < lo[i]) out.push(`  ▼ abaixo do mín histórico (${fmt(v-lo[i])})`);
+      }
+      return out;
+    };
+    if(chartEnv){ chartEnv.destroy(); chartEnv = null; }
+    chartEnv = new Chart(cv, {data:{labels:cmpXLabels(), datasets:ds}, options:o, plugins:[cmpTodayPlugin]});
+
+    const legItems = [[VIG_COLOR,'solid',(MONTHS_META[ACTIVE_MONTH]||{}).label+' (realizado)'],
+                      [VIG_COLOR,'dashed',(MONTHS_META[ACTIVE_MONTH]||{}).label+' (projeção)']];
+    if(hasBand) legItems.push(['#8b949e','dashed','Mediana dos '+CMP_MONTHS.length+' meses'],
+                              ['rgba(139,148,158,.5)','sw','Faixa mín–máx histórica'],
+                              [ABOVE_COLOR,'sw','Dia acima do máx'], [BELOW_COLOR,'sw','Dia abaixo do mín']);
+    cmpLegend('env-legend', legItems);
+    renderEnvInsights(med, lo, hi, who, use);
+  }
+
+  // cards de leitura — tudo calculado dos dados (nada hardcoded)
+  function renderEnvInsights(med, lo, hi, who, sgs){
+    const el = document.getElementById('env-insights'); if(!el) return;
+    if(!CMP_MONTHS.length){
+      el.innerHTML = `<div class="ins-card" style="--ic:#6e7681"><div class="ins-tag">Sem comparação</div>`
+        + `<div class="ins-txt">Selecione um ou mais meses acima para montar a faixa histórica e ver a leitura automática.</div></div>`;
+      return;
+    }
+    const cards = [];
+
+    // 1 · quem puxa o topo da faixa (+ data do encendido desse mês)
+    let bi=-1, bv=-1;
+    hi.forEach((v,i)=>{ if(v!=null && v>bv){ bv=v; bi=i; } });
+    if(bi>=0 && who[bi]){
+      const mkTop = who[bi].maxMk, e = encOf(mkTop);
+      const encTxt = e ? ` — o encendido dele foi em <b>${brDate(e.dia)}</b> (${Math.round(e.share*100)}% do lote do mês)` : '';
+      cards.push(['#FACC15','Topo da faixa',
+        `O teto histórico é <span class="num">${fmt(bv)}</span>, no dia <b>${dm(ALL_DAYS[bi])}</b>, e vem de
+         <b>${MONTHS_META[mkTop].label}</b>${encTxt}. É o pico de conversão pós-lote daquele mês.`]);
+    }
+
+    // 2 · espalhamento das datas de lote = por que a faixa é larga
+    const encs = CMP_MONTHS.map(k=>({k, e:encOf(k)})).filter(x=>x.e);
+    if(encs.length >= 2){
+      const dias = encs.map(x=> +x.e.dia.slice(8,10));
+      const minD = Math.min(...dias), maxD = Math.max(...dias);
+      const early = encs.find(x=> +x.e.dia.slice(8,10) === minD);
+      const late  = encs.find(x=> +x.e.dia.slice(8,10) === maxD);
+      const eAct  = encOf(ACTIVE_MONTH);
+      cards.push(['#A855F7','Timing do lote',
+        `As datas de encendido vão do dia <span class="num">${minD}</span> (${MONTHS_META[early.k].label})
+         ao dia <span class="num">${maxD}</span> (${MONTHS_META[late.k].label}) — <b>${maxD-minD} dias</b> de diferença.
+         É isso que alarga a faixa: cada mês teve o pico num ponto diferente.
+         ${eAct ? `O lote de ${MONTHS_META[ACTIVE_MONTH].label} foi em <b>${brDate(eAct.dia)}</b>.` : ''}`]);
+    }
+
+    // 3 · efeito de dia-da-semana na mediana
+    const byWd = {};
+    ALL_DAYS.forEach((d,i)=>{ if(med[i]==null) return; const w=wdOf(d); (byWd[w]=byWd[w]||[]).push(med[i]); });
+    const avgWd = Object.entries(byWd).map(([w,vs])=>[+w, vs.reduce((a,b)=>a+b,0)/vs.length]);
+    if(avgWd.length >= 5){
+      const geral = avgWd.reduce((s,[,v])=> s+v, 0)/avgWd.length;
+      avgWd.sort((a,b)=> a[1]-b[1]);
+      const worst = avgWd[0], best = avgWd[avgWd.length-1];
+      cards.push(['#22D3EE','Dia da semana',
+        `Na mediana histórica, <b>${WD_ABBR[worst[0]]}</b> é o dia mais fraco:
+         <span class="num">${(worst[1]/geral*100-100).toFixed(0)}%</span> vs a média dos dias;
+         o mais forte é <b>${WD_ABBR[best[0]]}</b> (+${(best[1]/geral*100-100).toFixed(0)}%).
+         Vale checar isso antes de tratar uma queda de fim de semana como problema.`]);
+    }
+
+    // 4 · onde o mês vigente está vs a faixa
+    let acima=0, dentro=0, abaixo=0, wi=-1, wDelta=0;
+    ALL_DAYS.forEach((d,i)=>{
+      if(d >= TODAY || hi[i]==null) return;
+      const v = cmpDayTotal(ACTIVE_MONTH,d,sgs); if(v==null) return;
+      if(v > hi[i]){ acima++; if(v-hi[i] > Math.abs(wDelta)){ wDelta=v-hi[i]; wi=i; } }
+      else if(v < lo[i]){ abaixo++; if(lo[i]-v > Math.abs(wDelta)){ wDelta=v-lo[i]; wi=i; } }
+      else dentro++;
+    });
+    if(acima+dentro+abaixo > 0){
+      cards.push([acima >= abaixo ? ABOVE_COLOR : BELOW_COLOR,
+        (MONTHS_META[ACTIVE_MONTH]||{}).label+' vs histórico',
+        `Dos <b>${acima+dentro+abaixo}</b> dias realizados: <span class="num">${acima}</span> acima da faixa,
+         <b>${dentro}</b> dentro e <span class="num">${abaixo}</span> abaixo.
+         ${wi>=0 ? `Maior desvio em <b>${dm(ALL_DAYS[wi])}</b> (${wDelta>0?'+':''}${fmt(wDelta)} vs o ${wDelta>0?'máx':'mín'} histórico).` : ''}`]);
+    }
+
+    el.innerHTML = cards.map(([c,tag,txt])=>
+      `<div class="ins-card" style="--ic:${c}"><div class="ins-tag">${tag}</div><div class="ins-txt">${txt}</div></div>`
+    ).join('');
+  }
+
+  // ══════ (B) corrida acumulada ══════
+  function makeCumulChart(){
+    const cv = document.getElementById('chartCumul'); if(!cv) return;
+    const sgs = getSelectedSGs(); const use = sgs.length ? sgs : SG_ORDER.slice();
+    const cum = arr => { let s=0; return arr.map(v=>{ if(v==null) return null; s+=v; return s; }); };
+    // ● no dia do encendido daquele mês (posicionado pelo alinhamento weekday+ordinal)
+    const encRadius = mkKey => { const ei = encIndexOf(mkKey);
+      return ALL_DAYS.map((_,i)=> i === ei ? 6 : 0); };
+
+    const {lastReal} = vigSplit(use);
+    const vigAll = cum(ALL_DAYS.map(d => cmpDayTotal(ACTIVE_MONTH,d,use) || 0));
+    const rVig = encRadius(ACTIVE_MONTH);
+    const ds = [
+      {...CMP_LINE, label:(MONTHS_META[ACTIVE_MONTH]||{}).label,
+       data:vigAll.map((v,i)=> i<=lastReal ? v : null), borderColor:VIG_COLOR, borderWidth:3.2, order:1,
+       pointRadius:rVig.map((r,i)=> i<=lastReal ? r : 0), pointBackgroundColor:VIG_COLOR,
+       pointBorderColor:'#0d1117', pointBorderWidth:2, pointHoverRadius:7},
+      {...CMP_LINE, label:(MONTHS_META[ACTIVE_MONTH]||{}).label+' (proj.)',
+       data:vigAll.map((v,i)=> i>=lastReal ? v : null), borderColor:VIG_COLOR, borderWidth:2.4,
+       borderDash:[5,4], order:1, pointRadius:rVig.map((r,i)=> i>=lastReal ? r : 0),
+       pointBackgroundColor:VIG_COLOR, pointBorderColor:'#0d1117', pointBorderWidth:2, pointHoverRadius:7}
+    ];
+    CMP_MONTHS.forEach(k=>{
+      const c = cmpColorOf(k);
+      const serie = ALL_DAYS.map(d=>{ const eq = equivalentDay(d,k); return eq ? (cmpDayTotal(k,eq,use)||0) : 0; });
+      ds.push({...CMP_LINE, label:MONTHS_META[k].label, data:cum(serie), borderColor:rgbaOf(c,.85),
+               borderWidth:1.8, order:3, pointRadius:encRadius(k), pointBackgroundColor:c,
+               pointBorderColor:'#0d1117', pointBorderWidth:2, pointHoverRadius:7});
+    });
+
+    const o = cmpBaseOptions();
+    o.plugins.tooltip.callbacks.afterBody = items => {
+      const i = items[0].dataIndex;
+      const hits = [ACTIVE_MONTH].concat(CMP_MONTHS).filter(k => encIndexOf(k) === i);
+      if(!hits.length) return '';
+      return hits.map(k=>{ const e = encOf(k);
+        return `  ● encendido de ${MONTHS_META[k].label}: ${brDate(e.dia)} · ${fmt(e.qtde)} (${Math.round(e.share*100)}% do lote)`; });
+    };
+    if(chartCum){ chartCum.destroy(); chartCum = null; }
+    chartCum = new Chart(cv, {data:{labels:cmpXLabels(), datasets:ds}, options:o, plugins:[cmpTodayPlugin]});
+
+    cmpLegend('cum-legend',
+      [[VIG_COLOR,'solid',(MONTHS_META[ACTIVE_MONTH]||{}).label+' (realizado)'],
+       [VIG_COLOR,'dashed',(MONTHS_META[ACTIVE_MONTH]||{}).label+' (projeção)']]
+      .concat(CMP_MONTHS.map(k=>[cmpColorOf(k),'solid',
+        MONTHS_META[k].label + (encOf(k) ? ' · lote '+brDate(encOf(k).dia) : '')]))
+      .concat(encOf(ACTIVE_MONTH) || CMP_MONTHS.some(k=>encOf(k)) ? [['','dot','● = dia do encendido (lote)']] : []));
+  }
+
+  function cmpLegend(id, items){
+    const el = document.getElementById(id); if(!el) return;
+    el.innerHTML = items.map(([c,kind,txt])=>{
+      const mark = kind==='dot' ? ''
+        : kind==='sw' ? `<span class="leg-sw" style="background:${c}"></span>`
+        : kind==='dashed' ? `<span class="leg-line dashed" style="color:${c}"></span>`
+        : `<span class="leg-line" style="background:${c}"></span>`;
+      return `<div class="leg-item">${mark}${txt}</div>`;
+    }).join('');
+  }
+
+  function renderCmpMonthSelector(){
+    const wrap = document.getElementById('cmp-month-selector'); if(!wrap) return;
+    wrap.innerHTML = cmpKeysAsc().map(mk=>{     // ordem cronológica: antigo → recente
+      const on = CMP_MONTHS.includes(mk);
+      const c = on ? cmpColorOf(mk) : '#8b949e';
+      return `<button class="cmp-mo${on?' active':''}" ${on?`style="background:${c};border-color:${c}"`:''} `
+        + `onclick="Proj.toggleCmpMonth('${mk}')"><span class="dot"></span>${MONTHS_META[mk].label}</button>`;
+    }).join('');
+  }
+  function toggleCmpMonth(mk){
+    const i = CMP_MONTHS.indexOf(mk);
+    if(i >= 0) CMP_MONTHS.splice(i,1);
+    else CMP_MONTHS = cmpKeysAsc().filter(k => k === mk || CMP_MONTHS.includes(k)); // mantém ordem cronológica
+    renderCmpMonthSelector(); renderCmp();
+  }
+  // redesenha os dois gráficos do comparativo
+  function renderCmp(){
+    try { makeEnvelopeChart(); makeCumulChart(); }
+    catch(e){ console.error('[Proj] comparativo:', e); }
   }
 
   let initialized = false, loading = false;
@@ -801,6 +1186,11 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     renderFilterPanel();
     makeChart();
     updateKPIs();
+    // Comparativo: por padrão liga os 3 meses fechados mais recentes (faixa histórica já
+    // faz sentido de cara, sem o usuário precisar clicar). Ordem cronológica preservada.
+    CMP_MONTHS = cmpKeysAsc().slice(-3);
+    renderCmpMonthSelector();
+    renderCmp();
     initialized = true;
   }
 
@@ -816,7 +1206,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     }, 150);
   });
 
-  window.Proj = { init, toggleSG, selectAll, selectNone, setMonth, setTc, selectClosedMonth, setLookbackDays };
+  window.Proj = { init, toggleSG, selectAll, selectNone, setMonth, setTc, selectClosedMonth, setLookbackDays, toggleCmpMonth };
 })();
 </script>
 

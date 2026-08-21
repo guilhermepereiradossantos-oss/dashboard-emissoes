@@ -393,10 +393,66 @@ if JUN_FILL_KEY in months_hist:
 #     o realizado — se um snapshot antigo ficar defasado, usar SKIP_HIST_SNAPSHOTS, nao overlay.)
 
 # ============================================================
+# 5e. DATA DO ENCENDIDO (lote) por mes e por TC  [2026-08-21]
+#   Usado pelos graficos "Comparativo com meses anteriores" (faixa historica + acumulado):
+#   marca o dia do lote como referencia. O encendido e MUITO concentrado (medido: 51-92% do
+#   mes num unico dia), entao "o dia do lote" = dia de maior volume de DT_ENCENDIDO.
+#   NAO-FATAL: se a query falhar, o bundle sai sem ENCENDIDO e o front simplesmente nao
+#   desenha os marcadores (nunca derruba o push por causa disso).
+# ============================================================
+ENC_SQL = f"""
+SELECT FORMAT_DATE('%Y-%m', DT_ENCENDIDO) AS ym,
+       FORMAT_DATE('%Y-%m-%d', DT_ENCENDIDO) AS dia,
+       CASE WHEN FLAG_TC LIKE '%Full%' THEN 'TC Full' ELSE 'Micro TC' END AS tc,
+       SUM(QTDE) AS enc
+FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
+WHERE DT_ENCENDIDO >= '{target_months[-1][0]}-01'
+  AND DT_ENCENDIDO <  DATE_ADD(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 1 MONTH)
+GROUP BY 1, 2, 3
+"""
+encendido = {}
+try:
+    print("Rodando query de datas de encendido (lote)...")
+    # Passa via STDIN (mesmo padrao da query principal). Passar SQL multi-linha como
+    # argumento com shell=True no Windows quebra (o shell mastiga backticks/%/quebras).
+    _enc_file = REPO / '_enc_dates.sql'
+    _enc_file.write_bytes(ENC_SQL.encode('utf-8'))   # bytes = sem BOM (BOM da erro \357 no bq)
+    with open(_enc_file, 'rb') as _f:
+        _r = subprocess.run(
+            [BQ_CMD, 'query', f'--project_id={PROJECT_ID}', '--use_legacy_sql=false',
+             '--nouse_cache', '--format=csv', '--max_rows=10000'],
+            stdin=_f, capture_output=True, env=env, shell=True)
+    if _r.returncode != 0:
+        raise RuntimeError((_r.stderr.decode(errors='replace') or 'sem stderr')[:300])
+    _per = defaultdict(lambda: defaultdict(float))   # (tc)(dia)
+    for _row in csv.DictReader(io.StringIO(_r.stdout.decode('utf-8', errors='replace'))):
+        if not _row.get('ym'):
+            continue
+        _v = float(_row['enc'] or 0)
+        _per[_row['tc']][_row['dia']] += _v
+        _per['Total'][_row['dia']]    += _v
+    for _tc, _days in _per.items():
+        _bym = defaultdict(list)
+        for _d, _v in _days.items():
+            _bym[_d[:7]].append((_d, _v))
+        encendido[_tc] = {}
+        for _ym, _lst in _bym.items():
+            _lst.sort(key=lambda x: -x[1])
+            _tot = sum(v for _, v in _lst) or 1
+            encendido[_tc][_ym] = dict(dia=_lst[0][0], qtde=int(round(_lst[0][1])),
+                                       share=round(_lst[0][1] / _tot, 3))
+    print(f"  -> encendido OK: " + ', '.join(
+        f"{k}={v.get(cur_key, {}).get('dia', '?')}" for k, v in encendido.items()))
+except Exception as _e:
+    print(f"  [WARN] datas de encendido indisponiveis ({_e}); bundle sai sem ENCENDIDO")
+    encendido = {}
+
+# ============================================================
 # 6. SALVA _proj_data.json
 # ============================================================
 out = dict(generated=TODAY, active_month=cur_key, sg_order=SG_ORDER,
-           META=months_meta, ACTUAL=months_actual, PROJ=months_proj, HIST=months_hist, KPIS=kpis)
+           META=months_meta, ACTUAL=months_actual, PROJ=months_proj, HIST=months_hist,
+           KPIS=kpis, ENCENDIDO=encendido)
 OUT_FILE.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding='utf-8')
 print(f"\n_proj_data.json gerado ({OUT_FILE.stat().st_size/1024:.0f} KB)")
 print(f"Resumo {TODAY}:")
