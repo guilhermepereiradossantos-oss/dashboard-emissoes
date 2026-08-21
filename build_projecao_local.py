@@ -52,7 +52,19 @@ SG_ORDER = ['BAU', 'EA', 'Sellers', 'Cuentas Canceladas', 'Only Nav', 'Mar Abert
 #   MICRO com a cauda da ~152k (+6% vs jul): ja converteu 89k ate o dia 17, entao nem decaindo
 #   fecha abaixo de julho sozinho. Decisao do usuario = abaixo de julho nos DOIS -> travo SO o
 #   Micro em 136.389 (o 2b escala a cauda ja decaida). Full segue livre (sem trava). *** PONTUAL. ***
-TARGET_TOTALS = {'2026-08': {'TC Full': 450000, 'Micro TC': 136389}}  # 2026-08-17(5): usuario ancora Full ~450k (minha cauda pura dava 419k; 450k = cauda segurando um pouco mais). Micro travado 136k.
+#   2026-08-21: AMBAS AS TRAVAS DE AGOSTO DESLIGADAS (pedido do usuario: "essa projecao agora esta
+#   alta pelo que vem sendo realizado, ajuste Full e revise Micro"). As travas estavam empurrando os
+#   dois lados para o valor ERRADO, em direcoes OPOSTAS:
+#     - TC Full travado em 450.000 forcava f=1,0062 sobre uma cauda que ja vinha inflada pela ancora
+#       velha (mediana 7d contaminada pelo pico do lote) -> cauda comecava em 16,4k/d, ACIMA do
+#       ultimo dia real (12,8k). Com a cauda v2 calibrada, o Full cai pro nivel que o proprio
+#       decaimento historico indica, sem valor fixo.
+#     - Micro TC travado em 136.389 forcava f=0,6132, ou seja, CORTAVA a projecao a ~2,7k/dia quando
+#       os ultimos 6 dias completos rodaram a ~5,6k/dia (media). Era a trava, nao o modelo, mandando.
+#       A trava veio de uma decisao de 17/08 ("abaixo de julho nos dois"); com o realizado de agosto
+#       essa premissa nao se sustenta mais no Micro -> devolvido ao organico. *** Se voce quiser
+#       manter Micro abaixo de julho por decisao de negocio, e so repor a trava aqui. ***
+TARGET_TOTALS = {}
 SKIP_HIST_SNAPSHOTS = {'2026-06-01', '2026-06-02', '2026-06-25'}  # 25/06: snapshot dev ruim (Micro TC HIST degenerado)
 
 def fmt(n): return f"{int(round(n)):,}".replace(',', '.')
@@ -222,23 +234,173 @@ if SELLER_ENC_ONEOFF and SELLER_ENC_ONEOFF['data_enc'][:7] == cur_key:
             _add += _cfg['n'] * frac
         print(f"  [ONE-OFF seller enc] {tc}: +{int(round(_add)):,}".replace(',', '.'))
 
+# janela = 6 meses (vigente + 5 anteriores), igual a safra do dash
+_ey, _em = year, month
+for _ in range(5):
+    _em -= 1
+    if _em == 0: _em = 12; _ey -= 1
+_enc_ini = f'{_ey}-{_em:02d}'
+
 # ============================================================
-# 2i. CAUDA REALISTA POS-PICO (2026-08-17, pedido do usuario). O pico do batch (13-16) JA passou
-#   (Full 40k/36k em 14-15 -> ja ~14k em 16). O proj_template sustentava o nivel de JULHO (~24k/dia),
-#   irreal p/ agosto pos-pico (julho ficou alto o mes todo pela novidade do modelo). Substituo a
-#   projecao dos dias RESTANTES por um decaimento ancorado no run-rate recente (mediana ult.7d,
-#   robusta ao spike do pico): daily = anchor * DECAY^i. Ancora o total ABAIXO de julho, data-driven.
-#   *** PONTUAL agosto; self-expira na virada (so roda p/ cur_key '2026-08'). ***
-if cur_key == '2026-08':
-    _rem = sorted(d for d in ALL_DAYS if d >= TODAY)
-    _DECAY = 0.97
-    for tc in TC_KEYS:
-        _anchor = recent_runrate(tc, 7)
-        if _anchor <= 0:
+# 1b. DATA DO ENCENDIDO (lote) por mes e por TC  [2026-08-21]
+#   (fica ANTES do 2i porque a cauda pos-lote usa esta data como referencia)
+#   Usado pelos graficos "Comparativo com meses anteriores" (faixa historica + acumulado):
+#   marca o dia do lote como referencia. O encendido e MUITO concentrado (medido: 51-92% do
+#   mes num unico dia), entao "o dia do lote" = dia de maior volume de DT_ENCENDIDO.
+#   NAO-FATAL: se a query falhar, o bundle sai sem ENCENDIDO e o front simplesmente nao
+#   desenha os marcadores (nunca derruba o push por causa disso).
+# ============================================================
+ENC_SQL = f"""
+SELECT FORMAT_DATE('%Y-%m', DT_ENCENDIDO) AS ym,
+       FORMAT_DATE('%Y-%m-%d', DT_ENCENDIDO) AS dia,
+       CASE WHEN FLAG_TC LIKE '%Full%' THEN 'TC Full' ELSE 'Micro TC' END AS tc,
+       SUM(QTDE) AS enc
+FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
+WHERE DT_ENCENDIDO >= '{_enc_ini}-01'
+  AND DT_ENCENDIDO <  DATE_ADD(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 1 MONTH)
+GROUP BY 1, 2, 3
+"""
+encendido = {}
+try:
+    print("Rodando query de datas de encendido (lote)...")
+    # Passa via STDIN (mesmo padrao da query principal). Passar SQL multi-linha como
+    # argumento com shell=True no Windows quebra (o shell mastiga backticks/%/quebras).
+    _enc_file = REPO / '_enc_dates.sql'
+    _enc_file.write_bytes(ENC_SQL.encode('utf-8'))   # bytes = sem BOM (BOM da erro \357 no bq)
+    with open(_enc_file, 'rb') as _f:
+        _r = subprocess.run(
+            [BQ_CMD, 'query', f'--project_id={PROJECT_ID}', '--use_legacy_sql=false',
+             '--nouse_cache', '--format=csv', '--max_rows=10000'],
+            stdin=_f, capture_output=True, env=env, shell=True)
+    if _r.returncode != 0:
+        raise RuntimeError((_r.stderr.decode(errors='replace') or 'sem stderr')[:300])
+    _per = defaultdict(lambda: defaultdict(float))   # (tc)(dia)
+    for _row in csv.DictReader(io.StringIO(_r.stdout.decode('utf-8', errors='replace'))):
+        if not _row.get('ym'):
             continue
+        _v = float(_row['enc'] or 0)
+        _per[_row['tc']][_row['dia']] += _v
+        _per['Total'][_row['dia']]    += _v
+    for _tc, _days in _per.items():
+        _bym = defaultdict(list)
+        for _d, _v in _days.items():
+            _bym[_d[:7]].append((_d, _v))
+        encendido[_tc] = {}
+        for _ym, _lst in _bym.items():
+            _lst.sort(key=lambda x: -x[1])
+            _tot = sum(v for _, v in _lst) or 1
+            encendido[_tc][_ym] = dict(dia=_lst[0][0], qtde=int(round(_lst[0][1])),
+                                       share=round(_lst[0][1] / _tot, 3))
+    print(f"  -> encendido OK: " + ', '.join(
+        f"{k}={v.get(cur_key, {}).get('dia', '?')}" for k, v in encendido.items()))
+except Exception as _e:
+    print(f"  [WARN] datas de encendido indisponiveis ({_e}); bundle sai sem ENCENDIDO")
+    encendido = {}
+
+# ============================================================
+# 2i. CAUDA POS-LOTE CALIBRADA NO HISTORICO  (v2 - 2026-08-21)
+#
+#   POR QUE MUDOU: a v1 (17/08) ancorava a cauda na mediana dos ultimos 7 dias
+#   (`recent_runrate(tc, 7)`). O usuario viu em 21/08 que a projecao estava "alta pelo que vem
+#   sendo realizado". Dois defeitos:
+#     (1) a janela de 7 dias AINDA CONTEM o pico do lote (14-15/08: 40k e 36k no Full) -> a
+#         mediana saiu 16.333/d, ACIMA do ultimo dia real (12,3k). A cauda COMECAVA SUBINDO,
+#         o oposto do comportamento pos-pico;
+#     (2) dias com carga parcial na base entravam na ancora (o 20/08 chegou a aparecer com 358
+#         no Full, ~3% do esperado, antes de a base completar).
+#
+#   COMO FUNCIONA AGORA (sem numero chumbado, tudo medido na hora):
+#     a) ancora  = media dos ultimos 3 dias realizados COMPLETOS (`_complete_real_days`);
+#     b) janelas = converte tudo p/ "D+n desde o lote" (data real do encendido, secao 1b). A
+#        janela observada e a dos 3 dias do item (a); a janela a projetar e D+n do 1o dia futuro
+#        ate o fim do mes. Isso importa porque cada produto esta num ponto diferente da curva:
+#        em 21/08 o Full estava em D+6 (lote 15/08) e o Micro em D+9 (lote 12/08);
+#     c) fator   = MEDIANA, entre os meses anteriores, de  media(janela_a_projetar)
+#                                                        / media(janela_observada)
+#        -> le o decaimento REAL da curva naquele trecho, por produto, em vez de supor;
+#     d) total   = ancora * fator * n_dias;  distribui com decaimento geometrico r saindo do
+#        ULTIMO dia real (continuidade visual: sem degrau entre realizado e projetado), com r
+#        resolvido p/ fechar o total. r limitado a [0,85; 1,05] p/ nao gerar shape absurdo.
+#   Mantem o shape organico "pico -> queda" que o usuario pediu (o pico ja e realizado; aqui
+#   modela-se so a queda). NAO e run-rate achatado nem cap.
+#
+#   Fatores medidos em 21/08 (abr-jul/26): Full D+3..5 -> D+6..16 = 0,688 (spread 0,51-0,75);
+#   Micro D+6..8 -> D+9..19 = 0,951 (spread 0,66-1,63; Micro converte mais espalhado, cauda
+#   quase nao decai). Se o spread estiver largo, o valor e a mediana - trate como estimativa.
+#
+#   Roda p/ QUALQUER mes (nao e pontual de agosto): se faltar encendido ou historico na janela,
+#   nao mexe e deixa a projecao organica passar.
+# ============================================================
+CAUDA_R_MIN, CAUDA_R_MAX = 0.85, 1.05
+
+def _complete_real_days(tc):
+    """dias realizados do mes vigente, descartando dias do FIM com carga parcial na base."""
+    daily = _daily_real(tc)
+    ds = sorted(d for d in daily if d.startswith(cur_key) and daily[d] > 0)
+    if len(ds) < 4:
+        return [(d, daily[d]) for d in ds]
+    ref = _median([daily[d] for d in ds])
+    while len(ds) > 4 and daily[ds[-1]] < 0.35 * ref:
+        print(f'    [carga parcial] {ds[-1]} = {int(daily[ds[-1]]):,} '
+              f'({daily[ds[-1]] / ref * 100:.0f}% da mediana do mes) -> fora da ancora'.replace(',', '.'))
+        ds.pop()
+    return [(d, daily[d]) for d in ds]
+
+def _month_daily(tc, ym):
+    """serie diaria realizada de um mes fechado (para medir o fator historico)."""
+    daily = _daily_real(tc)
+    return {d: v for d, v in daily.items() if d.startswith(ym) and v > 0}
+
+def _win_mean(serie, enc_iso, lo, hi):
+    """media da serie na janela D+lo..D+hi desde o encendido; None se cobertura fraca."""
+    if not enc_iso:
+        return None
+    e = date.fromisoformat(enc_iso)
+    vs = [v for d, v in serie.items() if lo <= (date.fromisoformat(d) - e).days <= hi]
+    return sum(vs) / len(vs) if len(vs) >= 2 else None
+
+def _hist_tail_factor(tc, ow, pw):
+    """mediana, nos meses anteriores, de media(janela pw) / media(janela ow)."""
+    fs = []
+    for ym in sorted(set(d[:7] for d in _daily_real(tc)) - {cur_key}):
+        enc = (encendido.get(tc, {}).get(ym) or {}).get('dia')
+        serie = _month_daily(tc, ym)
+        o = _win_mean(serie, enc, *ow)
+        p = _win_mean(serie, enc, *pw)
+        if o and p and o > 0:
+            fs.append(p / o)
+    return (_median(fs), len(fs)) if fs else (None, 0)
+
+_rem = sorted(d for d in ALL_DAYS if d >= TODAY)
+if _rem:
+    for tc in TC_KEYS:
+        _comp = _complete_real_days(tc)
+        _enc = (encendido.get(tc, {}).get(cur_key) or {}).get('dia')
+        if len(_comp) < 3 or not _enc:
+            print(f'  [CAUDA {tc}] sem ancora (dias completos={len(_comp)}, lote={_enc}) -> organico')
+            continue
+        _e = date.fromisoformat(_enc)
+        _dp = lambda iso: (date.fromisoformat(iso) - _e).days
+        _obs_days = _comp[-3:]
+        _ow = (_dp(_obs_days[0][0]), _dp(_obs_days[-1][0]))      # janela observada, em D+
+        _pw = (_dp(_rem[0]), _dp(_rem[-1]))                      # janela a projetar, em D+
+        _f, _nm = _hist_tail_factor(tc, _ow, _pw)
+        if not _f:
+            print(f'  [CAUDA {tc}] sem historico comparavel na janela D+{_pw[0]}..D+{_pw[1]} -> organico')
+            continue
+        _lvl = sum(v for _, v in _obs_days) / len(_obs_days)
+        _L = _obs_days[-1][1]                                    # ultimo dia real (continuidade)
+        _tgt = _lvl * _f * len(_rem)
+        _n = len(_rem)
+        _r = min(((abs((_L * _n if abs(rr - 1) < 1e-9 else _L * (1 - rr ** _n) / (1 - rr)) - _tgt), rr)
+                  for rr in (x / 1000 for x in range(int(CAUDA_R_MIN * 1000), int(CAUDA_R_MAX * 1000) + 1))))[1]
         for i, d in enumerate(_rem):
-            _apply_day_target(tc, d, _anchor * (_DECAY ** i))
-        print(f'  [CAUDA {tc}] anchor(recent7)={int(_anchor):,} decay={_DECAY} sobre {len(_rem)} dias')
+            _apply_day_target(tc, d, _L * (_r ** i))
+        _tail = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in _rem)
+        print(f'  [CAUDA {tc}] lote={_enc} | obs D+{_ow[0]}..D+{_ow[1]}={int(_lvl):,}/d '
+              f'| fator hist={_f:.3f} ({_nm}m) -> alvo {int(_tgt):,} '
+              f'| decay r={_r:.3f} de {int(_L):,} ate {int(_L * _r ** (_n - 1)):,} '
+              f'-> cauda {_n}d = {int(_tail):,}'.replace(',', '.'))
 
 # ============================================================
 # 2b (reposicionado). ESCALA PRA TARGET — ULTIMO ajuste sobre proj_data.
@@ -391,61 +553,6 @@ if JUN_FILL_KEY in months_hist:
 #     desvio vs as barras realizadas. Mesma decisao de 2026-07-26. *** NAO reintroduzir. ***
 #     (O 08-06 tinha reintroduzido isso p/ matar um 8k defasado; a solucao correta NAO e copiar
 #     o realizado — se um snapshot antigo ficar defasado, usar SKIP_HIST_SNAPSHOTS, nao overlay.)
-
-# ============================================================
-# 5e. DATA DO ENCENDIDO (lote) por mes e por TC  [2026-08-21]
-#   Usado pelos graficos "Comparativo com meses anteriores" (faixa historica + acumulado):
-#   marca o dia do lote como referencia. O encendido e MUITO concentrado (medido: 51-92% do
-#   mes num unico dia), entao "o dia do lote" = dia de maior volume de DT_ENCENDIDO.
-#   NAO-FATAL: se a query falhar, o bundle sai sem ENCENDIDO e o front simplesmente nao
-#   desenha os marcadores (nunca derruba o push por causa disso).
-# ============================================================
-ENC_SQL = f"""
-SELECT FORMAT_DATE('%Y-%m', DT_ENCENDIDO) AS ym,
-       FORMAT_DATE('%Y-%m-%d', DT_ENCENDIDO) AS dia,
-       CASE WHEN FLAG_TC LIKE '%Full%' THEN 'TC Full' ELSE 'Micro TC' END AS tc,
-       SUM(QTDE) AS enc
-FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
-WHERE DT_ENCENDIDO >= '{target_months[-1][0]}-01'
-  AND DT_ENCENDIDO <  DATE_ADD(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 1 MONTH)
-GROUP BY 1, 2, 3
-"""
-encendido = {}
-try:
-    print("Rodando query de datas de encendido (lote)...")
-    # Passa via STDIN (mesmo padrao da query principal). Passar SQL multi-linha como
-    # argumento com shell=True no Windows quebra (o shell mastiga backticks/%/quebras).
-    _enc_file = REPO / '_enc_dates.sql'
-    _enc_file.write_bytes(ENC_SQL.encode('utf-8'))   # bytes = sem BOM (BOM da erro \357 no bq)
-    with open(_enc_file, 'rb') as _f:
-        _r = subprocess.run(
-            [BQ_CMD, 'query', f'--project_id={PROJECT_ID}', '--use_legacy_sql=false',
-             '--nouse_cache', '--format=csv', '--max_rows=10000'],
-            stdin=_f, capture_output=True, env=env, shell=True)
-    if _r.returncode != 0:
-        raise RuntimeError((_r.stderr.decode(errors='replace') or 'sem stderr')[:300])
-    _per = defaultdict(lambda: defaultdict(float))   # (tc)(dia)
-    for _row in csv.DictReader(io.StringIO(_r.stdout.decode('utf-8', errors='replace'))):
-        if not _row.get('ym'):
-            continue
-        _v = float(_row['enc'] or 0)
-        _per[_row['tc']][_row['dia']] += _v
-        _per['Total'][_row['dia']]    += _v
-    for _tc, _days in _per.items():
-        _bym = defaultdict(list)
-        for _d, _v in _days.items():
-            _bym[_d[:7]].append((_d, _v))
-        encendido[_tc] = {}
-        for _ym, _lst in _bym.items():
-            _lst.sort(key=lambda x: -x[1])
-            _tot = sum(v for _, v in _lst) or 1
-            encendido[_tc][_ym] = dict(dia=_lst[0][0], qtde=int(round(_lst[0][1])),
-                                       share=round(_lst[0][1] / _tot, 3))
-    print(f"  -> encendido OK: " + ', '.join(
-        f"{k}={v.get(cur_key, {}).get('dia', '?')}" for k, v in encendido.items()))
-except Exception as _e:
-    print(f"  [WARN] datas de encendido indisponiveis ({_e}); bundle sai sem ENCENDIDO")
-    encendido = {}
 
 # ============================================================
 # 6. SALVA _proj_data.json
