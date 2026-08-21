@@ -532,17 +532,25 @@ GROUP BY 1,2,3,4,5,6
 #   nao deveria) — backfill de jun mal feito. jul/ago estao bons (D-J 5,7%). Entao rating_tc_new
 #   vale so p/ encendidos de JUL/26 em diante; jun e antes usam V6 (rating_tc). Corte por
 #   DT_ENCENDIDO (coluna do rating = do encendido; existe em todas as queries da base).
-def _rating_v6_fallback(sql: str) -> str:
-    return sql.replace(
-        "rating_v7",
-        "IF(DT_ENCENDIDO >= DATE '2026-07-01', COALESCE(rating_tc_new, rating_tc), rating_tc)")
+#
+# 2026-08-21 — RESOLVIDO NA BASE (base_projecao_Gui v2). O COALESCE acima estava ERRADO por cliente:
+#   V6 e V7 rodam EM PARALELO em BT_VU_MODEL_RATING (SCD2 por CRD_MODEL+CRD_VERSION), logo
+#   rating_tc_new vem preenchida tambem p/ quem segue encendido no V6 -> o COALESCE sempre pegava
+#   tc_new e errava o rating de ~41-49% dos TC Full (acerto de so 18-47% no V6 vs RBA de ago/26).
+#   A base v2 passou a expor `rating_efetivo`, que escolhe a coluna certa a partir do MODELO que de
+#   fato decidiu o encendido (derivado do grupo_especial: IN IN V6/V7, SWAP IN, CHA V1/V2) e p/
+#   seller prioriza o modelo merchant. Acerto vs RBA: 100% nao-seller / ~99% seller. O fallback por
+#   data virou desnecessario (sem tag => rating_tc, que cobre todo o historico pre-jul/26).
+#   Entao aqui basta trocar o token pela coluna nova. `rating_v7` foi REMOVIDA da base na v2.
+def _rating_source(sql: str) -> str:
+    return sql.replace("rating_v7", "rating_efetivo")
 
 for _qk in QUERIES:
     if "rating_v7" in QUERIES[_qk]:
-        QUERIES[_qk] = _rating_v6_fallback(QUERIES[_qk])
+        QUERIES[_qk] = _rating_source(QUERIES[_qk])
 for _qk in LIM_QUERIES:
     if "rating_v7" in LIM_QUERIES[_qk]:
-        LIM_QUERIES[_qk] = _rating_v6_fallback(LIM_QUERIES[_qk])
+        LIM_QUERIES[_qk] = _rating_source(LIM_QUERIES[_qk])
 
 
 def main():
