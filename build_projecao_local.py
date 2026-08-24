@@ -331,7 +331,21 @@ except Exception as _e:
 #   Roda p/ QUALQUER mes (nao e pontual de agosto): se faltar encendido ou historico na janela,
 #   nao mexe e deixa a projecao organica passar.
 # ============================================================
-CAUDA_R_MIN, CAUDA_R_MAX = 0.85, 1.05
+# Decaimento diario da tendencia (suave e FIXO) + fator historico limitado a 1,0.
+#
+# (2026-08-24) Antes eu fixava o inicio da cauda no nivel atual e RESOLVIA o r p/ fechar o total.
+# Com um fator historico de 0,825 em 8 dias, isso exigia r=0,942 (-5,8%/dia) e a cauda caia ~34%
+# de ponta a ponta -> a ultima segunda do mes ficava ABAIXO do sabado da semana anterior. Nao era
+# bug de weekday (o perfil ja estava certo dentro de cada semana), era a inclinacao: em 8 dias o
+# decaimento supera a diferenca util-vs-fds. Invertido: agora o DECAIMENTO e fixo e suave e o
+# NIVEL e resolvido p/ fechar o total. Mesmo total, shape realista, sem inversao de calendario.
+#
+# Fator limitado a 1,0: cauda pos-lote e coorte se esgotando, o piso e "para de cair", nao "volta
+# a subir". O historico do Micro deu 1,113 na janela atual (essa parte da cauda historicamente
+# sobe), mas agosto vem caindo forte (18/08 6.091 -> 23/08 2.659); deixar subir contrariaria o
+# dado recente e reintroduziria a inversao.
+CAUDA_DECAY_DIA = 0.985
+CAUDA_F_MAX = 1.00
 
 def _complete_real_days(tc):
     """dias realizados do mes vigente, descartando dias do FIM com carga parcial na base."""
@@ -371,6 +385,50 @@ def _hist_tail_factor(tc, ow, pw):
             fs.append(p / o)
     return (_median(fs), len(fs)) if fs else (None, 0)
 
+def _dow_factors_clean(tc):
+    """Fator por dia-da-semana (0=Seg..6=Dom), normalizado p/ media 1.
+
+    Pedido do usuario (2026-08-24): "e bem improvavel que vamos fazer menos emissoes na
+    semana do que no final de semana" — a cauda era decaimento PURO, entao um sabado no
+    inicio dela ficava acima de uma segunda no fim. Aqui mede-se o padrao semanal real.
+
+    Metodo: cada dia entra como RAZAO sobre a MEDIANA MOVEL CENTRADA de 7 dias (3 antes,
+    3 depois). Isso remove de uma vez o nivel do mes E a tendencia local (a cauda do lote),
+    sobrando so o efeito de dia-da-semana. Mediana (nao media) na janela p/ um pico de lote
+    dentro dela nao contaminar a base. Ainda exclui D+0..D+1 do lote (o proprio spike, cuja
+    razao seria absurda).
+
+    Por que nao "razao sobre a media do mes" (1a tentativa, 24/08): p/ lote que cai numa
+    QUARTA (10/06 e 12/08 no Micro), excluir D+0..D+2 tira qua/qui/sex mas deixa entrar o
+    SABADO seguinte (D+3) ainda inflado pela cauda -> o fator de sabado subia artificialmente.
+    No Micro isso dava Sab=0,944 vs Sex=0,935, ou seja "sabado >= sexta", o oposto do real
+    (em agosto: sexta 21 = 2.868 vs sabado 22 = 2.323, -19%). Com a mediana movel, o mesmo
+    calculo da Sab -5,2% vs Sex, coerente.
+    """
+    daily = _daily_real(tc)
+    spike = set()
+    for _ym, _info in (encendido.get(tc) or {}).items():
+        _e0 = date.fromisoformat(_info['dia'])
+        for _k in range(0, 2):
+            spike.add((_e0 + timedelta(days=_k)).isoformat())
+    ks = sorted(d for d, v in daily.items() if v > 0)
+    byw = defaultdict(list)
+    for d in ks:
+        if d in spike:
+            continue
+        dt = date.fromisoformat(d)
+        win = [daily[x] for x in ks if abs((date.fromisoformat(x) - dt).days) <= 3]
+        if len(win) < 5:
+            continue
+        base = _median(win)
+        if base > 0:
+            byw[dt.weekday()].append(daily[d] / base)
+    med = {wd: _median(vs) for wd, vs in byw.items() if len(vs) >= 5}
+    if len(med) < 7:
+        return {}
+    mean_med = sum(med.values()) / len(med)
+    return {wd: med[wd] / mean_med for wd in med} if mean_med > 0 else {}
+
 _rem = sorted(d for d in ALL_DAYS if d >= TODAY)
 if _rem:
     for tc in TC_KEYS:
@@ -388,19 +446,40 @@ if _rem:
         if not _f:
             print(f'  [CAUDA {tc}] sem historico comparavel na janela D+{_pw[0]}..D+{_pw[1]} -> organico')
             continue
-        _lvl = sum(v for _, v in _obs_days) / len(_obs_days)
-        _L = _obs_days[-1][1]                                    # ultimo dia real (continuidade)
-        _tgt = _lvl * _f * len(_rem)
+        # ---- sazonalidade semanal (2026-08-24) ----
+        # A cauda era decaimento PURO: um sabado no inicio dela saia acima de uma segunda no
+        # fim, o que nao acontece na pratica. Agora o decaimento define a TENDENCIA e o fator
+        # de weekday define o PERFIL dentro da semana.
+        _dow = _dow_factors_clean(tc)
+        _wf = (lambda iso: _dow.get(date.fromisoformat(iso).weekday(), 1.0)) if _dow else (lambda iso: 1.0)
+        # DES-sazonaliza a ancora: se o ultimo dia real caiu num dia forte/fraco, o nivel-base
+        # nao pode herdar isso (senao o efeito weekday entra duas vezes).
+        # Nivel-base = MEDIA des-sazonalizada dos 3 dias (nao so o ultimo dia). Usar so o
+        # ultimo dia fazia o resultado depender de em que weekday ele caiu: em 24/08 o ultimo
+        # real era um DOMINGO e, des-sazonalizado, saia +11% acima da media (Micro) -> a cauda
+        # comecava alta e o r tinha que ficar mais ingreme p/ fechar o total, o que jogava um
+        # dia util do fim do mes abaixo de um fim de semana do inicio. A media dos 3 dias e
+        # estavel e faz o r refletir a TENDENCIA, nao o calendario do ultimo dia.
+        _lvl = sum(v / _wf(d) for d, v in _obs_days) / len(_obs_days)
+        _f_eff = min(_f, CAUDA_F_MAX)                # cauda pos-lote nao volta a subir
         _n = len(_rem)
-        _r = min(((abs((_L * _n if abs(rr - 1) < 1e-9 else _L * (1 - rr ** _n) / (1 - rr)) - _tgt), rr)
-                  for rr in (x / 1000 for x in range(int(CAUDA_R_MIN * 1000), int(CAUDA_R_MAX * 1000) + 1))))[1]
+        _tgt = _lvl * _f_eff * _n
+        _wl = [_wf(d) for d in _rem]
+        # decaimento FIXO e suave; resolve o NIVEL (S) p/ a soma bater o alvo
+        _shape = [(CAUDA_DECAY_DIA ** i) * _wl[i] for i in range(_n)]
+        _S = _tgt / sum(_shape) if sum(_shape) > 0 else 0
         for i, d in enumerate(_rem):
-            _apply_day_target(tc, d, _L * (_r ** i))
+            _apply_day_target(tc, d, _S * _shape[i])
         _tail = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in _rem)
-        print(f'  [CAUDA {tc}] lote={_enc} | obs D+{_ow[0]}..D+{_ow[1]}={int(_lvl):,}/d '
-              f'| fator hist={_f:.3f} ({_nm}m) -> alvo {int(_tgt):,} '
-              f'| decay r={_r:.3f} de {int(_L):,} ate {int(_L * _r ** (_n - 1)):,} '
-              f'-> cauda {_n}d = {int(_tail):,}'.replace(',', '.'))
+        _WDN = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
+        _cap = '' if abs(_f_eff - _f) < 1e-9 else f' (limitado de {_f:.3f})'
+        print(f'  [CAUDA {tc}] lote={_enc} | obs D+{_ow[0]}..D+{_ow[1]} nivel-base={int(_lvl):,}/d '
+              f'| fator hist={_f_eff:.3f}{_cap} ({_nm}m) -> alvo {int(_tgt):,} '
+              f'| decay/dia={CAUDA_DECAY_DIA} -> cauda {_n}d = {int(_tail):,}'.replace(',', '.'))
+        if _dow:
+            print('    DOW ' + ' '.join(f'{_WDN[w]}={_dow[w]:.2f}' for w in sorted(_dow)))
+        else:
+            print('    [WARN] sem fator de weekday (historico insuficiente) -> cauda sem perfil semanal')
 
 # ============================================================
 # 2b (reposicionado). ESCALA PRA TARGET — ULTIMO ajuste sobre proj_data.
