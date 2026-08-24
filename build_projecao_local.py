@@ -346,6 +346,21 @@ except Exception as _e:
 # dado recente e reintroduziria a inversao.
 CAUDA_DECAY_DIA = 0.985
 CAUDA_F_MAX = 1.00
+# Janela do fator de weekday: so os ultimos ~90d. (2026-08-24) Com os 5 meses inteiros o sabado
+# do TC Full saia em 0,95 (-7% vs dia util), mas o sabado REALIZADO de agosto foi bem mais fraco
+# (22/08 = 10.677 vs nivel de dia util ~12,3k = -13%). O comportamento de fim de semana mudou;
+# 90d segue o padrao atual em vez de diluir com abr/mai.
+DOW_JANELA_DIAS = 90
+# Tendencia da cauda: quando a serie des-sazonalizada JA ACHATOU, nao aplicar mais decaimento.
+# (2026-08-24) Descoberta ao investigar o feedback do usuario ("ainda esta impactando demais os
+# dias de semana"): o fator historico (0,77-0,83) foi medido em meses cuja curva AINDA ESTAVA
+# CAINDO na janela de observacao (des-sazonalizado, abr 23,9k->12,9k de D+4 a D+8; mai
+# 16,3k->11,8k; jul 16,5k->14,2k). Agosto ja chegou no piso NA propria janela (D+4 12,1k -> D+8
+# 12,1k, plano). Aplicar "a queda continua" sobre uma serie que ja parou de cair e erro de
+# premissa: descontava a queda duas vezes. Agora a TENDENCIA vem da propria serie recente
+# (limitada a [0,97; 1,00] p/ nao extrapolar ruido), e o fator historico fica so como referencia
+# no log.
+CAUDA_R_OBS_MIN, CAUDA_R_OBS_MAX = 0.97, 1.00
 
 def _complete_real_days(tc):
     """dias realizados do mes vigente, descartando dias do FIM com carga parcial na base."""
@@ -411,7 +426,8 @@ def _dow_factors_clean(tc):
         _e0 = date.fromisoformat(_info['dia'])
         for _k in range(0, 2):
             spike.add((_e0 + timedelta(days=_k)).isoformat())
-    ks = sorted(d for d, v in daily.items() if v > 0)
+    _cut = (date.today() - timedelta(days=DOW_JANELA_DIAS)).isoformat()
+    ks = sorted(d for d, v in daily.items() if v > 0 and d >= _cut)
     byw = defaultdict(list)
     for d in ks:
         if d in spike:
@@ -460,22 +476,38 @@ if _rem:
         # comecava alta e o r tinha que ficar mais ingreme p/ fechar o total, o que jogava um
         # dia util do fim do mes abaixo de um fim de semana do inicio. A media dos 3 dias e
         # estavel e faz o r refletir a TENDENCIA, nao o calendario do ultimo dia.
+        # nivel-base = media des-sazonalizada dos 3 ultimos dias completos
         _lvl = sum(v / _wf(d) for d, v in _obs_days) / len(_obs_days)
-        _f_eff = min(_f, CAUDA_F_MAX)                # cauda pos-lote nao volta a subir
+        # TENDENCIA da propria serie, medida SO nos dias ja assentados (D+4 em diante).
+        # Se a serie ja achatou, sai ~1,0 e a cauda fica plana (caso de agosto/26); se ainda
+        # esta caindo, sai <1 e a cauda decai.
+        # *** Cuidado que custou uma iteracao (24/08): usar "3 ultimos vs 3 anteriores" sobre
+        # TODOS os dias pegava o D+3 (18/08 = 16.333, ainda inflado pelo lote) como base do
+        # "antes" -> a tendencia saia 0,975 (queda de 2,5%/dia) quando os dias assentados
+        # estavam PLANOS. Isso e a queda do pico, nao a tendencia da cauda. Cortando em D+4 o
+        # mesmo calculo da ~1,00 no Full. ***
+        _ds = [(dd, vv / _wf(dd)) for dd, vv in _comp if _dp(dd) >= 4]
+        _r_obs = None
+        if len(_ds) >= 4:
+            _h = len(_ds) // 2
+            _A, _B = _ds[:_h], _ds[_h:]
+            _ma = sum(v for _, v in _A) / len(_A)
+            _mb = sum(v for _, v in _B) / len(_B)
+            _ga = sum(_dp(dd) for dd, _ in _A) / len(_A)       # midpoint em D+ de cada metade
+            _gb = sum(_dp(dd) for dd, _ in _B) / len(_B)
+            if _ma > 0 and _gb > _ga:
+                _r_obs = (_mb / _ma) ** (1.0 / (_gb - _ga))    # taxa por dia
+        _r = min(max(_r_obs, CAUDA_R_OBS_MIN), CAUDA_R_OBS_MAX) if _r_obs else CAUDA_DECAY_DIA
         _n = len(_rem)
-        _tgt = _lvl * _f_eff * _n
         _wl = [_wf(d) for d in _rem]
-        # decaimento FIXO e suave; resolve o NIVEL (S) p/ a soma bater o alvo
-        _shape = [(CAUDA_DECAY_DIA ** i) * _wl[i] for i in range(_n)]
-        _S = _tgt / sum(_shape) if sum(_shape) > 0 else 0
         for i, d in enumerate(_rem):
-            _apply_day_target(tc, d, _S * _shape[i])
+            _apply_day_target(tc, d, _lvl * (_r ** i) * _wl[i])
         _tail = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in _rem)
         _WDN = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
-        _cap = '' if abs(_f_eff - _f) < 1e-9 else f' (limitado de {_f:.3f})'
         print(f'  [CAUDA {tc}] lote={_enc} | obs D+{_ow[0]}..D+{_ow[1]} nivel-base={int(_lvl):,}/d '
-              f'| fator hist={_f_eff:.3f}{_cap} ({_nm}m) -> alvo {int(_tgt):,} '
-              f'| decay/dia={CAUDA_DECAY_DIA} -> cauda {_n}d = {int(_tail):,}'.replace(',', '.'))
+              f'| tendencia obs r={_r:.4f}' + (f' (crua {_r_obs:.4f})' if _r_obs else ' (sem serie -> default)')
+              + f' | ref fator hist={_f:.3f} ({_nm}m) '
+              f'-> cauda {_n}d = {int(_tail):,}'.replace(',', '.'))
         if _dow:
             print('    DOW ' + ' '.join(f'{_WDN[w]}={_dow[w]:.2f}' for w in sorted(_dow)))
         else:
