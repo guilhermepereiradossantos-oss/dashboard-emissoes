@@ -58,6 +58,9 @@ TMP_DIR.mkdir(exist_ok=True)
 # que vai direto pro storage e evita 503/timeout do PUT simples do proxy /data/{name}.
 # Abaixo, usa o PUT legado /data/{name} (testado e estavel p/ datasets pequenos).
 SIGNED_THRESHOLD_MB = 20
+# Limite do PUT legado /data/{name} no Grid (a propria API responde 413 acima disso).
+# Usado p/ nao tentar um fallback que ja se sabe que nao cabe (ver upload_dataset).
+LEGADO_MAX_MB = 10
 
 # Datasets que sobem em json_columnar (coluna 1x + dados em arrays) p/ economizar ~62%.
 # Os demais continuam json_rows. O HTML (fromColumnar) aceita os dois formatos.
@@ -362,29 +365,46 @@ def put_dataset_signed(name: str, payload_path: Path, size_mb: float, fmt: str =
       pode retornar 409 "dataset_staged_file_not_ready" (retryable) -> retry com backoff.
     """
     base = f"{GRID_HOST}/api/v1/documents/{doc_id}/datasets/{name}"
-    _set_definition_format(base, fmt)
 
-    # 1) URL assinada (+ revision)
-    r = subprocess.run(
-        [CURL_CMD, "-s", "-X", "POST", f"{base}/upload-url",
-         "-H", "Content-Type: application/json", "-d", "{}"],
-        capture_output=True, text=True,
-    )
-    try:
-        info = json.loads(r.stdout)
-        rev, upload_url = info["revision"], info["upload_url"]
-    except Exception:
-        return {"size_mb": round(size_mb, 2), "http": "upload-url-fail", "ok": False, "body": r.stdout[:300]}
+    # 1+2) URL assinada (+ revision) e PUT do conteudo, COM RETRY em revision obsoleta.
+    #
+    # 2026-08-25: o `adoption` falhava recorrentemente com http=put-409
+    # {"error":"dataset_revision_mismatch"} — no PASSO 2 (PUT dos bytes), nao no publish.
+    # Causa: o POST da definicao (_set_definition_format) bump a revision do dataset; a
+    # revision devolvida pelo /upload-url logo depois as vezes ja nasce obsoleta (a escrita
+    # da definicao ainda estava assentando). E corrida, por isso era intermitente — e por isso
+    # simplesmente re-rodar o push resolvia. Agora, em revision_mismatch, pede uma revision
+    # NOVA e tenta de novo, em vez de desistir e cair num fallback que nao cabe.
+    put_code, put_body = "?", ""
+    for tentativa in range(4):
+        _set_definition_format(base, fmt)
+        r = subprocess.run(
+            [CURL_CMD, "-s", "-X", "POST", f"{base}/upload-url",
+             "-H", "Content-Type: application/json", "-d", "{}"],
+            capture_output=True, text=True,
+        )
+        try:
+            info = json.loads(r.stdout)
+            rev, upload_url = info["revision"], info["upload_url"]
+        except Exception:
+            return {"size_mb": round(size_mb, 2), "http": "upload-url-fail", "ok": False, "body": r.stdout[:300]}
 
-    # 2) PUT do conteudo no upload_url (storage; responde 204)
-    rp = subprocess.run(
-        [CURL_CMD, "-s", "-w", "\n%{http_code}", "-X", "PUT", upload_url,
-         "-H", "Content-Type: application/json", "--data-binary", f"@{payload_path}"],
-        capture_output=True, text=True,
-    )
-    put_code = rp.stdout.strip().rsplit("\n", 1)[-1]
+        rp = subprocess.run(
+            [CURL_CMD, "-s", "-w", "\n%{http_code}", "-X", "PUT", upload_url,
+             "-H", "Content-Type: application/json", "--data-binary", f"@{payload_path}"],
+            capture_output=True, text=True,
+        )
+        put_code = rp.stdout.strip().rsplit("\n", 1)[-1]
+        put_body = rp.stdout[:300]
+        if put_code in ("200", "201", "204"):
+            break
+        if put_code == "409" and "revision_mismatch" in put_body:
+            print(f"    [retry {tentativa + 1}/3] revision obsoleta no PUT de '{name}' -> pedindo revision nova")
+            time.sleep(2 + 2 * tentativa)
+            continue
+        break  # erro nao-retryable
     if put_code not in ("200", "201", "204"):
-        return {"size_mb": round(size_mb, 2), "http": f"put-{put_code}", "ok": False, "body": rp.stdout[:300]}
+        return {"size_mb": round(size_mb, 2), "http": f"put-{put_code}", "ok": False, "body": put_body}
 
     # 3) publica a revision (com retry p/ propagacao do staged file)
     pub_code, body = "?", ""
@@ -419,6 +439,19 @@ def upload_dataset(name: str, rows: list, doc_id: str = DOC_ID) -> dict:
         size_mb = payload_path.stat().st_size / 1024 / 1024
         res = put_dataset_signed(name, payload_path, size_mb, fmt="json_columnar", doc_id=doc_id)
         if res["ok"]:
+            return res
+        # O fallback legado (PUT /data/{name}) tem limite de 10 MB no Grid. Pro `adoption` o
+        # json_rows da ~46 MB, entao o fallback SEMPRE morria com http=413 — so trocava um erro
+        # por outro, deixava o format do dataset em json_rows (piorando o proximo run) e
+        # marcava overall=FAIL. Se nao couber, nao tenta: reporta o erro real do fluxo assinado.
+        rows_path = TMP_DIR / f"{name}_array.json"
+        with open(rows_path, "w", encoding="utf-8") as f:
+            json.dump(rows, f, separators=(",", ":"))
+        rows_mb = rows_path.stat().st_size / 1024 / 1024
+        if rows_mb > LEGADO_MAX_MB:
+            print(f"  [WARN] columnar assinado falhou (http={res['http']}; {res['body'][:120]})")
+            print(f"  [SKIP] fallback legado nao cabe: json_rows={rows_mb:.1f} MB > limite {LEGADO_MAX_MB} MB "
+                  f"-> mantendo columnar; re-rodar o push resolve se for corrida de revision")
             return res
         print(f"  [WARN] columnar assinado falhou (http={res['http']}; {res['body'][:120]}) -> fallback PUT legado json_rows")
         # fallback: restaura format json_rows e usa o PUT legado
