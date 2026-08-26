@@ -402,6 +402,16 @@ def put_dataset_signed(name: str, payload_path: Path, size_mb: float, fmt: str =
             print(f"    [retry {tentativa + 1}/3] revision obsoleta no PUT de '{name}' -> pedindo revision nova")
             time.sleep(2 + 2 * tentativa)
             continue
+        # 2026-08-26: transiente de rede/gateway tambem precisa de retry. O `mensal_encendidos`
+        # (19 MB, o maior upload) morreu com put-503 "upstream connect error / connection
+        # termination" no meio do PUT. Nao e revision, e a conexao caindo — e antes o retry so
+        # cobria o 409, entao um 503 derrubava o dataset e o run inteiro (overall=FAIL).
+        # 000 = curl nao conseguiu completar a conexao (mesmo caso).
+        if put_code in ("000", "500", "502", "503", "504", "408", "429"):
+            print(f"    [retry {tentativa + 1}/3] falha transiente (http={put_code}) no PUT de "
+                  f"'{name}' -> nova tentativa")
+            time.sleep(5 + 5 * tentativa)
+            continue
         break  # erro nao-retryable
     if put_code not in ("200", "201", "204"):
         return {"size_mb": round(size_mb, 2), "http": f"put-{put_code}", "ok": False, "body": put_body}
