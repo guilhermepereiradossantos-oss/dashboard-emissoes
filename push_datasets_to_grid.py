@@ -90,34 +90,23 @@ NUM_COLS = {"n_enc", "n_primo", "n_reenc", "n_conv", "soma_limite", "soma_maxsal
 # exatamente com o tamanho do teste (583.676 QTDE em ago/26) e da p/ isolar o efeito.
 # Depois: Sellers > Only Nav > Cuentas Canceladas > BAU.
 #
-# UNIVERSO DE SELLER: `PURO_SELLERS = 'SELLER'` (= CUST_TYPE_PYL), conforme o print do
-# usuario (27/08). NAO e FLAG_NISE = '0. SELLER', que era o usado antes. Validado
-# reproduzindo o print: jul/26 + TC Full + PURO_SELLERS='SELLER' da 252.144 QTDE, exatamente
-# o "Total geral" do Tableau dele, grupo a grupo.
+# SELLERS — DUAS categorias (2026-08-27, correcao do usuario):
+#   "Puro Sellers"    = PURO_SELLERS = 'SELLER'      (CUST_TYPE_PYL)
+#   "Sellers - Mixto" = FLAG_NISE = '0. SELLER'      (marcacao ANTIGA, que era so "Sellers")
+# Medido em ago/26 e a particao e limpa — FLAG_NISE='0. SELLER' cobre exatamente 2 casos:
+#   PURO_SELLERS=SELLER  + FLAG_SELLERS=SELLER -> 255.186 QTDE  (Puro Sellers)
+#   PURO_SELLERS=INDIVIDUO + FLAG_SELLERS=MIXTO -> 321.166 QTDE (Sellers - Mixto)
+# Logo nao ha perda nem duplicacao; "Puro Sellers" vem antes so por ser o caso mais especifico.
 #
-# ⚠️ SMB x LT — PENDENTE DE UMA COLUNA NA BASE (nao e ambiguidade, e falta de dado):
-# A separacao correta e `SEL_SEGMENT` do SCORE_PROPOSTAS_CCARD, que e limpa:
-#     LONGTAIL (LOLO + HILO) | SMB (SMB1/2/3) | BIG SELLERS (LM1/LM2/CORP)
-# Mas `SEL_SEGMENT` NAO existe em base_projecao_Gui, e a base e AGREGADA (sem CCARD_PROP_ID),
-# entao nao da p/ join aqui. Precisa entrar na query principal — que ja faz join nessa tabela
-# (alias `bureaus`), logo e 1 linha: adicionar `bureaus.SEL_SEGMENT`.
-# Descartado: raspar 'SMB'/'LT' do texto do grupo_especial — cobre so 33% dos sellers
-# (jul/26: LT 27,4% + SMB 5,3%; PJ CHA fica 44,3% sem marca e outros 23,1% tambem).
-# Enquanto a coluna nao chegar, seller fica em "Sellers" (grupo unico).
+# (Historico: em 27/08 cheguei a usar SO PURO_SELLERS, colapsando os dois num grupo "Sellers".
+# O split SMB x LT via SEL_SEGMENT, que estava pendente, deixou de ser necessario — o usuario
+# optou por Puro vs Mixto em vez de SMB vs LT.)
 # ════════════════════════════════════════════════════════════════════════════════════════
-
-# <<< UNICO PONTO A TROCAR quando `SEL_SEGMENT` entrar na base >>>
-# Trocar por:
-#   SELLER_SPLIT_SQL = """CASE
-#         WHEN SEL_SEGMENT = 'SMB' THEN 'Sellers SMB'
-#         WHEN SEL_SEGMENT = 'LONGTAIL' THEN 'Sellers LT'
-#         ELSE 'Sellers Outros' END"""   -- BIG SELLERS = 925 em jul/26, decidir com o usuario
-# e acrescentar 'Sellers SMB'/'Sellers LT' em SG_VALUES nos HTMLs.
-SELLER_SPLIT_SQL = "'Sellers'"
 
 SUPER_GRUPO_SQL = f"""CASE
     WHEN FL_TEST_AB_C1_C2 = 1 THEN "Teste"
-    WHEN PURO_SELLERS = "SELLER" THEN {SELLER_SPLIT_SQL}
+    WHEN PURO_SELLERS = "SELLER" THEN "Puro Sellers"
+    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers - Mixto"
     WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav."
     WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
     ELSE "BAU"

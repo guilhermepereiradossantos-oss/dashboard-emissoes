@@ -134,13 +134,6 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 .daily-controls{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .daily-controls label{font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px}
 .daily-month-sel{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
-/* Chips de safra da aba Adoption (multi-seleção dos últimos 12 meses + Todos) */
-.adopt-safra-chips{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;vertical-align:middle}
-.asafra-chip{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:3px 9px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;font-family:inherit;line-height:1.5}
-.asafra-chip:hover{background:#30363d;color:#e6edf3}
-.asafra-chip.on{background:#58a6ff;border-color:#58a6ff;color:#0d1117}
-.asafra-chip.all{background:#21262d;border-color:#3DFF91;color:#3DFF91}
-.asafra-chip.all:hover{background:rgba(61,255,145,.14)}
 .daily-month-sel:focus{outline:none;border-color:#58a6ff}
 /* ADOPTION: slider de dias + filtro desabilitado pela quebra */
 #adopt-dias{accent-color:#58a6ff;cursor:pointer;width:200px;vertical-align:middle}
@@ -470,10 +463,6 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
         <option value="range_numero_propostas">Range Nº Propostas</option>
         <option value="FLAG_APP_ATIVO">App Ativo</option>
       </select>
-      <!-- 2026-08-27: era uma JANELA (6M/12M/Tudo). Agora é multi-seleção dos últimos 12 meses,
-           p/ escolher exatamente quais safras entram no gráfico, + botão Todos. -->
-      <label style="margin-left:8px">Safra:</label>
-      <span class="adopt-safra-chips" id="adopt-safra-chips"></span>
       <label style="margin-left:14px">Dias até conversão: <span id="adopt-dias-val">40</span></label>
       <input type="range" id="adopt-dias" min="0" max="40" value="40">
       <label style="margin-left:14px">Efeito EA:</label>
@@ -507,10 +496,10 @@ const DOC_ID = '01KVDVV9XG2ZJ53YEEQRT1E704';
 // SUPER GRUPO — valores (2026-08-27). Espelha SUPER_GRUPO_SQL do push_datasets_to_grid.py.
 // Precedência lá: Teste > Sellers > Only Nav. > Cuentas Canceladas > BAU.
 // "Mar Aberto" saiu (absorvido em BAU). "Teste" = teste vigente (hoje piso mínimo C1/C2).
-// PENDENTE: quando `SEL_SEGMENT` entrar na base, 'Sellers' vira 'Sellers SMB' + 'Sellers LT'
-// — trocar aqui e em SELLER_SPLIT_SQL no push script (os dois têm de andar juntos).
+// Sellers em 2 categorias: 'Puro Sellers' (PURO_SELLERS='SELLER') e 'Sellers - Mixto'
+// (FLAG_NISE='0. SELLER', a marcação antiga). Partição limpa, sem sobreposição.
 // ════════════════════════════════════════════════════════════════
-const SG_VALUES = ['BAU', 'Sellers', 'Only Nav.', 'Teste', 'Cuentas Canceladas'];
+const SG_VALUES = ['BAU', 'Puro Sellers', 'Sellers - Mixto', 'Only Nav.', 'Teste', 'Cuentas Canceladas'];
 
 const FILTER_DEFS = [
   { id: 'FLAG_TC',                       label: 'Tipo TC',
@@ -881,9 +870,13 @@ async function loadAllDatasets() {
     _ds_nprop_enc = fromColumnar(npropEnc);
     _ds_nprop_emi = fromColumnar(npropEmi);
     _ds_adoption  = fromColumnar(adoption);
+    // Safra da Adoption é filtro dinâmico: popula com os últimos 12 meses (mais recente
+    // primeiro) ANTES de montar a barra, senão o dropdown nasce vazio.
+    {
+      const _sd = ADOPT_FILTER_DEFS.find(d => d.id === 'safra_enc');
+      if (_sd) _sd.values = adoptSafraUniverse().slice().reverse();
+    }
     if (typeof buildAdoptFilters === 'function') buildAdoptFilters();
-    // chips de safra da Adoption dependem do dataset já carregado (27/08)
-    if (typeof renderAdoptSafraChips === 'function') renderAdoptSafraChips();
 
     // 2026-08-27: os filtros dinâmicos Safra e Canal foram removidos das abas Encendidos e
     // Emissões, então não há mais nada p/ popular aqui (os defs deixaram de existir).
@@ -1510,64 +1503,33 @@ const ADOPT_ORDERS = {
 };
 // Dimensões filtráveis da aba (super_grupo é só quebra, sem filtro)
 const ADOPT_FILTER_DEFS = [
+  { id: 'safra_enc',              label: 'Safra',              values: [], dynamic: true },
   { id: 'FLAG_TC',                label: 'Tipo TC',            values: ['1. TC Full', '2. Micro TC'] },
   { id: 'FLAG_NISE',             label: 'Nise',               values: ['1. Bronze', '2. Silver', '3. Gold', '4. Platinum', '5. Nulo', '0. SELLER'] },
   { id: 'rating_tc_grp',         label: 'Rating TC',          values: RATING_ORDER },
   { id: 'super_grupo',           label: 'Grupo Especial',     values: SG_VALUES },
 ];
 let adoptBreak = '__total__', adoptDias = 40;
-// adoptSafras: null = todas as safras; Set = exatamente as marcadas nos chips (27/08)
-let adoptSafras = null;
 let adoptFilters = {};
 let adoptExclEA = false;   // false = Com EA (inclui tudo); true = Sem EA (remove canal 'EA - MP')
 let adoptMode = 'safra';   // 'safra' = cohort (cc/n_enc por safra); 'mes' = fluxo (n_conv mês ÷ n_enc mês)
 
-// Últimos 12 meses disponíveis no dataset (asc). Base dos chips de safra.
+// Safra da aba Adoption é um FILTRO normal (lista suspensa, igual aos outros da aba e ao
+// padrão do doc de Limite). 2026-08-27: a 1ª versão usou chips inline, que o usuário achou
+// ruim visualmente e quebravam o layout da barra de controles.
+// Universo = últimos 12 meses do dataset; nenhum marcado => todos entram.
 function adoptSafraUniverse() {
   if (!_ds_adoption) return [];
-  const all = [...new Set(_ds_adoption.map(r => r.safra_enc))]
-    .filter(m => m && m !== 'null').sort();
-  return all.slice(-12);
+  return [...new Set(_ds_adoption.map(r => r.safra_enc))]
+    .filter(m => m && m !== 'null').sort().slice(-12);
 }
 
-// 2026-08-27: antes devolvia uma JANELA dos últimos N meses (adoptSafraN). Agora devolve
-// exatamente as safras que o usuário marcou nos chips. adoptSafras = null => todas
-// (estado inicial e estado do botão "Todos").
 function adoptSafraMonths() {
   const uni = adoptSafraUniverse();
-  if (!adoptSafras) return new Set(uni);
-  const sel = uni.filter(m => adoptSafras.has(m));
-  return new Set(sel.length ? sel : uni);   // nenhuma marcada => não esvazia o gráfico
-}
-
-function renderAdoptSafraChips() {
-  const wrap = document.getElementById('adopt-safra-chips');
-  if (!wrap) return;
-  const uni = adoptSafraUniverse();
-  const on  = adoptSafraMonths();
-  const todas = !adoptSafras || adoptSafras.size === 0 || uni.every(m => adoptSafras.has(m));
-  wrap.innerHTML =
-    `<button class="asafra-chip all" data-asafra="__all__" title="Marcar ou desmarcar todas as safras">`
-    + `${todas ? '✓ Todos' : 'Todos'}</button>`
-    + uni.map(m => {
-        const [y, mo] = m.split('-');
-        const lbl = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+mo]
-                    + '/' + y.slice(2);
-        return `<button class="asafra-chip${on.has(m) ? ' on' : ''}" data-asafra="${m}">${lbl}</button>`;
-      }).join('');
-}
-
-function toggleAdoptSafra(m) {
-  const uni = adoptSafraUniverse();
-  if (m === '__all__') {
-    const todas = !adoptSafras || uni.every(x => adoptSafras.has(x));
-    adoptSafras = todas ? new Set() : null;     // null = todas; Set vazio = nenhuma
-  } else {
-    if (!adoptSafras) adoptSafras = new Set(uni);   // primeiro clique: parte de todas marcadas
-    if (adoptSafras.has(m)) adoptSafras.delete(m); else adoptSafras.add(m);
-  }
-  renderAdoptSafraChips();
-  renderAdoption();
+  const sel = adoptFilters['safra_enc'];
+  if (!sel || sel.size === 0) return new Set(uni);
+  const on = uni.filter(m => sel.has(m));
+  return new Set(on.length ? on : uni);
 }
 
 function buildAdoptFilters() {
@@ -1909,11 +1871,6 @@ try {
   // Aba % Adoption — controles próprios
   const abreak = document.getElementById('adopt-break');
   if (abreak) abreak.addEventListener('change', e => setAdoptBreak(e.target.value));
-  const asafraWrap = document.getElementById('adopt-safra-chips');
-  if (asafraWrap) asafraWrap.addEventListener('click', e => {
-    const b = e.target.closest('[data-asafra]');
-    if (b) toggleAdoptSafra(b.dataset.asafra);
-  });
   const adias = document.getElementById('adopt-dias');
   if (adias) adias.addEventListener('input', e => {
     adoptDias = +e.target.value;
