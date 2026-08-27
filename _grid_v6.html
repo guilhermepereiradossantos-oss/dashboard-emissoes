@@ -572,11 +572,21 @@ const C_RATING = {
   'Sem rating': '#808080',
   'null':       '#484F58',
 };
+// Cores do super grupo. 2026-08-27: ao renomear os grupos ('Sellers' -> 'Puro Sellers'/
+// 'Sellers - Mixto', 'Only Nav' -> 'Only Nav.') as chaves antigas pararam de casar e TUDO
+// caía no cinza do fallback — só o BAU tinha cor. Manter esta lista sincronizada com
+// SG_VALUES e com SUPER_GRUPO_SQL do push.
+// Família de seller em tons de verde (Puro claro -> escuro por porte; Mixto em teal) p/ ler
+// como um bloco só; Teste em roxo, que é a cor de "comparação" nos outros gráficos.
 const C_SG = {
-  'BAU':                '#58a6ff',
-  'Sellers':            '#3DFF91',
-  'Mar Aberto':         '#FF7F11',
-  'Only Nav':           '#F5C500',
+  'BAU':                '#58a6ff',   // azul — grupo de referência
+  'Puro Sellers':       '#3DFF91',   // verde (quando ainda não há split LT/SMB/Big)
+  'Puro Sellers LT':    '#3DFF91',
+  'Puro Sellers SMB':   '#1FB871',
+  'Puro Sellers Big':   '#0E7A4A',
+  'Sellers - Mixto':    '#2BD9C0',   // teal — seller, mas não puro
+  'Only Nav.':          '#F5C500',
+  'Teste':              '#A855F7',
   'Cuentas Canceladas': '#FF5A5A',
 };
 // App Ativo: MP na base → ML no topo → Sem App por último (null coalescido p/ 'Sem App' no push)
