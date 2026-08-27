@@ -134,6 +134,13 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 .daily-controls{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .daily-controls label{font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px}
 .daily-month-sel{background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
+/* Chips de safra da aba Adoption (multi-seleção dos últimos 12 meses + Todos) */
+.adopt-safra-chips{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;vertical-align:middle}
+.asafra-chip{background:#21262d;border:1px solid #30363d;color:#8b949e;padding:3px 9px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;font-family:inherit;line-height:1.5}
+.asafra-chip:hover{background:#30363d;color:#e6edf3}
+.asafra-chip.on{background:#58a6ff;border-color:#58a6ff;color:#0d1117}
+.asafra-chip.all{background:#21262d;border-color:#3DFF91;color:#3DFF91}
+.asafra-chip.all:hover{background:rgba(61,255,145,.14)}
 .daily-month-sel:focus{outline:none;border-color:#58a6ff}
 /* ADOPTION: slider de dias + filtro desabilitado pela quebra */
 #adopt-dias{accent-color:#58a6ff;cursor:pointer;width:200px;vertical-align:middle}
@@ -463,12 +470,10 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
         <option value="range_numero_propostas">Range Nº Propostas</option>
         <option value="FLAG_APP_ATIVO">App Ativo</option>
       </select>
+      <!-- 2026-08-27: era uma JANELA (6M/12M/Tudo). Agora é multi-seleção dos últimos 12 meses,
+           p/ escolher exatamente quais safras entram no gráfico, + botão Todos. -->
       <label style="margin-left:8px">Safra:</label>
-      <select class="daily-month-sel" id="adopt-safra">
-        <option value="6">6M</option>
-        <option value="12" selected>12M</option>
-        <option value="999">Tudo</option>
-      </select>
+      <span class="adopt-safra-chips" id="adopt-safra-chips"></span>
       <label style="margin-left:14px">Dias até conversão: <span id="adopt-dias-val">40</span></label>
       <input type="range" id="adopt-dias" min="0" max="40" value="40">
       <label style="margin-left:14px">Efeito EA:</label>
@@ -498,25 +503,31 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 // ════════════════════════════════════════════════════════════════
 const DOC_ID = '01KVDVV9XG2ZJ53YEEQRT1E704';
 
+// ════════════════════════════════════════════════════════════════
+// SUPER GRUPO — valores (2026-08-27). Espelha SUPER_GRUPO_SQL do push_datasets_to_grid.py.
+// Precedência lá: Teste > Sellers > Only Nav. > Cuentas Canceladas > BAU.
+// "Mar Aberto" saiu (absorvido em BAU). "Teste" = teste vigente (hoje piso mínimo C1/C2).
+// PENDENTE: quando `SEL_SEGMENT` entrar na base, 'Sellers' vira 'Sellers SMB' + 'Sellers LT'
+// — trocar aqui e em SELLER_SPLIT_SQL no push script (os dois têm de andar juntos).
+// ════════════════════════════════════════════════════════════════
+const SG_VALUES = ['BAU', 'Sellers', 'Only Nav.', 'Teste', 'Cuentas Canceladas'];
+
 const FILTER_DEFS = [
   { id: 'FLAG_TC',                       label: 'Tipo TC',
     values: ['1. TC Full','2. Micro TC'] },
-  { id: 'safra_enc',                     label: 'Safra',
-    values: [], dynamic: true },
+  // 2026-08-27 (pedido do usuario): removidos os filtros Safra, Canal, Uso CC pré-TC e
+  // Cancel. no mês enc. das abas Encendidos e Emissões (não estavam sendo usados).
+  // `canal_aquisicao` CONTINUA na query — alimenta o gráfico de share por canal da aba
+  // Emissões (em-chart-canal); só o filtro saiu. Já `FLAG_USO_CC_ANT_ENC_TC` e
+  // `status_cancelada_no_mes_de_encendido` saíram também da query (só existiam p/ o filtro).
   { id: 'FLAG_REENCENDIDO',              label: 'Reencendido',
     values: ['1. Primeiro Encendido','2. Reencendido'] },
   { id: 'FLAG_NISE',                     label: 'NISE',
     values: ['1. Bronze','2. Silver','3. Gold','4. Platinum','5. Nulo','0. SELLER'] },
-  { id: 'canal_aquisicao',               label: 'Canal',
-    values: [], dynamic: true },
-  { id: 'FLAG_USO_CC_ANT_ENC_TC',        label: 'Uso CC pré-TC',
-    values: ['1. Ativos Ate 30','3. Ativos Ate 90','5. Ativos Ate 180','6. Ativos > 180','4. Sem Uso de CC antes da contratacao TC'] },
   { id: 'FLAG_APP_ATIVO',                label: 'App Ativo',
     values: ['1. MP','2. MP y ML','3. ML','Sem App'] },
-  { id: 'status_cancelada_no_mes_de_encendido', label: 'Cancel. no mês enc.',
-    values: ['true','false'] },
   { id: 'super_grupo',                   label: 'Super Grupo',
-    values: ['BAU','Sellers','Mar Aberto','Only Nav','Cuentas Canceladas'] },
+    values: SG_VALUES },
   { id: 'rating_tc_grp',                 label: 'Rating TC',
     values: ['A1','A2','A3','B1','B2','B3','C1','C2','C3','C','D-J','Sem rating'] },
 ];
@@ -871,14 +882,12 @@ async function loadAllDatasets() {
     _ds_nprop_emi = fromColumnar(npropEmi);
     _ds_adoption  = fromColumnar(adoption);
     if (typeof buildAdoptFilters === 'function') buildAdoptFilters();
+    // chips de safra da Adoption dependem do dataset já carregado (27/08)
+    if (typeof renderAdoptSafraChips === 'function') renderAdoptSafraChips();
 
-    // Populate dynamic filters (safra_enc, canal_aquisicao)
-    const safras = uniqueSorted(_ds_enc, 'safra_enc').sort((a,b) => b.localeCompare(a));
-    const canais = uniqueSorted(_ds_enc, 'canal_aquisicao');
-    const safraDef = FILTER_DEFS.find(d => d.id === 'safra_enc');
-    if (safraDef) safraDef.values = safras.slice(0, 13);
-    const canalDef = FILTER_DEFS.find(d => d.id === 'canal_aquisicao');
-    if (canalDef) canalDef.values = canais;
+    // 2026-08-27: os filtros dinâmicos Safra e Canal foram removidos das abas Encendidos e
+    // Emissões, então não há mais nada p/ popular aqui (os defs deixaram de existir).
+    // `canal_aquisicao` segue na query e alimenta o gráfico de share da aba Emissões.
 
     buildFilterBar();
     renderActiveTab();
@@ -1283,7 +1292,7 @@ const DAILY_TC_MAP = { full: '1. TC Full', micro: '2. Micro TC', todos: null };
 const DAILY_TC_LABEL = { full: 'TC Full', micro: 'Micro TC', todos: 'Todos (TC Full + Micro)' };
 
 // Ordem de empilhamento dos super grupos no gráfico diário (mesma do C_SG)
-const DAILY_SG_ORDER = ['BAU', 'Sellers', 'Mar Aberto', 'Only Nav', 'Cuentas Canceladas'];
+const DAILY_SG_ORDER = SG_VALUES;
 
 function onDailyMonthChange() {
   const safra = document.getElementById('enc-daily-month-sel').value;
@@ -1495,7 +1504,7 @@ const ADOPT_ORDERS = {
   FLAG_TC: ['1. TC Full', '2. Micro TC'],
   FLAG_NISE: ['1. Bronze', '2. Silver', '3. Gold', '4. Platinum', '5. Nulo', '0. SELLER'],
   rating_tc_grp: RATING_ORDER,
-  super_grupo: ['BAU', 'Sellers', 'Mar Aberto', 'Only Nav', 'Cuentas Canceladas'],
+  super_grupo: SG_VALUES,
   range_numero_propostas: ORDER_NPROP,
   FLAG_APP_ATIVO: ORDER_APP,
 };
@@ -1504,20 +1513,61 @@ const ADOPT_FILTER_DEFS = [
   { id: 'FLAG_TC',                label: 'Tipo TC',            values: ['1. TC Full', '2. Micro TC'] },
   { id: 'FLAG_NISE',             label: 'Nise',               values: ['1. Bronze', '2. Silver', '3. Gold', '4. Platinum', '5. Nulo', '0. SELLER'] },
   { id: 'rating_tc_grp',         label: 'Rating TC',          values: RATING_ORDER },
-  { id: 'super_grupo',           label: 'Grupo Especial',     values: ['BAU', 'Sellers', 'Mar Aberto', 'Only Nav', 'Cuentas Canceladas'] },
-  { id: 'range_numero_propostas',label: 'Range Nº Propostas', values: ORDER_NPROP },
-  { id: 'FLAG_APP_ATIVO',        label: 'App Ativo',          values: ORDER_APP },
+  { id: 'super_grupo',           label: 'Grupo Especial',     values: SG_VALUES },
 ];
-let adoptBreak = '__total__', adoptDias = 40, adoptSafraN = 12;
+let adoptBreak = '__total__', adoptDias = 40;
+// adoptSafras: null = todas as safras; Set = exatamente as marcadas nos chips (27/08)
+let adoptSafras = null;
 let adoptFilters = {};
 let adoptExclEA = false;   // false = Com EA (inclui tudo); true = Sem EA (remove canal 'EA - MP')
 let adoptMode = 'safra';   // 'safra' = cohort (cc/n_enc por safra); 'mes' = fluxo (n_conv mês ÷ n_enc mês)
 
+// Últimos 12 meses disponíveis no dataset (asc). Base dos chips de safra.
+function adoptSafraUniverse() {
+  if (!_ds_adoption) return [];
+  const all = [...new Set(_ds_adoption.map(r => r.safra_enc))]
+    .filter(m => m && m !== 'null').sort();
+  return all.slice(-12);
+}
+
+// 2026-08-27: antes devolvia uma JANELA dos últimos N meses (adoptSafraN). Agora devolve
+// exatamente as safras que o usuário marcou nos chips. adoptSafras = null => todas
+// (estado inicial e estado do botão "Todos").
 function adoptSafraMonths() {
-  if (!_ds_adoption) return new Set();
-  const all = [...new Set(_ds_adoption.map(r => r.safra_enc))].sort(); // asc
-  const take = adoptSafraN >= 999 ? all.length : adoptSafraN;
-  return new Set(all.slice(-take));
+  const uni = adoptSafraUniverse();
+  if (!adoptSafras) return new Set(uni);
+  const sel = uni.filter(m => adoptSafras.has(m));
+  return new Set(sel.length ? sel : uni);   // nenhuma marcada => não esvazia o gráfico
+}
+
+function renderAdoptSafraChips() {
+  const wrap = document.getElementById('adopt-safra-chips');
+  if (!wrap) return;
+  const uni = adoptSafraUniverse();
+  const on  = adoptSafraMonths();
+  const todas = !adoptSafras || adoptSafras.size === 0 || uni.every(m => adoptSafras.has(m));
+  wrap.innerHTML =
+    `<button class="asafra-chip all" data-asafra="__all__" title="Marcar ou desmarcar todas as safras">`
+    + `${todas ? '✓ Todos' : 'Todos'}</button>`
+    + uni.map(m => {
+        const [y, mo] = m.split('-');
+        const lbl = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+mo]
+                    + '/' + y.slice(2);
+        return `<button class="asafra-chip${on.has(m) ? ' on' : ''}" data-asafra="${m}">${lbl}</button>`;
+      }).join('');
+}
+
+function toggleAdoptSafra(m) {
+  const uni = adoptSafraUniverse();
+  if (m === '__all__') {
+    const todas = !adoptSafras || uni.every(x => adoptSafras.has(x));
+    adoptSafras = todas ? new Set() : null;     // null = todas; Set vazio = nenhuma
+  } else {
+    if (!adoptSafras) adoptSafras = new Set(uni);   // primeiro clique: parte de todas marcadas
+    if (adoptSafras.has(m)) adoptSafras.delete(m); else adoptSafras.add(m);
+  }
+  renderAdoptSafraChips();
+  renderAdoption();
 }
 
 function buildAdoptFilters() {
@@ -1859,8 +1909,11 @@ try {
   // Aba % Adoption — controles próprios
   const abreak = document.getElementById('adopt-break');
   if (abreak) abreak.addEventListener('change', e => setAdoptBreak(e.target.value));
-  const asafra = document.getElementById('adopt-safra');
-  if (asafra) asafra.addEventListener('change', e => { adoptSafraN = +e.target.value; renderAdoption(); });
+  const asafraWrap = document.getElementById('adopt-safra-chips');
+  if (asafraWrap) asafraWrap.addEventListener('click', e => {
+    const b = e.target.closest('[data-asafra]');
+    if (b) toggleAdoptSafra(b.dataset.asafra);
+  });
   const adias = document.getElementById('adopt-dias');
   if (adias) adias.addEventListener('input', e => {
     adoptDias = +e.target.value;

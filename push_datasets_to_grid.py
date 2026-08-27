@@ -49,7 +49,11 @@ LIM_DOC_ID  = "01KYRJTVSJEFPBZV41XY0X36H4"   # doc Limite TCMP (datasets limite_
 # Projeto de EXECUCAO/billing dos jobs BQ. Usar o furyid do usuario (nao o meli-bi-data
 # compartilhado) p/ evitar "max jobs queued per project" na fila lotada do projeto comum.
 # Os jobs leem meli-bi-data.* cross-project normalmente.
-PROJECT_ID = "ddme000725-g9rtvpqr28z-furyid"
+# 2026-08-27: billing trocado de ...725... para ...341... O ...725... voltou a travar por quota:
+# jobs entram e ficam em PENDING indefinidamente (nao falham, so nao saem da fila). Foi o que
+# derrubou a tarefa agendada de 09:30 (rodou 14 min, log ficou so com o cabecalho) e travou o push
+# manual em 20 min com 2 jobs empilhados. O ...341... e o padrao ja documentado como estavel.
+PROJECT_ID = "ddme000341-ox7qb27ldi8-furyid"
 GRID_HOST = "https://grid.melioffice.com"
 TMP_DIR = Path(r"C:\Users\GPEREIRADOSS\grid_tmp")
 TMP_DIR.mkdir(exist_ok=True)
@@ -69,22 +73,64 @@ COLUMNAR = {"mensal_encendidos", "mensal_emissoes", "nprop_enc", "nprop_emi"}
 # Caso de "string -> numero" depois de bq query --format=prettyjson
 NUM_COLS = {"n_enc", "n_primo", "n_reenc", "n_conv", "soma_limite", "soma_maxsaldo"}
 
+# ════════════════════════════════════════════════════════════════════════════════════════
+# SUPER GRUPO — definicao UNICA (2026-08-27, pedido do usuario)
+#
+# Antes esta CASE estava COPIADA em 6 queries; qualquer mudanca tinha 6 chances de divergir.
+# Agora e uma constante interpolada em todas (inclusive nas de limite, que passaram a ter
+# super_grupo).
+#
+# Grupos novos: BAU · Sellers SMB · Sellers LT · Only Nav. · Teste · Cuentas Canceladas
+#   - saiu "Mar Aberto" -> absorvido em BAU (decisao do usuario 27/08)
+#   - entrou "Teste": marcacao de teste vigente. Hoje = teste piso minimo C1/C2
+#     (FL_TEST_AB_C1_C2 = 1, via view RBA_TESTE_AB_MENSAL). Quando entrar outro teste, e
+#     aqui que se troca a condicao.
+#
+# PRECEDENCIA (decisao do usuario): Teste ganha de TODOS. Assim o grupo "Teste" fecha
+# exatamente com o tamanho do teste (583.676 QTDE em ago/26) e da p/ isolar o efeito.
+# Depois: Sellers > Only Nav > Cuentas Canceladas > BAU.
+#
+# UNIVERSO DE SELLER: `PURO_SELLERS = 'SELLER'` (= CUST_TYPE_PYL), conforme o print do
+# usuario (27/08). NAO e FLAG_NISE = '0. SELLER', que era o usado antes. Validado
+# reproduzindo o print: jul/26 + TC Full + PURO_SELLERS='SELLER' da 252.144 QTDE, exatamente
+# o "Total geral" do Tableau dele, grupo a grupo.
+#
+# ⚠️ SMB x LT — PENDENTE DE UMA COLUNA NA BASE (nao e ambiguidade, e falta de dado):
+# A separacao correta e `SEL_SEGMENT` do SCORE_PROPOSTAS_CCARD, que e limpa:
+#     LONGTAIL (LOLO + HILO) | SMB (SMB1/2/3) | BIG SELLERS (LM1/LM2/CORP)
+# Mas `SEL_SEGMENT` NAO existe em base_projecao_Gui, e a base e AGREGADA (sem CCARD_PROP_ID),
+# entao nao da p/ join aqui. Precisa entrar na query principal — que ja faz join nessa tabela
+# (alias `bureaus`), logo e 1 linha: adicionar `bureaus.SEL_SEGMENT`.
+# Descartado: raspar 'SMB'/'LT' do texto do grupo_especial — cobre so 33% dos sellers
+# (jul/26: LT 27,4% + SMB 5,3%; PJ CHA fica 44,3% sem marca e outros 23,1% tambem).
+# Enquanto a coluna nao chegar, seller fica em "Sellers" (grupo unico).
+# ════════════════════════════════════════════════════════════════════════════════════════
+
+# <<< UNICO PONTO A TROCAR quando `SEL_SEGMENT` entrar na base >>>
+# Trocar por:
+#   SELLER_SPLIT_SQL = """CASE
+#         WHEN SEL_SEGMENT = 'SMB' THEN 'Sellers SMB'
+#         WHEN SEL_SEGMENT = 'LONGTAIL' THEN 'Sellers LT'
+#         ELSE 'Sellers Outros' END"""   -- BIG SELLERS = 925 em jul/26, decidir com o usuario
+# e acrescentar 'Sellers SMB'/'Sellers LT' em SG_VALUES nos HTMLs.
+SELLER_SPLIT_SQL = "'Sellers'"
+
+SUPER_GRUPO_SQL = f"""CASE
+    WHEN FL_TEST_AB_C1_C2 = 1 THEN "Teste"
+    WHEN PURO_SELLERS = "SELLER" THEN {SELLER_SPLIT_SQL}
+    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav."
+    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
+    ELSE "BAU"
+  END"""
+
 QUERIES = {
-    "mensal_encendidos": """
+    "mensal_encendidos": f"""
 SELECT
   FORMAT_DATE("%Y-%m", DT_ENCENDIDO) AS safra_enc,
   FLAG_TC, FLAG_REENCENDIDO, FLAG_NISE,
   FLAG_CANAL_AQUISICAO AS canal_aquisicao,
-  FLAG_USO_CC_ANT_ENC_TC,
   COALESCE(FLAG_APP_ATIVO, "Sem App") AS FLAG_APP_ATIVO,
-  status_cancelada_no_mes_de_encendido,
-  CASE
-    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers"
-    WHEN grupo_especial LIKE "%Mar Aberto%" THEN "Mar Aberto"
-    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav"
-    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
-    ELSE "BAU"
-  END AS super_grupo,
+  {SUPER_GRUPO_SQL} AS super_grupo,
   CASE
     WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
     WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
@@ -101,21 +147,13 @@ FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
 WHERE DT_ENCENDIDO >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MONTH)
 GROUP BY ALL
 """,
-    "mensal_emissoes": """
+    "mensal_emissoes": f"""
 SELECT
   FORMAT_DATE("%Y-%m", DT_CONV) AS safra_conv,
   FLAG_TC, FLAG_REENCENDIDO, FLAG_NISE,
   FLAG_CANAL_AQUISICAO AS canal_aquisicao,
-  FLAG_USO_CC_ANT_ENC_TC,
   COALESCE(FLAG_APP_ATIVO, "Sem App") AS FLAG_APP_ATIVO,
-  status_cancelada_no_mes_de_encendido,
-  CASE
-    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers"
-    WHEN grupo_especial LIKE "%Mar Aberto%" THEN "Mar Aberto"
-    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav"
-    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
-    ELSE "BAU"
-  END AS super_grupo,
+  {SUPER_GRUPO_SQL} AS super_grupo,
   CASE
     WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
     WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
@@ -130,18 +168,12 @@ WHERE FLAG_CONVERSAO = "1. Convertido"
   AND DT_CONV >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MONTH)
 GROUP BY ALL
 """,
-    "diario": """
+    "diario": f"""
 SELECT
   CAST(DT_ENCENDIDO AS STRING) AS dia_enc,
   FORMAT_DATE("%Y-%m", DT_ENCENDIDO) AS safra_enc,
   FLAG_TC,
-  CASE
-    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers"
-    WHEN grupo_especial LIKE "%Mar Aberto%" THEN "Mar Aberto"
-    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav"
-    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
-    ELSE "BAU"
-  END AS super_grupo,
+  {SUPER_GRUPO_SQL} AS super_grupo,
   SUM(QTDE) AS n_enc
 FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
 WHERE DT_ENCENDIDO >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MONTH)
@@ -151,17 +183,12 @@ ORDER BY dia_enc
     # Datasets Nº Propostas — enriquecidos c/ dims-chave p/ reagir aos filtros do dash
     # (NISE, Rating TC, Super Grupo, Canal, Tipo TC, Safra). NAO carregam Reencendido/Uso CC/
     # App/Cancel (decisao de peso do usuario 28/07). Columnar. Front (filtrar) reage sozinho.
-    "nprop_enc": """
+    "nprop_enc": f"""
 SELECT
   FORMAT_DATE("%Y-%m", DT_ENCENDIDO) AS safra_enc,
   FLAG_TC, FLAG_NISE,
   FLAG_CANAL_AQUISICAO AS canal_aquisicao,
-  CASE
-    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers"
-    WHEN grupo_especial LIKE "%Mar Aberto%" THEN "Mar Aberto"
-    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav"
-    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
-    ELSE "BAU" END AS super_grupo,
+  {SUPER_GRUPO_SQL} AS super_grupo,
   CASE
     WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
     WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
@@ -175,17 +202,12 @@ FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
 WHERE DT_ENCENDIDO >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MONTH)
 GROUP BY ALL
 """,
-    "nprop_emi": """
+    "nprop_emi": f"""
 SELECT
   FORMAT_DATE("%Y-%m", DT_CONV) AS safra_conv,
   FLAG_TC, FLAG_NISE,
   FLAG_CANAL_AQUISICAO AS canal_aquisicao,
-  CASE
-    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers"
-    WHEN grupo_especial LIKE "%Mar Aberto%" THEN "Mar Aberto"
-    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav"
-    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
-    ELSE "BAU" END AS super_grupo,
+  {SUPER_GRUPO_SQL} AS super_grupo,
   CASE
     WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
     WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
@@ -216,13 +238,7 @@ QUERIES["adoption"] = f"""
 SELECT
   FORMAT_DATE("%Y-%m", DT_ENCENDIDO) AS safra_enc,
   FLAG_TC, FLAG_NISE,
-  CASE
-    WHEN FLAG_NISE = "0. SELLER" THEN "Sellers"
-    WHEN grupo_especial LIKE "%Mar Aberto%" THEN "Mar Aberto"
-    WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav"
-    WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"
-    ELSE "BAU"
-  END AS super_grupo,
+  {SUPER_GRUPO_SQL} AS super_grupo,
   CASE
     WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
     WHEN rating_v7 = "B1" THEN "B1" WHEN rating_v7 = "B2" THEN "B2" WHEN rating_v7 IN ("B","B3") THEN "B3"
@@ -538,7 +554,7 @@ SELECT
   FLAG_TC, FLAG_NISE,
   {_LIM_RAT} AS rating,
   FLAG_CONVERSAO, FLAG_REENCENDIDO,
-  COALESCE(FLAG_APP_ATIVO,'Sem App') AS FLAG_APP_ATIVO,
+  {SUPER_GRUPO_SQL} AS super_grupo,
   SUM(QTDE) AS n, ROUND(SUM(soma_limite)) AS soma_limite,
   ROUND(SUM(max_saldo_r)) AS soma_maxsaldo
 FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
@@ -551,7 +567,7 @@ SELECT
   FLAG_TC, FLAG_NISE,
   {_LIM_RAT} AS rating,
   FLAG_REENCENDIDO,
-  COALESCE(FLAG_APP_ATIVO,'Sem App') AS FLAG_APP_ATIVO,
+  {SUPER_GRUPO_SQL} AS super_grupo,
   SUM(QTDE) AS n, ROUND(SUM(soma_limite)) AS soma_limite,
   ROUND(SUM(max_saldo_r)) AS soma_maxsaldo
 FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`

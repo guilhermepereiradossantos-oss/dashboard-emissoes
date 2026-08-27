@@ -126,6 +126,10 @@ var LIM = (function(){
   var C_RAT={'A1':'#BF9000','A2':'#F5C500','A3':'#FFEE7A','B1':'#374D6E','B2':'#4A6796','B3':'#4C7FD6','C1':'#C77B3C','C2':'#9C5A1E','C3':'#6E3D10','D-J':'#484F58','Sem rating':'#808080','Outros':'#667'};
   var ORD_NISE=['0. SELLER','1. Bronze','2. Silver','3. Gold','4. Platinum'];
   var ORD_RAT=['A1','A2','A3','B1','B2','B3','C1','C2','C3','D-J','Sem rating','Outros'];
+  // Super Grupo (2026-08-27) — mesma lista/ordem do SG_VALUES no _grid_v6.html.
+  // Quando SEL_SEGMENT entrar na base, 'Sellers' vira 'Sellers SMB' + 'Sellers LT' aqui também.
+  var ORD_SG=['BAU','Sellers','Only Nav.','Teste','Cuentas Canceladas'];
+  var C_SG={'BAU':'#2E4976','Sellers':'#5B9BD5','Only Nav.':'#F5C500','Teste':'#A855F7','Cuentas Canceladas':'#854A04'};
   var LBL_NISE={'0. SELLER':'Seller','1. Bronze':'Bronze','2. Silver':'Silver','3. Gold':'Gold','4. Platinum':'Platinum'};
   var MES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   function fmtSafra(s){return MES[(+s.slice(5,7))-1]+'/'+s.slice(2,4);}
@@ -142,15 +146,18 @@ var LIM = (function(){
     {id:'FLAG_REENCENDIDO',label:'Reencendido',vals:['1. Primeiro Encendido','2. Reencendido']},
     {id:'rating',label:'Rating TC',vals:ORD_RAT},
     {id:'FLAG_NISE',label:'NISE',vals:ORD_NISE,fmt:function(v){return LBL_NISE[v]||v;}},
-    {id:'FLAG_APP_ATIVO',label:'App ativo',vals:['1. MP','2. MP y ML','3. ML','Sem App']}
+    // 2026-08-27: saiu 'App ativo' (não usado) e entrou 'Super Grupo' — filtro + quebra.
+    // ORD_SG espelha SUPER_GRUPO_SQL do push_datasets_to_grid.py (precedência
+    // Teste > Sellers > Only Nav. > Cuentas Canceladas > BAU).
+    {id:'super_grupo',label:'Super Grupo',vals:ORD_SG}
   ];
   var brk='total', baseMode='cohorte', sel={}, ENC=[], CONV=[], g1=null, g2=null, g3=null, aEnc=null, aConv=null, hidG1={}, hidG2={}, hidG3={}, openDD=null;
   FDEF.forEach(function(f){sel[f.id]=[];});
 
-  function keyOrder(){return brk==='total'?['Total']:brk==='nise'?ORD_NISE:ORD_RAT;}
-  function keyColor(k){return brk==='total'?AZUL:brk==='nise'?C_NISE[k]:C_RAT[k];}
+  function keyOrder(){return brk==='total'?['Total']:brk==='nise'?ORD_NISE:brk==='sg'?ORD_SG:ORD_RAT;}
+  function keyColor(k){return brk==='total'?AZUL:brk==='nise'?C_NISE[k]:brk==='sg'?C_SG[k]:C_RAT[k];}
   function keyLabel(k){return brk==='nise'?(LBL_NISE[k]||k):k;}
-  function keyOf(r){return brk==='total'?'Total':brk==='nise'?r.FLAG_NISE:r.rating;}
+  function keyOf(r){return brk==='total'?'Total':brk==='nise'?r.FLAG_NISE:brk==='sg'?r.super_grupo:r.rating;}
   function convMode(){if(baseMode==='mes')return 'conv';var s=sel[CONVKEY]||[];if(s.length===1&&s[0]==='1. Convertido')return 'conv';if(s.length===1&&s[0]==='2. Nao Convertido')return 'nao';return 'all';}
   function filt(rows){return rows.filter(function(r){for(var i=0;i<FDEF.length;i++){var f=FDEF[i];if(f.id===CONVKEY)continue;var s=sel[f.id];if(s.length){var v=(f.id==='safra')?r.safra:(f.id==='rating')?r.rating:r[f.id];if(s.indexOf(v)<0)return false;}}return true;});}
   function aggEnc(rows){var sf=[];rows.forEach(function(r){if(sf.indexOf(r.safra)<0)sf.push(r.safra);});sf.sort();var g={};rows.forEach(function(r){var k=keyOf(r);g[k]=g[k]||{nA:{},nC:{},lA:{},lC:{},mA:{},mC:{}};var s=r.safra,n=+r.n,l=+r.soma_limite,mx=+r.soma_maxsaldo||0,c=(r.FLAG_CONVERSAO==='1. Convertido');g[k].nA[s]=(g[k].nA[s]||0)+n;g[k].lA[s]=(g[k].lA[s]||0)+l;g[k].mA[s]=(g[k].mA[s]||0)+mx;if(c){g[k].nC[s]=(g[k].nC[s]||0)+n;g[k].lC[s]=(g[k].lC[s]||0)+l;g[k].mC[s]=(g[k].mC[s]||0)+mx;}});return {sf:sf,g:g};}
@@ -227,6 +234,22 @@ var LIM = (function(){
       btn.innerHTML=f.label+' <span style="opacity:.6">▾</span>'+((sel[f.id]&&sel[f.id].length)?' <span class="cnt">'+sel[f.id].length+'</span>':'');
       var pan=document.createElement('div');pan.className='fpanel';
       if(openDD===f.id)pan.classList.add('open');
+      // 2026-08-27 (pedido do usuario): atalho "Todos / Nenhum" no topo de cada caixinha.
+      // Marcar todos = limpar a selecao (lista vazia ja significa "sem filtro" no filt()),
+      // assim nao fica um filtro gigante de N itens preso no estado.
+      (function(){
+        var act=document.createElement('div');
+        act.style.cssText='display:flex;gap:6px;padding:2px 4px 6px;border-bottom:1px solid #21262d;margin-bottom:4px';
+        function mk(txt,fn){var b=document.createElement('button');b.textContent=txt;
+          b.style.cssText='flex:1;background:#21262d;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:4px 0;font-size:11px;cursor:pointer;font-family:inherit';
+          b.onmouseover=function(){b.style.color='#e6edf3';};b.onmouseout=function(){b.style.color='#8b949e';};
+          b.onclick=function(e){e.stopPropagation();fn();openDD=f.id;redraw();buildBar();};return b;}
+        // Todos = marca todas as caixas; Nenhum = desmarca todas. Neste modelo lista
+        // vazia significa "sem filtro" (mostra tudo), entao Nenhum volta ao neutro.
+        act.appendChild(mk('Todos',  function(){sel[f.id]=f.vals.slice();}));
+        act.appendChild(mk('Nenhum', function(){sel[f.id]=[];}));
+        pan.appendChild(act);
+      })();
       f.vals.forEach(function(v){var lab=document.createElement('label');var cb=document.createElement('input');cb.type='checkbox';cb.checked=(sel[f.id]||[]).indexOf(v)>=0;cb.onchange=function(){if(cb.checked)sel[f.id].push(v);else sel[f.id]=sel[f.id].filter(function(x){return x!==v;});openDD=f.id;redraw();buildBar();};lab.appendChild(cb);lab.appendChild(document.createTextNode(' '+(f.fmt?f.fmt(v):v)));pan.appendChild(lab);});
       btn.onclick=function(e){e.stopPropagation();var willOpen=(openDD!==f.id);document.querySelectorAll('.fpanel').forEach(function(x){x.classList.remove('open');});openDD=willOpen?f.id:null;if(willOpen)pan.classList.add('open');};
       dd.appendChild(btn);dd.appendChild(pan);bar.appendChild(dd);
@@ -240,7 +263,7 @@ var LIM = (function(){
     [['cohorte','Cohorte (encendido)'],['mes','Mês (emissão)']].forEach(function(o){var b=document.createElement('button');b.textContent=o[1];if(baseMode===o[0])b.className='on';b.onclick=function(){baseMode=o[0];buildBar();buildCtl();redraw();};tb.appendChild(b);});
     cb.appendChild(tb);w.appendChild(cb);
     var qb=document.createElement('div');qb.className='ctl';qb.innerHTML='<span>Quebra por</span>';
-    var s=document.createElement('select');s.className='brksel';[['total','Total'],['nise','NISE'],['rating','Rating TC']].forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];if(brk===o[0])op.selected=true;s.appendChild(op);});
+    var s=document.createElement('select');s.className='brksel';[['total','Total'],['nise','NISE'],['rating','Rating TC'],['sg','Super Grupo']].forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];if(brk===o[0])op.selected=true;s.appendChild(op);});
     s.onchange=function(){brk=s.value;hidG1={};hidG2={};hidG3={};redraw();};qb.appendChild(s);w.appendChild(qb);
   }
   function showError(m){var e=document.getElementById('errbanner');e.textContent=m;e.style.display='block';}
