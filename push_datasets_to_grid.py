@@ -80,7 +80,7 @@ NUM_COLS = {"n_enc", "n_primo", "n_reenc", "n_conv", "soma_limite", "soma_maxsal
 # Agora e uma constante interpolada em todas (inclusive nas de limite, que passaram a ter
 # super_grupo).
 #
-# Grupos novos: BAU · Sellers SMB · Sellers LT · Only Nav. · Teste · Cuentas Canceladas
+# Grupos: BAU · Puro Sellers (LT/SMB/Big) · Sellers - Mixto · Only Nav. · Teste · Cuentas Canceladas
 #   - saiu "Mar Aberto" -> absorvido em BAU (decisao do usuario 27/08)
 #   - entrou "Teste": marcacao de teste vigente. Hoje = teste piso minimo C1/C2
 #     (FL_TEST_AB_C1_C2 = 1, via view RBA_TESTE_AB_MENSAL). Quando entrar outro teste, e
@@ -99,13 +99,59 @@ NUM_COLS = {"n_enc", "n_primo", "n_reenc", "n_conv", "soma_limite", "soma_maxsal
 # Logo nao ha perda nem duplicacao; "Puro Sellers" vem antes so por ser o caso mais especifico.
 #
 # (Historico: em 27/08 cheguei a usar SO PURO_SELLERS, colapsando os dois num grupo "Sellers".
-# O split SMB x LT via SEL_SEGMENT, que estava pendente, deixou de ser necessario — o usuario
-# optou por Puro vs Mixto em vez de SMB vs LT.)
+# Depois o usuario pediu Puro vs Mixto E o split LT/SMB dentro de Puro — ver bloco abaixo.)
 # ════════════════════════════════════════════════════════════════════════════════════════
+
+# ── Split de Puro Sellers por segmento (LT / SMB / Big) ──────────────────────────────────
+# Fonte: `SEL_SEGMENT` da LK_MP_MAUS_SEGMENTATION (indicada pelo usuario). Essa tabela JA esta
+# no join da query principal (alias `seg`, de onde saem FLAG_SELLERS e PURO_SELLERS), entao
+# expor a coluna e 1 linha la: adicionar `seg.SEL_SEGMENT`.
+#
+# AUTO-DETECCAO: em vez de exigir que alguem lembre de virar uma flag aqui depois do rebuild,
+# o script checa no INFORMATION_SCHEMA se a coluna ja existe na base. Se existe, o split entra
+# sozinho; se nao, "Puro Sellers" fica como um grupo so. A checagem e metadata (barata).
+#
+# Por que NAO usar o texto do grupo_especial (validado em 27/08 contra o SEL_SEGMENT):
+#   'PF LT'  -> 99,5% realmente LONGTAIL  (bom)
+#   'PF SMB' -> 88,9% realmente SMB       (10% eram LONGTAIL)
+#   'PJ'     -> NAO e segmento: 63,5% LONGTAIL + 35,8% SMB. E 44% dos Puro Sellers.
+# O texto do grupo classificaria so ~33% dos sellers e ainda erraria no PJ. O SEL_SEGMENT
+# cobre 100% do encendido de sellers (ago/26: LONGTAIL 201.353 / SMB 53.607 / BIG SELLERS 939,
+# nenhum nulo).
+def _base_tem_coluna(col: str) -> bool:
+    sql = ("SELECT COUNT(*) AS n FROM "
+           "`meli-bi-data.SBOX_CREDITSTC.INFORMATION_SCHEMA.COLUMNS` "
+           "WHERE table_name = 'base_projecao_Gui' AND column_name = '" + col + "'")
+    try:
+        r = subprocess.run(
+            [BQ_CMD, "query", "--project_id=" + PROJECT_ID, "--use_legacy_sql=false",
+             "--format=csv", "--max_rows=5"],
+            input=sql, capture_output=True, text=True, shell=False,
+            encoding="utf-8", timeout=180)
+        if r.returncode != 0:
+            return False
+        linhas = [l for l in r.stdout.strip().splitlines() if l.strip()]
+        return len(linhas) > 1 and linhas[-1].strip() not in ("0", "")
+    except Exception:
+        return False   # na duvida, mantem o comportamento atual (grupo unico)
+
+
+TEM_SEL_SEGMENT = _base_tem_coluna("SEL_SEGMENT")
+_SPLIT = (
+    'CASE\n'
+    '      WHEN SEL_SEGMENT = "LONGTAIL"    THEN "Puro Sellers LT"\n'
+    '      WHEN SEL_SEGMENT = "SMB"         THEN "Puro Sellers SMB"\n'
+    '      WHEN SEL_SEGMENT = "BIG SELLERS" THEN "Puro Sellers Big"\n'
+    '      ELSE "Puro Sellers" END'
+)
+PURO_SELLERS_SQL = _SPLIT if TEM_SEL_SEGMENT else '"Puro Sellers"'
+print("[super_grupo] SEL_SEGMENT na base: "
+      + ("SIM -> Puro Sellers separado em LT/SMB/Big" if TEM_SEL_SEGMENT
+         else "NAO -> Puro Sellers como grupo unico"))
 
 SUPER_GRUPO_SQL = f"""CASE
     WHEN FL_TEST_AB_C1_C2 = 1 THEN "Teste"
-    WHEN PURO_SELLERS = "SELLER" THEN "Puro Sellers"
+    WHEN PURO_SELLERS = "SELLER" THEN {PURO_SELLERS_SQL}
     WHEN FLAG_NISE = "0. SELLER" THEN "Sellers - Mixto"
     WHEN grupo_especial = "TEST REACH-TEST NO ECOSISTEMATICOS" THEN "Only Nav."
     WHEN grupo_especial LIKE "%CANCELADAS%" OR status_cancelada_anteriormente = TRUE THEN "Cuentas Canceladas"

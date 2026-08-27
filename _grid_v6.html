@@ -499,7 +499,10 @@ const DOC_ID = '01KVDVV9XG2ZJ53YEEQRT1E704';
 // Sellers em 2 categorias: 'Puro Sellers' (PURO_SELLERS='SELLER') e 'Sellers - Mixto'
 // (FLAG_NISE='0. SELLER', a marcação antiga). Partição limpa, sem sobreposição.
 // ════════════════════════════════════════════════════════════════
-const SG_VALUES = ['BAU', 'Puro Sellers', 'Sellers - Mixto', 'Only Nav.', 'Teste', 'Cuentas Canceladas'];
+// 'Puro Sellers' aparece como grupo unico ATE o SEL_SEGMENT entrar na base; a partir dai o
+// push passa a emitir LT/SMB/Big automaticamente. Os 4 rotulos ficam listados p/ o filtro
+// funcionar nos dois estados sem republicar o HTML (o(s) sem dado so nao aparece(m) no grafico).
+const SG_VALUES = ['BAU', 'Puro Sellers', 'Puro Sellers LT', 'Puro Sellers SMB', 'Puro Sellers Big', 'Sellers - Mixto', 'Only Nav.', 'Teste', 'Cuentas Canceladas'];
 
 const FILTER_DEFS = [
   { id: 'FLAG_TC',                       label: 'Tipo TC',
