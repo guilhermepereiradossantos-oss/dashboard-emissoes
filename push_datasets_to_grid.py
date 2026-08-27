@@ -614,13 +614,30 @@ for _qk in LIM_QUERIES:
 
 def main():
     # Push seletivo (one-off):
-    #   python push_datasets_to_grid.py                 -> tudo (5 datasets -> DOC_ID, projecao -> PROJ_DOC_ID)
+    #   python push_datasets_to_grid.py                 -> tudo
     #   python push_datasets_to_grid.py projecao         -> so projecao (rebuild) -> PROJ_DOC_ID
     #   python push_datasets_to_grid.py projecao --no-rebuild  -> so projecao reusando _proj_data.json
+    #   python push_datasets_to_grid.py limite           -> so limite_enc + limite_conv
+    #   python push_datasets_to_grid.py --only=adoption  -> SO esse dataset (aceita lista:
+    #                                                       --only=adoption,diario)
+    #
+    # 2026-08-27: `--only` criado porque recuperar UM dataset que falhou obrigava re-rodar o
+    # push inteiro (9 queries + 9 uploads, ~12 min) — e nesse meio tempo um job do BQ podia
+    # entrar em fila e travar tudo de novo. Aconteceu 3x seguidas com o `adoption`.
     args = [a for a in sys.argv[1:]]
     only_proj = "projecao" in args
     only_lim = "limite" in args
     rebuild_proj = "--no-rebuild" not in args
+    only_names = set()
+    for a in args:
+        if a.startswith("--only="):
+            only_names |= {x.strip() for x in a.split("=", 1)[1].split(",") if x.strip()}
+    if only_names:
+        desconhecidos = only_names - set(QUERIES) - set(LIM_QUERIES) - {"projecao"}
+        if desconhecidos:
+            print(f"  [ERRO] dataset(s) desconhecido(s) em --only: {sorted(desconhecidos)}")
+            print(f"         validos: {sorted(set(QUERIES) | set(LIM_QUERIES) | {'projecao'})}")
+            return 1
 
     print(f"[push_datasets] Start {time.strftime('%Y-%m-%d %H:%M:%S')}"
           + (f" (SO projecao, rebuild={rebuild_proj})" if only_proj else ""))
@@ -629,6 +646,8 @@ def main():
     if not only_proj and not only_lim:
         exclude_cur = not current_month_batched()  # esconde mês vigente das abas v6 até o batch
         for name, sql in QUERIES.items():  # 6 datasets -> doc principal (Emissoes+Encendidos)
+            if only_names and name not in only_names:
+                continue
             if exclude_cur and name in EXCL_COL:
                 # Mês vigente escondido (pre-batch): (1) estende a janela 1 mês a mais p/ trás
                 # (12->13 meses) p/ manter o YoY do ÚLTIMO mês exibido — senão o comparativo YoY
@@ -672,6 +691,8 @@ def main():
         # YoY vira Jul/25 em vez de Ago/25). Quando ago bate o batch, volta ao padrao (Ago/25 + ..Ago/26).
         _lim_prebatch = not current_month_batched()
         for name, sql in LIM_QUERIES.items():
+            if only_names and name not in only_names:
+                continue
             if _lim_prebatch:
                 sql = (sql
                     .replace("INTERVAL 12 MONTH", "INTERVAL 13 MONTH")
@@ -698,7 +719,7 @@ def main():
                 print(f"  Error body: {res['body']}")
                 overall_ok = False
 
-    if only_lim:
+    if only_lim or (only_names and "projecao" not in only_names):
         print(f"\n[push_datasets] End {time.strftime('%Y-%m-%d %H:%M:%S')} | overall={'OK' if overall_ok else 'FAIL'}")
         return
 
