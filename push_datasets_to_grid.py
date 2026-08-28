@@ -136,18 +136,19 @@ def _base_tem_coluna(col: str) -> bool:
         return False   # na duvida, mantem o comportamento atual (grupo unico)
 
 
-TEM_SEL_SEGMENT = _base_tem_coluna("SEL_SEGMENT")
-_SPLIT = (
-    'CASE\n'
-    '      WHEN SEL_SEGMENT = "LONGTAIL"    THEN "Puro Sellers LT"\n'
-    '      WHEN SEL_SEGMENT = "SMB"         THEN "Puro Sellers SMB"\n'
-    '      WHEN SEL_SEGMENT = "BIG SELLERS" THEN "Puro Sellers Big"\n'
-    '      ELSE "Puro Sellers" END'
-)
-PURO_SELLERS_SQL = _SPLIT if TEM_SEL_SEGMENT else '"Puro Sellers"'
-print("[super_grupo] SEL_SEGMENT na base: "
-      + ("SIM -> Puro Sellers separado em LT/SMB/Big" if TEM_SEL_SEGMENT
-         else "NAO -> Puro Sellers como grupo unico"))
+# A coluna entrou na base como SEGMENTO_SELLERS (o usuario aliasou assim o seg.SEL_SEGMENT).
+# Detecta os dois nomes p/ nao depender do alias escolhido num rebuild futuro.
+COL_SEGMENTO = next((c for c in ("SEGMENTO_SELLERS", "SEL_SEGMENT") if _base_tem_coluna(c)), None)
+PURO_SELLERS_SQL = ('"Puro Sellers"' if not COL_SEGMENTO else chr(10).join([
+    'CASE',
+    '      WHEN ' + COL_SEGMENTO + ' = "LONGTAIL"    THEN "Puro Sellers LT"',
+    '      WHEN ' + COL_SEGMENTO + ' = "SMB"         THEN "Puro Sellers SMB"',
+    '      WHEN ' + COL_SEGMENTO + ' = "BIG SELLERS" THEN "Puro Sellers Big"',
+    '      ELSE "Puro Sellers" END',
+]))
+print("[super_grupo] coluna de segmento: "
+      + (COL_SEGMENTO + " -> Puro Sellers separado em LT/SMB/Big" if COL_SEGMENTO
+         else "nenhuma -> Puro Sellers como grupo unico"))
 
 SUPER_GRUPO_SQL = f"""CASE
     WHEN FL_TEST_AB_C1_C2 = 1 THEN "Teste"
