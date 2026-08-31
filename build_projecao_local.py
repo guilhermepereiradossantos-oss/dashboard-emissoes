@@ -23,7 +23,9 @@ from pathlib import Path
 # ---- CONFIG (mesma do update_dashboard.py) ----
 BPY        = r'C:\Users\GPEREIRADOSS\AppData\Local\Google\Cloud SDK\google-cloud-sdk\platform\bundledpython\python.exe'
 BQ_CMD     = r'C:\Users\GPEREIRADOSS\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\bq.cmd'
-PROJECT_ID = 'ddme000725-g9rtvpqr28z-furyid'
+# 2026-08-27: ver nota em push_datasets_to_grid.py — ...725... trava por quota (jobs em PENDING
+# eterno); ...341... e o padrao estavel.
+PROJECT_ID = 'ddme000341-ox7qb27ldi8-furyid'
 REPO       = Path(__file__).resolve().parent
 SQL_FILE   = REPO / 'dashboard_sg_gui.sql'
 HIST_FILE  = REPO / 'proj_historico.json'         # leitura (producao, read-only)
