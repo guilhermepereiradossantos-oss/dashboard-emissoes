@@ -460,10 +460,19 @@ if _rem:
         _obs_days = _comp[-3:]
         _ow = (_dp(_obs_days[0][0]), _dp(_obs_days[-1][0]))      # janela observada, em D+
         _pw = (_dp(_rem[0]), _dp(_rem[-1]))                      # janela a projetar, em D+
+        # 2026-08-31: o fator historico virou SO REFERENCIA DE LOG em 24/08 (a tendencia passou a
+        # sair da propria serie recente, _r_obs). O `continue` aqui era resto da versao antiga e
+        # abortava a cauda INTEIRA por um valor que o calculo nem usa mais -> caia no organico cru,
+        # sem ancora no realizado. Isso acontecia em TODO ultimo dia do mes: com 1 dia restante a
+        # janela a projetar tem tamanho 1 (D+n..D+n) e o _win_mean exige >= 2 dias, entao o fator
+        # SEMPRE saia None. Efeito medido em 31/08: Full projetava 16.069 p/ uma segunda cuja media
+        # dos 7 dias anteriores era 10.429 (+54%); Micro 5.024 vs 2.650 (+90%) -- justo no dia em que
+        # o numero e lido como "o fechado do mes". Agora o fator ausente so tira a linha de
+        # referencia do log; a cauda segue ancorada no nivel-base realizado.
         _f, _nm = _hist_tail_factor(tc, _ow, _pw)
         if not _f:
-            print(f'  [CAUDA {tc}] sem historico comparavel na janela D+{_pw[0]}..D+{_pw[1]} -> organico')
-            continue
+            print(f'  [CAUDA {tc}] sem fator historico na janela D+{_pw[0]}..D+{_pw[1]} '
+                  f'(so referencia de log) -> segue com ancora no realizado')
         # ---- sazonalidade semanal (2026-08-24) ----
         # A cauda era decaimento PURO: um sabado no inicio dela saia acima de uma segunda no
         # fim, o que nao acontece na pratica. Agora o decaimento define a TENDENCIA e o fator
@@ -508,8 +517,8 @@ if _rem:
         _WDN = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
         print(f'  [CAUDA {tc}] lote={_enc} | obs D+{_ow[0]}..D+{_ow[1]} nivel-base={int(_lvl):,}/d '
               f'| tendencia obs r={_r:.4f}' + (f' (crua {_r_obs:.4f})' if _r_obs else ' (sem serie -> default)')
-              + f' | ref fator hist={_f:.3f} ({_nm}m) '
-              f'-> cauda {_n}d = {int(_tail):,}'.replace(',', '.'))
+              + (f' | ref fator hist={_f:.3f} ({_nm}m)' if _f else ' | ref fator hist=n/d')
+              + f' -> cauda {_n}d = {int(_tail):,}'.replace(',', '.'))
         if _dow:
             print('    DOW ' + ' '.join(f'{_WDN[w]}={_dow[w]:.2f}' for w in sorted(_dow)))
         else:
