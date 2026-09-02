@@ -457,6 +457,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
       <select class="daily-month-sel" id="adopt-break">
         <option value="__total__" selected>Total</option>
         <option value="FLAG_TC">Tipo TC</option>
+        <option value="FLAG_REENCENDIDO">Reencendido</option>
         <option value="FLAG_NISE">Nise</option>
         <option value="rating_tc_grp">Rating TC</option>
         <option value="super_grupo">Grupo Especial</option>
@@ -588,6 +589,13 @@ const C_SG = {
   'Only Nav.':          '#F5C500',
   'Teste':              '#A855F7',
   'Cuentas Canceladas': '#FF5A5A',
+};
+// Reencendido (2026-09-01): 1º encendido = azul (o "novo"), reencendido = laranja (o repique).
+const ORDER_REENC = ['1. Primeiro Encendido','2. Reencendido'];
+const C_REENC = {
+  '1. Primeiro Encendido': '#5B9BD5',
+  '2. Reencendido':        '#FF7F11',
+  'null':                  '#484F58',
 };
 // App Ativo: MP na base → ML no topo → Sem App por último (null coalescido p/ 'Sem App' no push)
 const ORDER_APP = ['1. MP','2. MP y ML','3. ML','Sem App'];
@@ -1499,6 +1507,7 @@ function showBqUnavail() {
 // adoption(N) = SUM(cc{N}) / SUM(n_enc), por safra, recalculado p/ quebra/filtro.
 const ADOPT_COLORS = {
   FLAG_TC: { '1. TC Full': '#58a6ff', '2. Micro TC': '#3DFF91' },
+  FLAG_REENCENDIDO: C_REENC,
   FLAG_NISE: C_NISE,
   rating_tc_grp: C_RATING,
   super_grupo: C_SG,
@@ -1508,6 +1517,7 @@ const ADOPT_COLORS = {
 const RATING_ORDER = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'C', 'D-J', 'Sem rating'];
 const ADOPT_ORDERS = {
   FLAG_TC: ['1. TC Full', '2. Micro TC'],
+  FLAG_REENCENDIDO: ORDER_REENC,
   FLAG_NISE: ['1. Bronze', '2. Silver', '3. Gold', '4. Platinum', '5. Nulo', '0. SELLER'],
   rating_tc_grp: RATING_ORDER,
   super_grupo: SG_VALUES,
@@ -1518,6 +1528,7 @@ const ADOPT_ORDERS = {
 const ADOPT_FILTER_DEFS = [
   { id: 'safra_enc',              label: 'Safra',              values: [], dynamic: true },
   { id: 'FLAG_TC',                label: 'Tipo TC',            values: ['1. TC Full', '2. Micro TC'] },
+  { id: 'FLAG_REENCENDIDO',       label: 'Reencendido',        values: ORDER_REENC },
   { id: 'FLAG_NISE',             label: 'Nise',               values: ['1. Bronze', '2. Silver', '3. Gold', '4. Platinum', '5. Nulo', '0. SELLER'] },
   { id: 'rating_tc_grp',         label: 'Rating TC',          values: RATING_ORDER },
   { id: 'super_grupo',           label: 'Grupo Especial',     values: SG_VALUES },

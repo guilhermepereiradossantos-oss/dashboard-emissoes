@@ -273,7 +273,7 @@ _cc_cols = ",\n  ".join(
 QUERIES["adoption"] = f"""
 SELECT
   FORMAT_DATE("%Y-%m", DT_ENCENDIDO) AS safra_enc,
-  FLAG_TC, FLAG_NISE,
+  FLAG_TC, FLAG_REENCENDIDO, FLAG_NISE,
   {SUPER_GRUPO_SQL} AS super_grupo,
   CASE
     WHEN rating_v7 = "A1" THEN "A1" WHEN rating_v7 = "A2" THEN "A2" WHEN rating_v7 = "A" THEN "A3"
