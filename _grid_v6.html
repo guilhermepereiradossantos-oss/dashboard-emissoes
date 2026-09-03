@@ -119,6 +119,12 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 .data-table td:first-child{text-align:left;color:#8b949e;font-weight:600}
 .data-table tr:last-child td{border-bottom:none}
 .data-table tr.row-highlight td{color:#e6edf3;font-weight:700;border-top:1px solid #21262d}
+/* Tabela vs Plano (2026-09-03): % acima/abaixo do plano + coluna do mês corrente (projetada) */
+.pct-good{color:#3DFF91;font-weight:700}
+.pct-bad{color:#FF5A5A;font-weight:700}
+.col-proj{background:rgba(255,127,17,.07)}
+.data-table td.col-proj,.data-table th.col-proj{font-weight:800}
+.chart-title .title-ctrl{float:right;text-transform:none;letter-spacing:0}
 .adopt-hi{color:#3DFF91;font-weight:700}
 .adopt-md{color:#F5C500;font-weight:700}
 .adopt-lo{color:#FF5A5A;font-weight:700}
@@ -312,8 +318,19 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 
     <!-- EVOLUTION CHART -->
     <div class="chart-wrap">
-      <div class="chart-title">Evolução Mensal — Emissões (por safra de conversão)</div>
+      <div class="chart-title">Evolução Mensal — Emissões (por safra de conversão)
+        <span class="title-ctrl">
+          <button class="filter-btn" id="em-periodo-toggle"
+                  title="Janela padrão = mesmo mês do ano anterior + últimos 9 meses. 13 meses = os 13 meses corridos até o mês mais recente (série contínua, sem o buraco entre o YoY e os recentes).">Janela padrão</button>
+        </span>
+      </div>
       <div class="chart-inner"><canvas id="em-chart-evol"></canvas></div>
+    </div>
+
+    <!-- TABELA vs PLANO (2026-09-03) -->
+    <div class="table-wrap">
+      <h3>Emissões vs Plano <span id="em-plano-tc" style="color:#58a6ff"></span></h3>
+      <div id="em-plano-table-wrap"><table class="data-table" id="em-plano-table"><tr><td style="color:#484f58;padding:16px 0">Carregando...</td></tr></table></div>
     </div>
 
     <!-- SHARE CHARTS 2x2 -->
@@ -505,6 +522,30 @@ const DOC_ID = '01KVDVV9XG2ZJ53YEEQRT1E704';
 // funcionar nos dois estados sem republicar o HTML (o(s) sem dado so nao aparece(m) no grafico).
 const SG_VALUES = ['BAU', 'Puro Sellers', 'Puro Sellers LT', 'Puro Sellers SMB', 'Puro Sellers Big', 'Sellers - Mixto', 'Only Nav.', 'Teste', 'Cuentas Canceladas'];
 
+// ════════════════════════════════════════════════════════════════
+// PLANO 2026 (2026-09-03)
+// Mesmos números do doc de Projeção (`_grid_projecao.html`) — fonte: planilha Seguimiento.
+// ⚠️ Existe em DOIS arquivos: ao atualizar o plano, atualizar nos dois.
+// Só 2026: meses de 2025 ficam sem plano (a linha não desenha e a tabela mostra "—").
+// ════════════════════════════════════════════════════════════════
+const PLAN_2026 = {
+  'TC Full': {'2026-01':412830,'2026-02':373600,'2026-03':437592,'2026-04':427356,'2026-05':452120,'2026-06':466884,'2026-07':501646,'2026-08':496292,'2026-09':486055,'2026-10':530581,'2026-11':544456,'2026-12':487030},
+  'Micro TC':{'2026-01':97171,'2026-02':86000,'2026-03':97406,'2026-04':97643,'2026-05':97881,'2026-06':98117,'2026-07':98353,'2026-08':98708,'2026-09':98946,'2026-10':99418,'2026-11':110544,'2026-12':102970}
+};
+// Plano do mês `mk` para o Tipo TC pedido ('TC Full' | 'Micro TC' | 'Total'); null se não houver.
+function planFor(tc, mk) {
+  const f = (PLAN_2026['TC Full'] || {})[mk], mi = (PLAN_2026['Micro TC'] || {})[mk];
+  if (tc === 'Total') return (f == null && mi == null) ? null : (f || 0) + (mi || 0);
+  const v = (PLAN_2026[tc] || {})[mk];
+  return v == null ? null : v;
+}
+// Traduz o filtro Tipo TC ativo para a chave do plano. Nenhum ou os dois marcados = Total.
+function planTcAtivo() {
+  const sel = activeFilters['FLAG_TC'];
+  if (!sel || sel.size === 0 || sel.size === 2) return 'Total';
+  return sel.has('1. TC Full') ? 'TC Full' : 'Micro TC';
+}
+
 const FILTER_DEFS = [
   { id: 'FLAG_TC',                       label: 'Tipo TC',
     values: ['1. TC Full','2. Micro TC'] },
@@ -617,6 +658,15 @@ let _ds_diario    = null;
 let _ds_nprop_enc = null;
 let _ds_nprop_emi = null;
 let _ds_adoption  = null;
+// 2026-09-03: série longa de emissões (25 meses, só safra × Tipo TC) — denominador do % YoY.
+// Os datasets normais têm janela de 13 meses, onde "mesmo mês do ano anterior" só existe p/ o
+// último mês; sem esta série a linha de YoY nasceria com 1 ponto.
+let _ds_emi_hist  = null;
+// 2026-09-03: bundle da Projeção (mesmo do doc satélite) — usado só p/ o total PROJETADO do mês
+// corrente na tabela "vs Plano". `null` = não carregou; a tabela cai no realizado parcial.
+let _proj_kpis    = null;   // { 'TC Full': {grand_total, real_total, pct_real}, 'Micro TC': {...} }
+let _proj_mes     = null;   // 'YYYY-MM' do mês que o bundle projeta
+let emPeriodo     = 'padrao';   // 'padrao' (YoY + 9 meses) | '13m' (13 meses corridos)
 let _loading      = false;
 let _initialized  = false;
 
@@ -658,6 +708,41 @@ function buildMonthWindow(cur) {
   for (let i = 8; i >= 0; i--) recent.push(addMonths(cur, -i));
   const yoy = addMonths(cur, -12);
   return [yoy, ...recent];
+}
+
+// Janela da aba EMISSÕES (2026-09-03). 'padrao' = a de sempre (mês YoY + últimos 9, com o buraco
+// entre eles); '13m' = 13 meses corridos, sem buraco — aí o YoY é a 1ª coluna e a série fica
+// contínua, que é o que permite ler a linha de MoM sem degrau falso.
+function emMonthWindow(cur) {
+  if (!cur) return [];
+  if (emPeriodo !== '13m') return buildMonthWindow(cur);
+  const out = [];
+  for (let i = 12; i >= 0; i--) out.push(addMonths(cur, -i));
+  return out;
+}
+
+// ── Bundle da Projeção (dataset `projecao`, mesmo do doc satélite) ──
+// Formato: 1 linha { bundle: "<json>" }. Só interessam KPIS (total projetado por TC) e o mês.
+function lerBundleProjecao(p) {
+  _proj_kpis = null; _proj_mes = null;
+  try {
+    const rows = fromColumnar(p);
+    const txt = (rows && rows[0]) ? rows[0].bundle : null;
+    if (!txt) return;
+    const b = (typeof txt === 'string') ? JSON.parse(txt) : txt;
+    _proj_kpis = b.KPIS || null;
+    _proj_mes  = b.active_month || null;
+  } catch (e) { _proj_kpis = null; _proj_mes = null; }
+}
+// Total PROJETADO de fechamento do mês `mk` para o Tipo TC ativo; null se o bundle não cobre `mk`.
+function projTotalFor(tc, mk) {
+  if (!_proj_kpis || !_proj_mes || mk !== _proj_mes) return null;
+  const g = k => (_proj_kpis[k] && _proj_kpis[k].grand_total != null) ? _proj_kpis[k].grand_total : null;
+  if (tc === 'Total') {
+    const f = g('TC Full'), mi = g('Micro TC');
+    return (f == null && mi == null) ? null : (f || 0) + (mi || 0);
+  }
+  return g(tc);
 }
 
 function groupBy(rows, keys, metrics) {
@@ -877,14 +962,20 @@ async function loadAllDatasets() {
   hideError();
 
   try {
-    const [enc, emi, diario, npropEnc, npropEmi, adoption] = await Promise.all([
+    // `projecao` é NÃO-ESSENCIAL: se falhar, a tabela vs Plano usa o realizado parcial e o
+    // resto da página segue igual. Por isso vai com .catch(() => null), fora do all-or-nothing.
+    const [enc, emi, diario, npropEnc, npropEmi, adoption, proj, emiHist] = await Promise.all([
       Grid.dataset('mensal_encendidos').load(),
       Grid.dataset('mensal_emissoes').load(),
       Grid.dataset('diario').load(),
       Grid.dataset('nprop_enc').load(),
       Grid.dataset('nprop_emi').load(),
       Grid.dataset('adoption').load(),
+      Grid.dataset('projecao').load().catch(() => null),
+      Grid.dataset('emi_hist').load().catch(() => null),
     ]);
+    lerBundleProjecao(proj);
+    _ds_emi_hist = emiHist ? fromColumnar(emiHist) : null;
     _ds_enc       = fromColumnar(enc);
     _ds_emi       = fromColumnar(emi);
     _ds_diario    = fromColumnar(diario);
@@ -927,9 +1018,12 @@ const barLabelsPlugin = {
     const showSegPct = cfg.showSegPct !== false;
     const minTotal = cfg.minTotal || 0; // só rotula se o total nominal da barra atingir este valor
     const ctx = chart.ctx;
+    // `skipBarLabel` (2026-09-03): datasets de LINHA sobrepostos à barra (plano, YoY%, MoM%) não
+    // participam nem do % por segmento nem do cálculo do topo — senão o rótulo do total saltaria
+    // para a altura da linha (ou, no caso do eixo %, para uma posição sem relação com a barra).
     const visibleDs = chart.data.datasets
       .map((ds, i) => ({ ds, i }))
-      .filter(({ i }) => chart.isDatasetVisible(i));
+      .filter(({ ds, i }) => chart.isDatasetVisible(i) && !ds.skipBarLabel);
     const nLabels = chart.data.labels.length;
 
     for (let x = 0; x < nLabels; x++) {
@@ -1123,7 +1217,7 @@ function renderEmissoes() {
   const byEnc = groupBy(encRows, ['safra_enc'], ['n_enc','n_primo','n_reenc','n_conv','soma_limite']);
 
   const cur    = monthsEmi[monthsEmi.length - 1];
-  const months = buildMonthWindow(cur);
+  const months = emMonthWindow(cur);
   const prev   = months.length >= 2 ? months[months.length - 2] : null;
 
   const curEmi  = byConv.find(r => r.safra_conv === cur)  || {};
@@ -1157,29 +1251,90 @@ function renderEmissoes() {
 
   // Evolution chart
   const evolData = months.map(m => n((byConv.find(r => r.safra_conv === m) || {}).n_conv));
+
+  // ── Plano + comparativos YoY/MoM (2026-09-03) ──
+  // O Plano e a Projeção existem só por Tipo TC — não são recortáveis por NISE/rating/grupo.
+  // Então respondem ao filtro Tipo TC e IGNORAM os demais (avisado no cabeçalho da tabela).
+  const tcPlano = planTcAtivo();
+  const realOf  = mk => { const r = byConv.find(x => x.safra_conv === mk); return r ? n(r.n_conv) : null; };
+
+  // Série de 25 meses no nível de Tipo TC (dataset `emi_hist`) — base das TRÊS linhas sobrepostas.
+  // Por que não usar o dado filtrado: (a) o YoY precisa de m-12, que não existe na janela de 13
+  // meses dos datasets normais; (b) plano e projeção só existem por Tipo TC. Usando a mesma série
+  // nas três linhas, elas contam a mesma história. Sem filtro extra, isto é idêntico ao filtrado.
+  const alvoTC = tcPlano === 'TC Full' ? '1. TC Full' : (tcPlano === 'Micro TC' ? '2. Micro TC' : null);
+  const histMap = {};
+  (_ds_emi_hist || []).forEach(r => {
+    if (alvoTC && r.FLAG_TC !== alvoTC) return;
+    histMap[r.safra_conv] = (histMap[r.safra_conv] || 0) + n(r.n_conv);
+  });
+  const histOf = mk => (mk in histMap) ? histMap[mk] : realOf(mk);   // fallback se o dataset faltar
+
+  // Valor de FECHAMENTO do mês: realizado nos meses fechados, projeção no mês corrente (parcial).
+  // Sem isso o mês em curso compararia "meio mês contra mês inteiro" e apareceria como despencando.
+  const fechOf  = mk => { const p = projTotalFor(tcPlano, mk); return p != null ? p : histOf(mk); };
+  const planData = months.map(m => planFor(tcPlano, m));
+  const pctVar   = (a, b) => (a == null || b == null || b <= 0) ? null : (a / b - 1) * 100;
+  // MoM/YoY sempre pelo mês de CALENDÁRIO (addMonths), nunca pela posição na janela — na janela
+  // 'padrao' existe um buraco entre a barra YoY e as 9 recentes, e ali vizinho ≠ mês anterior.
+  const yoyData  = months.map(m => pctVar(fechOf(m), histOf(addMonths(m, -12))));
+  const momData  = months.map(m => pctVar(fechOf(m), histOf(addMonths(m, -1))));
+
   makeChart('em-chart-evol', {
     type: 'bar',
     plugins: [barLabelsPlugin],
     data: {
       labels: months.map(fmtSafra),
-      datasets: [{
-        label: 'Emissões', data: evolData,
-        backgroundColor: 'rgba(61,255,145,.7)', borderColor: '#3DFF91', borderWidth: 1,
-      }]
+      datasets: [
+        {
+          label: 'Emissões', data: evolData, order: 4,
+          backgroundColor: 'rgba(61,255,145,.7)', borderColor: '#3DFF91', borderWidth: 1,
+        },
+        {
+          type: 'line', label: 'Plano', data: planData, skipBarLabel: true, order: 3,
+          borderColor: '#F5C500', backgroundColor: '#F5C500', borderWidth: 2,
+          pointRadius: 3, pointHoverRadius: 5, tension: .25, spanGaps: false,
+        },
+        {
+          type: 'line', label: '% YoY', data: yoyData, skipBarLabel: true, order: 1, yAxisID: 'y1',
+          borderColor: '#58a6ff', backgroundColor: '#58a6ff', borderWidth: 2, borderDash: [6, 4],
+          pointRadius: 2, pointHoverRadius: 4, tension: .25, spanGaps: true,
+        },
+        {
+          type: 'line', label: '% MoM', data: momData, skipBarLabel: true, order: 2, yAxisID: 'y1',
+          borderColor: '#A855F7', backgroundColor: '#A855F7', borderWidth: 2, borderDash: [2, 3],
+          pointRadius: 2, pointHoverRadius: 4, tension: .25, spanGaps: true,
+        },
+      ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.parsed.y) } },
+        legend: { position: 'bottom', labels: { color: '#8b949e', boxWidth: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => {
+          const v = ctx.parsed.y;
+          if (v == null) return ctx.dataset.label + ': –';
+          if (ctx.dataset.yAxisID === 'y1') return ' ' + ctx.dataset.label + ': ' + (v >= 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + '%';
+          if (ctx.dataset.label === 'Plano') {
+            const real = evolData[ctx.dataIndex];
+            const ating = v > 0 ? ' (' + (real / v * 100).toFixed(1).replace('.', ',') + '% do plano)' : '';
+            return ' Plano: ' + fmt(v) + ating;
+          }
+          return ' ' + fmt(v);
+        } } },
         barTotals: { nominal: evolData, showSegPct: false }
       },
       scales: {
-        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
-        y: { grace: '12%', grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => fmtCompact(v) } }
+        x:  { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
+        y:  { grace: '12%', grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => fmtCompact(v) } },
+        y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => (v >= 0 ? '+' : '') + Math.round(v) + '%' } }
       }
     }
   });
+
+  // Tabela vs Plano (colunas = meses da janela; linhas = Plano / Total Mês / % vs Plano)
+  buildPlanoTable(months, tcPlano, histOf);
 
   // Pies — data filtered, share by safra_conv (emi)
   makeChart('em-chart-nise',   shareChartConfig(emiRows, 'safra_conv', months, 'FLAG_NISE',              C_NISE,   'n_conv'));
@@ -1380,6 +1535,58 @@ function renderDailyChart(rows, safra, tcLabel, sgFilter) {
 // ════════════════════════════════════════════════════════════════
 // EVOLUTION TABLES
 // ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+// TABELA "EMISSÕES vs PLANO" (2026-09-03)
+// Colunas = meses da janela · linhas = Plano / Total Mês / % vs Plano.
+// No mês em curso o "Total Mês" mostra a PROJEÇÃO de fechamento (coluna destacada): comparar o
+// realizado parcial contra o plano cheio pintaria de vermelho todo dia 5 do mês.
+// Se a projeção não estiver disponível, o % vira "—" em vez de um vermelho falso.
+// ════════════════════════════════════════════════════════════════
+// `valOf` = série no nível de Tipo TC (mesma das linhas do gráfico), não o recorte filtrado —
+// o plano só existe por Tipo TC, então dividir um recorte por um plano cheio daria % sem sentido.
+function buildPlanoTable(months, tcPlano, valOf) {
+  const wrap = document.getElementById('em-plano-table-wrap');
+  if (!wrap) return;
+
+  const outros = Object.keys(activeFilters)
+    .filter(f => f !== 'FLAG_TC' && activeFilters[f] && activeFilters[f].size > 0);
+  const lbl = document.getElementById('em-plano-tc');
+  if (lbl) {
+    lbl.textContent = '· ' + (tcPlano === 'Total' ? 'TC Full + Micro TC' : tcPlano)
+      + (outros.length ? ' · plano e projeção não respondem aos demais filtros' : '');
+    lbl.style.color = outros.length ? '#F5C500' : '#58a6ff';
+  }
+
+  const hoje   = new Date();
+  const curCal = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+  const isProj  = m => projTotalFor(tcPlano, m) != null;
+  const parcial = m => (m === curCal) && !isProj(m);     // mês em curso sem projeção disponível
+  const totalOf = m => { const p = projTotalFor(tcPlano, m); return p != null ? p : valOf(m); };
+  const cls     = m => isProj(m) ? ' col-proj' : '';
+
+  const th  = months.map(m => `<th class="${cls(m).trim()}">${fmtSafra(m)}${isProj(m) ? ' *' : (parcial(m) ? ' ‡' : '')}</th>`).join('');
+  const tdP = months.map(m => { const v = planFor(tcPlano, m); return `<td class="${cls(m).trim()}">${v == null ? '—' : fmt(v)}</td>`; }).join('');
+  const tdT = months.map(m => { const v = totalOf(m);          return `<td class="${cls(m).trim()}">${v == null ? '—' : fmt(v)}</td>`; }).join('');
+  const tdV = months.map(m => {
+    const p = planFor(tcPlano, m), v = totalOf(m);
+    if (p == null || p <= 0 || v == null || parcial(m)) return `<td class="${cls(m).trim()}">—</td>`;
+    const r = v / p * 100;
+    return `<td class="${r >= 100 ? 'pct-good' : 'pct-bad'}${cls(m)}">${r.toFixed(1).replace('.', ',')}%</td>`;
+  }).join('');
+
+  let nota = '';
+  if (months.some(isProj))  nota += '<div style="font-size:11px;color:#8b949e;margin-top:8px">* mês em curso — "Total Mês" é a <b>projeção de fechamento</b> (mesma do doc de Projeção), não o realizado parcial.</div>';
+  if (months.some(parcial)) nota += '<div style="font-size:11px;color:#F5C500;margin-top:8px">‡ mês em curso com realizado parcial e projeção indisponível — % vs Plano omitido de propósito.</div>';
+  nota += '<div style="font-size:11px;color:#8b949e;margin-top:4px">Plano 2026 · fonte: planilha Seguimiento. Meses de 2025 não têm plano cadastrado.</div>';
+
+  wrap.innerHTML = '<table class="data-table" id="em-plano-table">'
+    + `<thead><tr><th>Métrica</th>${th}</tr></thead><tbody>`
+    + `<tr><td>Plano</td>${tdP}</tr>`
+    + `<tr><td>Total Mês</td>${tdT}</tr>`
+    + `<tr class="row-highlight"><td>% vs Plano</td>${tdV}</tr>`
+    + '</tbody></table>' + nota;
+}
+
 function buildEvolTableEmi(wrapId, byConv, byEnc, months, curMonth) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return;
@@ -1891,6 +2098,15 @@ try {
   if (dailyTcSel) dailyTcSel.addEventListener('change', onDailyMonthChange);
   const dailySgSel = document.getElementById('enc-daily-sg-sel');
   if (dailySgSel) dailySgSel.addEventListener('change', onDailyMonthChange);
+
+  // Aba Emissões — janela do gráfico de evolução (2026-09-03)
+  const eper = document.getElementById('em-periodo-toggle');
+  if (eper) eper.addEventListener('click', () => {
+    emPeriodo = (emPeriodo === '13m') ? 'padrao' : '13m';
+    eper.textContent = (emPeriodo === '13m') ? '13 meses' : 'Janela padrão';
+    eper.classList.toggle('has-active', emPeriodo === '13m');
+    renderEmissoes();
+  });
 
   // Aba % Adoption — controles próprios
   const abreak = document.getElementById('adopt-break');

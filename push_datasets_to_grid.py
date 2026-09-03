@@ -292,6 +292,23 @@ WHERE DT_ENCENDIDO >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 12 MO
 GROUP BY ALL
 """
 COLUMNAR.add("adoption")  # muitas colunas cc* -> columnar economiza espaco
+
+# ── emi_hist (2026-09-03): serie LONGA de emissoes, so p/ a linha de % YoY da aba Emissoes ──
+# Os datasets normais rodam numa janela de 13 meses; com ela, "mesmo mes do ano anterior" so existe
+# p/ o ULTIMO mes da janela, e a linha de YoY nascia com 1 ponto. Aqui a janela vai a 25 meses, mas
+# SEM dimensoes (so safra x FLAG_TC) -> ~50 linhas, poucos KB. Nao substitui `mensal_emissoes`:
+# serve so de denominador do YoY e de base das linhas sobrepostas (plano/YoY/MoM), que existem
+# apenas no nivel de Tipo TC.
+QUERIES["emi_hist"] = """
+SELECT
+  FORMAT_DATE("%Y-%m", DT_CONV) AS safra_conv,
+  FLAG_TC,
+  SUM(QTDE) AS n_conv
+FROM `meli-bi-data.SBOX_CREDITSTC.base_projecao_Gui`
+WHERE FLAG_CONVERSAO = "1. Convertido"
+  AND DT_CONV >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 25 MONTH)
+GROUP BY ALL
+"""
 NUM_COLS.update({"n_enc"} | {f"cc{k}" for k in range(_ADOPT_MAXDIAS + 1)})
 
 
@@ -543,7 +560,7 @@ FORCE_SHOW_MONTH = "2026-07"
 EXCL_COL = {  # coluna de data p/ cortar o mês vigente incompleto, por dataset
     "mensal_encendidos": "DT_ENCENDIDO", "diario": "DT_ENCENDIDO",
     "nprop_enc": "DT_ENCENDIDO", "adoption": "DT_ENCENDIDO",
-    "mensal_emissoes": "DT_CONV", "nprop_emi": "DT_CONV",
+    "mensal_emissoes": "DT_CONV", "nprop_emi": "DT_CONV", "emi_hist": "DT_CONV",
 }
 
 def current_month_batched() -> bool:
@@ -772,6 +789,24 @@ def main():
             overall_ok = False
     except Exception as e:
         print(f"  [FAIL] projecao: {e}")
+        overall_ok = False
+
+    # 2026-09-03: o MESMO bundle vai tambem pro doc de Emissoes+Encendidos. A tabela "vs Plano"
+    # da aba Emissoes usa o total PROJETADO do mes corrente (o realizado do mes em curso e
+    # parcial e compararia parcial contra plano cheio). Sem rebuild: reusa o bundle recem-gerado
+    # acima, entao custa so o PUT (~80 KB). Isso tambem resolve o dataset `projecao` orfao que
+    # estava parado neste doc desde 24/06.
+    print(f"\n--- projecao (copia) --> {DOC_ID} ---")
+    t0 = time.time()
+    try:
+        res = push_projecao(rebuild=False, doc_id=DOC_ID)
+        status = "[OK]" if res["ok"] else "[FAIL]"
+        print(f"  {status} PUT http={res['http']}  size={res['size_mb']} MB  time={time.time()-t0:.1f}s")
+        if not res["ok"]:
+            print(f"  Error body: {res['body']}")
+            overall_ok = False
+    except Exception as e:
+        print(f"  [FAIL] projecao (copia): {e}")
         overall_ok = False
 
     print(f"\n[push_datasets] End {time.strftime('%Y-%m-%d %H:%M:%S')} | overall={'OK' if overall_ok else 'FAIL'}")
