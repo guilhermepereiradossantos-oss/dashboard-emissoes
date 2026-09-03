@@ -1646,6 +1646,29 @@ function buildPlanoTable(months, tcPlano, valOf) {
     return `<td class="${r >= 100 ? 'pct-good' : 'pct-bad'}${cls(m)}">${r.toFixed(1).replace('.', ',')}%</td>`;
   }).join('');
 
+  // ── % YTD: acumulado do ano até o mês da coluna ÷ acumulado do plano no mesmo intervalo ──
+  // Só entram no cálculo os meses que TÊM plano cadastrado: incluir um mês sem plano somaria
+  // realizado no numerador sem somar nada no denominador e inflaria o % sozinho.
+  // O mês em curso entra pela PROJEÇÃO (mesma regra do "Total Mês").
+  const ytdOf = m => {
+    const ano = m.slice(0, 4), ate = +m.slice(5, 7);
+    let num = 0, den = 0, algum = false;
+    for (let k = 1; k <= ate; k++) {
+      const mk = ano + '-' + String(k).padStart(2, '0');
+      const p = planFor(tcPlano, mk);
+      if (p == null || p <= 0) continue;
+      const v = totalOf(mk);
+      if (v == null) continue;
+      num += v; den += p; algum = true;
+    }
+    return (algum && den > 0) ? num / den * 100 : null;
+  };
+  const tdY = months.map(m => {
+    const r = parcial(m) ? null : ytdOf(m);
+    if (r == null) return `<td class="${cls(m).trim()}">—</td>`;
+    return `<td class="${r >= 100 ? 'pct-good' : 'pct-bad'}${cls(m)}">${r.toFixed(1).replace('.', ',')}%</td>`;
+  }).join('');
+
   let nota = '';
   if (months.some(isProj))  nota += '<div style="font-size:11px;color:#8b949e;margin-top:8px">* mês em curso — "Total Mês" é a <b>projeção de fechamento</b> (mesma do doc de Projeção), não o realizado parcial.</div>';
   if (months.some(parcial)) nota += '<div style="font-size:11px;color:#F5C500;margin-top:8px">‡ mês em curso com realizado parcial e projeção indisponível — % vs Plano omitido de propósito.</div>';
@@ -1656,6 +1679,7 @@ function buildPlanoTable(months, tcPlano, valOf) {
     + `<tr><td>Plano</td>${tdP}</tr>`
     + `<tr><td>Total Mês</td>${tdT}</tr>`
     + `<tr class="row-highlight"><td>% vs Plano</td>${tdV}</tr>`
+    + `<tr><td title="Acumulado do ano até o mês ÷ acumulado do plano no mesmo intervalo">% YTD</td>${tdY}</tr>`
     + '</tbody></table>' + nota;
 }
 
