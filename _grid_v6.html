@@ -260,6 +260,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
   </div>
   <div class="header-right">
     <a class="btn-back" href="https://grid.adminml.com/d/01KVWX9P01ZH59AFSEFJ31A91Q/view" target="_blank">← Voltar ao menu</a>
+    <div class="header-badge" title="Última data com dado fechado na base (conversões). Vale para todas as abas.">Dados até D-1: <span id="hdr-dados-ate">—</span></div>
     <div class="header-badge">Fonte: <span>Grid Datasets</span></div>
     <button class="btn-refresh" id="btn-refresh">↻ Atualizar</button>
   </div>
@@ -320,9 +321,6 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     <div class="chart-wrap">
       <div class="chart-title">Evolução Mensal — Emissões (por safra de conversão)
         <span class="title-ctrl">
-          <span style="display:inline-flex;align-items:center;gap:5px;color:#8b949e;font-size:10px;margin-right:12px">
-            <span style="width:14px;height:2px;background:#FF5A5A;display:inline-block;border-radius:2px"></span>Plano do mês
-          </span>
           <button class="filter-btn" id="em-periodo-toggle"
                   title="Janela padrão = mesmo mês do ano anterior + últimos 9 meses. 13 meses = os 13 meses corridos até o mês mais recente (série contínua, sem o buraco entre o YoY e os recentes).">Janela padrão</button>
         </span>
@@ -669,6 +667,7 @@ let _ds_emi_hist  = null;
 // corrente na tabela "vs Plano". `null` = não carregou; a tabela cai no realizado parcial.
 let _proj_kpis    = null;   // { 'TC Full': {grand_total, real_total, pct_real}, 'Micro TC': {...} }
 let _proj_mes     = null;   // 'YYYY-MM' do mês que o bundle projeta
+let _proj_bundle  = null;   // bundle inteiro (usado p/ o "Dados até D-1" do cabeçalho)
 let emPeriodo     = 'padrao';   // 'padrao' (YoY + 9 meses) | '13m' (13 meses corridos)
 let _loading      = false;
 let _initialized  = false;
@@ -727,16 +726,38 @@ function emMonthWindow(cur) {
 // ── Bundle da Projeção (dataset `projecao`, mesmo do doc satélite) ──
 // Formato: 1 linha { bundle: "<json>" }. Só interessam KPIS (total projetado por TC) e o mês.
 function lerBundleProjecao(p) {
-  _proj_kpis = null; _proj_mes = null;
+  _proj_kpis = null; _proj_mes = null; _proj_bundle = null;
   try {
     const rows = fromColumnar(p);
     const txt = (rows && rows[0]) ? rows[0].bundle : null;
     if (!txt) return;
     const b = (typeof txt === 'string') ? JSON.parse(txt) : txt;
+    _proj_bundle = b;
     _proj_kpis = b.KPIS || null;
     _proj_mes  = b.active_month || null;
-  } catch (e) { _proj_kpis = null; _proj_mes = null; }
+  } catch (e) { _proj_kpis = null; _proj_mes = null; _proj_bundle = null; }
 }
+// ── "Dados até D-1" no cabeçalho (2026-09-03) ──
+// MEDE a última data fechada em vez de assumir "ontem": se a base não rodou, o dash tem que
+// mostrar a data real, não uma data otimista. Fonte 1 = último dia com realizado no bundle da
+// Projeção (conversões); fonte 2 = último dia do dataset `diario` (encendidos).
+function atualizaDadosAte() {
+  const el = document.getElementById('hdr-dados-ate');
+  if (!el) return;
+  let ult = null;
+  try {
+    const A = (_proj_bundle && _proj_bundle.ACTUAL) || null;
+    if (A) for (const ym in A) for (const tc in A[ym]) for (const sg in A[ym][tc])
+      for (const d in A[ym][tc][sg]) if (A[ym][tc][sg][d] > 0 && (!ult || d > ult)) ult = d;
+  } catch (e) {}
+  if (!ult && _ds_diario && _ds_diario.length) {
+    for (const r of _ds_diario) if (r.dia_enc && n(r.n_enc) > 0 && (!ult || r.dia_enc > ult)) ult = r.dia_enc;
+  }
+  if (!ult) { el.textContent = '—'; return; }
+  const a = ult.slice(0, 10).split('-');
+  el.textContent = a[2] + '/' + a[1] + '/' + a[0];
+}
+
 // Total PROJETADO de fechamento do mês `mk` para o Tipo TC ativo; null se o bundle não cobre `mk`.
 function projTotalFor(tc, mk) {
   if (!_proj_kpis || !_proj_mes || mk !== _proj_mes) return null;
@@ -997,6 +1018,7 @@ async function loadAllDatasets() {
     // Emissões, então não há mais nada p/ popular aqui (os defs deixaram de existir).
     // `canal_aquisicao` segue na query e alimenta o gráfico de share da aba Emissões.
 
+    atualizaDadosAte();
     buildFilterBar();
     renderActiveTab();
   } catch (e) {
@@ -1379,7 +1401,25 @@ function renderEmissoes() {
       responsive: true, maintainAspectRatio: false,
       layout: { padding: { top: 64 } },   // espaço p/ os colchetes, desenhados fora da área
       plugins: {
-        legend: { position: 'bottom', labels: { color: '#8b949e', boxWidth: 12, font: { size: 11 } } },
+        // Legenda com um item EXTRA p/ o traço do Plano (não é dataset, é desenho do plugin).
+        // `index: -1` marca o item falso; o onClick ignora ele p/ não tentar esconder um dataset
+        // que não existe (o handler padrão do Chart.js quebraria com datasetIndex undefined).
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: '#8b949e', boxWidth: 12, font: { size: 11 },
+            generateLabels: ch => {
+              const base = Chart.defaults.plugins.legend.labels.generateLabels(ch);
+              base.push({ text: 'Plano do mês', fillStyle: '#FF5A5A', strokeStyle: '#FF5A5A',
+                          lineWidth: 0, hidden: false, index: -1 });
+              return base;
+            }
+          },
+          onClick: (e, item, legend) => {
+            if (item.index === -1 || item.datasetIndex == null) return;   // item do Plano: sem ação
+            Chart.defaults.plugins.legend.onClick.call(legend, e, item, legend);
+          }
+        },
         tooltip: { callbacks: {
           label: ctx => {
             const tot = n(evolData[ctx.dataIndex]);
@@ -1642,8 +1682,10 @@ function buildPlanoTable(months, tcPlano, valOf) {
   const tdV = months.map(m => {
     const p = planFor(tcPlano, m), v = totalOf(m);
     if (p == null || p <= 0 || v == null || parcial(m)) return `<td class="${cls(m).trim()}">—</td>`;
-    const r = v / p * 100;
-    return `<td class="${r >= 100 ? 'pct-good' : 'pct-bad'}${cls(m)}">${r.toFixed(1).replace('.', ',')}%</td>`;
+    // Cor pelo valor JÁ ARREDONDADO (regra do usuário: ≥100,0% verde · ≤99,9% vermelho).
+    // Comparar o número cru pintaria de vermelho uma célula escrita "100,0%" (ex.: 99,96%).
+    const r = v / p * 100, rr = +r.toFixed(1);
+    return `<td class="${rr >= 100 ? 'pct-good' : 'pct-bad'}${cls(m)}">${r.toFixed(1).replace('.', ',')}%</td>`;
   }).join('');
 
   // ── % YTD: acumulado do ano até o mês da coluna ÷ acumulado do plano no mesmo intervalo ──
@@ -1666,7 +1708,8 @@ function buildPlanoTable(months, tcPlano, valOf) {
   const tdY = months.map(m => {
     const r = parcial(m) ? null : ytdOf(m);
     if (r == null) return `<td class="${cls(m).trim()}">—</td>`;
-    return `<td class="${r >= 100 ? 'pct-good' : 'pct-bad'}${cls(m)}">${r.toFixed(1).replace('.', ',')}%</td>`;
+    const rr = +r.toFixed(1);
+    return `<td class="${rr >= 100 ? 'pct-good' : 'pct-bad'}${cls(m)}">${r.toFixed(1).replace('.', ',')}%</td>`;
   }).join('');
 
   let nota = '';
