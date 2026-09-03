@@ -320,6 +320,9 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
     <div class="chart-wrap">
       <div class="chart-title">Evolução Mensal — Emissões (por safra de conversão)
         <span class="title-ctrl">
+          <span style="display:inline-flex;align-items:center;gap:5px;color:#8b949e;font-size:10px;margin-right:12px">
+            <span style="width:14px;height:2px;background:#FF5A5A;display:inline-block;border-radius:2px"></span>Plano do mês
+          </span>
           <button class="filter-btn" id="em-periodo-toggle"
                   title="Janela padrão = mesmo mês do ano anterior + últimos 9 meses. 13 meses = os 13 meses corridos até o mês mais recente (série contínua, sem o buraco entre o YoY e os recentes).">Janela padrão</button>
         </span>
@@ -1067,6 +1070,15 @@ const barLabelsPlugin = {
         if (el && el.y < topY) { topY = el.y; topX = el.x; }
       });
       if (topX == null) continue;
+      // 2026-09-03: quando o traço do Plano fica ACIMA do topo da barra (mês abaixo do plano), o
+      // rótulo tem que subir junto — senão o número é impresso em cima do traço vermelho.
+      if (cfg.plano && chart.scales.y) {
+        const pv = cfg.plano[x];
+        if (pv != null) {
+          const py = chart.scales.y.getPixelForValue(pv);
+          if (py >= chart.chartArea.top && py < topY) topY = py;
+        }
+      }
       if (totalVal <= 0) continue;
       ctx.save();
       ctx.fillStyle = '#e6edf3';
@@ -1076,6 +1088,81 @@ const barLabelsPlugin = {
       ctx.fillText(fmtCompact(totalVal), topX, topY - 3);
       ctx.restore();
     }
+  }
+};
+
+// ════════════════════════════════════════════════════════════════
+// PLANO + COLCHETES YoY/MoM (2026-09-03) — desenho copiado do dash TD do colega
+// · Plano = traço vermelho curto DENTRO de cada barra, na altura do plano do mês (não é uma
+//   linha conectando meses: cada barra tem sua própria meta, como num bullet chart).
+// · YoY/MoM = colchete acima das barras ligando os dois meses comparados, com um badge no meio.
+//   MoM sólido logo acima da área; YoY tracejado, mais alto. Verde se ≥ 0, vermelho se < 0.
+// Exige `layout.padding.top` (~64px) — os colchetes são desenhados FORA da área do gráfico.
+// Config em options.plugins.planBracket = { plano:[], valores:[], iCur, iMoM, iYoY }.
+// ════════════════════════════════════════════════════════════════
+const planBracketPlugin = {
+  id: 'planBracket',
+  afterDraw(chart) {
+    const cfg = (chart.options.plugins && chart.options.plugins.planBracket) || {};
+    const ctx = chart.ctx;
+    const meta = chart.getDatasetMeta(0);
+    const bars = meta && meta.data;
+    if (!bars || !bars.length) return;
+    const yScale = chart.scales.y;
+
+    // ── 1. traço do Plano em cada barra ──
+    if (cfg.plano && yScale) {
+      bars.forEach((bar, i) => {
+        const p = cfg.plano[i];
+        if (p == null || !bar) return;
+        const py = yScale.getPixelForValue(p);
+        if (py > chart.chartArea.bottom || py < chart.chartArea.top) return;
+        const hw = bar.width * 0.45;
+        ctx.save();
+        ctx.strokeStyle = '#FF5A5A'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(bar.x - hw, py); ctx.lineTo(bar.x + hw, py); ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    // ── 2. colchetes MoM / YoY ──
+    const vals = cfg.valores;
+    if (!vals || cfg.iCur == null) return;
+    const curVal = vals[cfg.iCur];
+    const areaTop = chart.chartArea.top;
+
+    const brkt = (i0, yPos, cor, prefixo, tracejado) => {
+      const base = vals[i0];
+      const b0 = bars[i0], b1 = bars[cfg.iCur];
+      if (!base || !curVal || !b0 || !b1) return;
+      const x1 = b0.x, x2 = b1.x, midX = (x1 + x2) / 2;
+      const pct = (curVal / base - 1) * 100;
+      const txt = prefixo + (pct >= 0 ? '+' : '') + pct.toFixed(1).replace('.', ',') + '%';
+      const bw = 84, bh = 17, gap = bw / 2 + 6, stub = 7;
+      const rr = (x, y, w, h, r) => {
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+        else { ctx.beginPath(); ctx.rect(x, y, w, h); }
+      };
+      ctx.save();
+      ctx.strokeStyle = cor; ctx.lineWidth = 1.5;
+      if (tracejado) ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(x1, yPos); ctx.lineTo(x1, yPos + stub); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x2, yPos); ctx.lineTo(x2, yPos + stub); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1, yPos); ctx.lineTo(midX - gap, yPos); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(midX + gap, yPos); ctx.lineTo(x2, yPos); ctx.stroke();
+      ctx.setLineDash([]);
+      const bx = midX - bw / 2, by = yPos - bh / 2;
+      ctx.fillStyle = '#161b22'; rr(bx, by, bw, bh, 4); ctx.fill();
+      ctx.strokeStyle = cor;     rr(bx, by, bw, bh, 4); ctx.stroke();
+      ctx.fillStyle = pct >= 0 ? '#3DFF91' : '#FF5A5A';
+      ctx.font = '700 10px "Segoe UI", system-ui, Arial';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(txt, midX, yPos);
+      ctx.restore();
+    };
+
+    if (cfg.iMoM != null && cfg.iMoM >= 0) brkt(cfg.iMoM, areaTop - 18, '#8b949e', 'MoM ', false);
+    if (cfg.iYoY != null && cfg.iYoY >= 0) brkt(cfg.iYoY, areaTop - 42, '#6e7681', 'YoY ', true);
   }
 };
 
@@ -1274,61 +1361,47 @@ function renderEmissoes() {
   // Sem isso o mês em curso compararia "meio mês contra mês inteiro" e apareceria como despencando.
   const fechOf  = mk => { const p = projTotalFor(tcPlano, mk); return p != null ? p : histOf(mk); };
   const planData = months.map(m => planFor(tcPlano, m));
-  const pctVar   = (a, b) => (a == null || b == null || b <= 0) ? null : (a / b - 1) * 100;
-  // MoM/YoY sempre pelo mês de CALENDÁRIO (addMonths), nunca pela posição na janela — na janela
-  // 'padrao' existe um buraco entre a barra YoY e as 9 recentes, e ali vizinho ≠ mês anterior.
-  const yoyData  = months.map(m => pctVar(fechOf(m), histOf(addMonths(m, -12))));
-  const momData  = months.map(m => pctVar(fechOf(m), histOf(addMonths(m, -1))));
+
+  // Índices dos meses comparados pelos colchetes — sempre pelo CALENDÁRIO, nunca pela posição
+  // (na janela 'padrao' o vizinho da 1ª barra não é o mês seguinte).
+  const iCur = months.length - 1;
+  const iMoM = months.indexOf(addMonths(cur, -1));
+  const iYoY = months.indexOf(addMonths(cur, -12));
+  // Valores usados nos colchetes: fechamento (projeção no mês corrente), no nível de Tipo TC.
+  const fechArr = months.map(fechOf);
 
   makeChart('em-chart-evol', {
     type: 'bar',
-    plugins: [barLabelsPlugin],
+    plugins: [barLabelsPlugin, planBracketPlugin],
     data: {
       labels: months.map(fmtSafra),
-      datasets: [
-        {
-          label: 'Emissões', data: evolData, order: 4,
-          backgroundColor: 'rgba(61,255,145,.7)', borderColor: '#3DFF91', borderWidth: 1,
-        },
-        {
-          type: 'line', label: 'Plano', data: planData, skipBarLabel: true, order: 3,
-          borderColor: '#F5C500', backgroundColor: '#F5C500', borderWidth: 2,
-          pointRadius: 3, pointHoverRadius: 5, tension: .25, spanGaps: false,
-        },
-        {
-          type: 'line', label: '% YoY', data: yoyData, skipBarLabel: true, order: 1, yAxisID: 'y1',
-          borderColor: '#58a6ff', backgroundColor: '#58a6ff', borderWidth: 2, borderDash: [6, 4],
-          pointRadius: 2, pointHoverRadius: 4, tension: .25, spanGaps: true,
-        },
-        {
-          type: 'line', label: '% MoM', data: momData, skipBarLabel: true, order: 2, yAxisID: 'y1',
-          borderColor: '#A855F7', backgroundColor: '#A855F7', borderWidth: 2, borderDash: [2, 3],
-          pointRadius: 2, pointHoverRadius: 4, tension: .25, spanGaps: true,
-        },
-      ]
+      datasets: [{
+        label: 'Emissões', data: evolData,
+        backgroundColor: 'rgba(61,255,145,.7)', borderColor: '#3DFF91', borderWidth: 1,
+      }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 64 } },   // espaço p/ os colchetes, desenhados fora da área
       plugins: {
-        legend: { position: 'bottom', labels: { color: '#8b949e', boxWidth: 12, font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => {
-          const v = ctx.parsed.y;
-          if (v == null) return ctx.dataset.label + ': –';
-          if (ctx.dataset.yAxisID === 'y1') return ' ' + ctx.dataset.label + ': ' + (v >= 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + '%';
-          if (ctx.dataset.label === 'Plano') {
-            const real = evolData[ctx.dataIndex];
-            const ating = v > 0 ? ' (' + (real / v * 100).toFixed(1).replace('.', ',') + '% do plano)' : '';
-            return ' Plano: ' + fmt(v) + ating;
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: ctx => ' ' + fmt(ctx.parsed.y),
+          afterBody: items => {
+            const i = items[0] && items[0].dataIndex;
+            if (i == null) return;
+            const p = planData[i];
+            if (p == null || p <= 0) return [' Plano: —'];
+            const real = evolData[i];
+            return [' Plano: ' + fmt(p), ' vs Plano: ' + (real / p * 100).toFixed(1).replace('.', ',') + '%'];
           }
-          return ' ' + fmt(v);
-        } } },
-        barTotals: { nominal: evolData, showSegPct: false }
+        } },
+        barTotals: { nominal: evolData, showSegPct: false, plano: planData },
+        planBracket: { plano: planData, valores: fechArr, iCur: iCur, iMoM: iMoM, iYoY: iYoY }
       },
       scales: {
-        x:  { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
-        y:  { grace: '12%', grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => fmtCompact(v) } },
-        y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => (v >= 0 ? '+' : '') + Math.round(v) + '%' } }
+        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
+        y: { grace: '12%', grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => fmtCompact(v) } }
       }
     }
   });
