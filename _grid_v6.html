@@ -1070,15 +1070,6 @@ const barLabelsPlugin = {
         if (el && el.y < topY) { topY = el.y; topX = el.x; }
       });
       if (topX == null) continue;
-      // 2026-09-03: quando o traço do Plano fica ACIMA do topo da barra (mês abaixo do plano), o
-      // rótulo tem que subir junto — senão o número é impresso em cima do traço vermelho.
-      if (cfg.plano && chart.scales.y) {
-        const pv = cfg.plano[x];
-        if (pv != null) {
-          const py = chart.scales.y.getPixelForValue(pv);
-          if (py >= chart.chartArea.top && py < topY) topY = py;
-        }
-      }
       if (totalVal <= 0) continue;
       ctx.save();
       ctx.fillStyle = '#e6edf3';
@@ -1336,8 +1327,12 @@ function renderEmissoes() {
     document.getElementById('em-kpi-enc-prev').textContent   = '—';
   }
 
-  // Evolution chart
-  const evolData = months.map(m => n((byConv.find(r => r.safra_conv === m) || {}).n_conv));
+  // Evolution chart — barras empilhadas por Tipo TC (2026-09-03), nas cores da aba Encendidos.
+  const byConvTC = groupBy(emiRows, ['safra_conv', 'FLAG_TC'], ['n_conv']);
+  const serieTC  = tc => months.map(m => n((byConvTC.find(r => r.safra_conv === m && r.FLAG_TC === tc) || {}).n_conv));
+  const evolFull  = serieTC('1. TC Full');
+  const evolMicro = serieTC('2. Micro TC');
+  const evolData  = months.map(m => n((byConv.find(r => r.safra_conv === m) || {}).n_conv));
 
   // ── Plano + comparativos YoY/MoM (2026-09-03) ──
   // O Plano e a Projeção existem só por Tipo TC — não são recortáveis por NISE/rating/grupo.
@@ -1375,33 +1370,37 @@ function renderEmissoes() {
     plugins: [barLabelsPlugin, planBracketPlugin],
     data: {
       labels: months.map(fmtSafra),
-      datasets: [{
-        label: 'Emissões', data: evolData,
-        backgroundColor: 'rgba(61,255,145,.7)', borderColor: '#3DFF91', borderWidth: 1,
-      }]
+      datasets: [
+        { label: 'TC Full',  data: evolFull,  backgroundColor: '#F5C500', borderWidth: 0 },
+        { label: 'Micro TC', data: evolMicro, backgroundColor: '#917000', borderWidth: 0 },
+      ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       layout: { padding: { top: 64 } },   // espaço p/ os colchetes, desenhados fora da área
       plugins: {
-        legend: { display: false },
+        legend: { position: 'bottom', labels: { color: '#8b949e', boxWidth: 12, font: { size: 11 } } },
         tooltip: { callbacks: {
-          label: ctx => ' ' + fmt(ctx.parsed.y),
+          label: ctx => {
+            const tot = n(evolData[ctx.dataIndex]);
+            const p = tot > 0 ? (ctx.parsed.y / tot * 100).toFixed(1).replace('.', ',') + '%' : '—';
+            return ` ${ctx.dataset.label}: ${p} · ${fmt(ctx.parsed.y)}`;
+          },
           afterBody: items => {
             const i = items[0] && items[0].dataIndex;
             if (i == null) return;
             const p = planData[i];
             if (p == null || p <= 0) return [' Plano: —'];
-            const real = evolData[i];
-            return [' Plano: ' + fmt(p), ' vs Plano: ' + (real / p * 100).toFixed(1).replace('.', ',') + '%'];
+            return [' Total: ' + fmt(evolData[i]), ' Plano: ' + fmt(p),
+                    ' vs Plano: ' + (evolData[i] / p * 100).toFixed(1).replace('.', ',') + '%'];
           }
         } },
-        barTotals: { nominal: evolData, showSegPct: false, plano: planData },
+        barTotals: { nominal: evolData, showSegPct: true },
         planBracket: { plano: planData, valores: fechArr, iCur: iCur, iMoM: iMoM, iYoY: iYoY }
       },
       scales: {
-        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
-        y: { grace: '12%', grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => fmtCompact(v) } }
+        x: { stacked: true, grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
+        y: { stacked: true, grace: '12%', grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => fmtCompact(v) } }
       }
     }
   });
