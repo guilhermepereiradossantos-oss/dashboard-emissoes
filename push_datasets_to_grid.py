@@ -772,6 +772,17 @@ def main():
                 print(f"  Error body: {res['body']}")
                 overall_ok = False
 
+            # 2026-09-03: mesma linha tambem no doc de Emissoes+Encendidos — a aba de Alertas
+            # precisa de limite medio / exposicao, e os datasets so existiam no doc de Limite.
+            # Reusa as `rows` ja materializadas: custa so o PUT (~2 MB somando os dois).
+            t0 = time.time()
+            res2 = upload_dataset(name, rows, doc_id=DOC_ID)
+            st2 = "[OK]" if res2["ok"] else "[FAIL]"
+            print(f"  {st2} copia --> {DOC_ID}  http={res2['http']}  size={res2['size_mb']} MB  up_time={time.time()-t0:.1f}s")
+            if not res2["ok"]:
+                print(f"  Error body: {res2['body']}")
+                overall_ok = False
+
     if only_lim or (only_names and "projecao" not in only_names):
         print(f"\n[push_datasets] End {time.strftime('%Y-%m-%d %H:%M:%S')} | overall={'OK' if overall_ok else 'FAIL'}")
         return
