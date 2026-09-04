@@ -252,6 +252,25 @@ _enc_ini = f'{_ey}-{_em:02d}'
 #   NAO-FATAL: se a query falhar, o bundle sai sem ENCENDIDO e o front simplesmente nao
 #   desenha os marcadores (nunca derruba o push por causa disso).
 # ============================================================
+# ════════════════════════════════════════════════════════════════════════════════
+# MES PRE-LOTE (2026-09-04)
+# ════════════════════════════════════════════════════════════════════════════════
+# Volume minimo p/ um dia contar como LOTE. Os lotes reais sao de milhoes; o ruido
+# diario de um mes pre-lote fica na casa de 1-4 mil.
+LOTE_MIN_QTDE = 100_000
+# Data prevista do lote, informada pelo negocio (o modelo nao tem como saber). Serve p/
+# delimitar ate onde vai a ancoragem no realizado; do lote em diante vale o shape organico.
+# Deixar o mes de fora = o codigo usa o dia de PICO da propria projecao organica.
+LOTE_PREVISTO = {'2026-09': '2026-09-15'}   # usuario em 04/09: encendido entre 15 e 16/09
+# ── DATA DUPLA (2026-09-04) ──
+# Medido nas datas duplas de 2026 com o lote longe (o lote contamina os 4 dias seguintes):
+#   02/02 +11,8% · 04/04 +1,7% · 06/06 -0,2% · 07/07 +36,8% · 08/08 +12,9%
+#   media +12,6%, mediana +11,8% (num dia tipico de 2026 a mediana e +0,4%)
+# Efeito real mas IRREGULAR (2 das 5 nao mostraram nada), e vale por UM dia so: ~1,3k cartoes
+# num mes de ~400k. Fica explicito e facil de desligar (basta esvaziar o dict).
+DATA_DUPLA_UPLIFT = 0.12
+DATA_DUPLA_DIAS = {'2026-09': '2026-09-09'}
+
 ENC_SQL = f"""
 SELECT FORMAT_DATE('%Y-%m', DT_ENCENDIDO) AS ym,
        FORMAT_DATE('%Y-%m-%d', DT_ENCENDIDO) AS dia,
@@ -291,6 +310,12 @@ try:
         for _ym, _lst in _bym.items():
             _lst.sort(key=lambda x: -x[1])
             _tot = sum(v for _, v in _lst) or 1
+            # 2026-09-04: so vale como LOTE se o dia for material. Num mes PRE-LOTE o "dia de
+            # maior encendido" e ruido: em 2026-09 saiu 01/09 com 1.634 encendidos, e a cauda
+            # passou a contar D+ a partir dessa data falsa -> achatou o mes inteiro e apagou o
+            # pico do lote que ainda vai acontecer (setembro caiu p/ 264k, contra ~445k).
+            if _lst[0][1] < LOTE_MIN_QTDE:
+                continue                      # mes sem lote (ainda) -> nao entra em `encendido`
             encendido[_tc][_ym] = dict(dia=_lst[0][0], qtde=int(round(_lst[0][1])),
                                        share=round(_lst[0][1] / _tot, 3))
     print(f"  -> encendido OK: " + ', '.join(
@@ -448,7 +473,70 @@ def _dow_factors_clean(tc):
     return {wd: med[wd] / mean_med for wd in med} if mean_med > 0 else {}
 
 _rem = sorted(d for d in ALL_DAYS if d >= TODAY)
-if _rem:
+
+# ============================================================
+# 2i-PRE. MES PRE-LOTE (2026-09-04) — ancora os dias ATE o lote no realizado.
+#
+# Situacao: comeco de mes, o lote de encendido ainda nao rodou. O organico projeta os
+# primeiros dias replicando o mes anterior e sai ACIMA do que esta acontecendo (em 03/09
+# projetava 13,2k/dia com o realizado do dia 02 em 11,0k, e subindo daí).
+# A cauda (2i) NAO serve aqui: ela existe p/ depois do lote e, sem lote no mes, contava D+
+# a partir de um dia falso -> em 04/09 achatou setembro inteiro p/ 264k, apagando o pico.
+#
+# Regra: do dia de hoje ate a VESPERA do lote, o nivel vem do realizado (media
+# des-sazonalizada dos 3 ultimos dias completos, com a tendencia da propria serie).
+# Do lote em diante, PRESERVA o organico — e ele que carrega o pico da safra nova.
+# ============================================================
+_sem_lote_no_mes = not any((encendido.get(tc, {}) or {}).get(cur_key) for tc in TC_KEYS)
+if _rem and _sem_lote_no_mes:
+    _lote_prev = LOTE_PREVISTO.get(cur_key)
+    for tc in TC_KEYS:
+        _comp = _complete_real_days(tc)
+        if len(_comp) < 3:
+            print(f'  [PRE-LOTE {tc}] so {len(_comp)} dia(s) completo(s) -> organico'); continue
+        _diaria = defaultdict(float)
+        for sg in proj_data[tc]:
+            for d, v in proj_data[tc][sg].items():
+                if d.startswith(cur_key): _diaria[d] += v
+        _pico = max(_diaria, key=lambda d: _diaria[d]) if _diaria else None
+        _corte = _lote_prev or _pico
+        if not _corte:
+            print(f'  [PRE-LOTE {tc}] sem data de lote e sem pico organico -> organico'); continue
+        if _pico and _lote_prev:
+            _dif = (date.fromisoformat(_pico) - date.fromisoformat(_lote_prev)).days
+            if abs(_dif) > 2:
+                # Nao desloco a curva automaticamente: mover uma coorte inteira e arriscado e
+                # nao da p/ validar sem um caso real. Fica o aviso p/ decisao humana.
+                print(f'    [ATENCAO {tc}] pico do organico em {_pico} vs lote informado '
+                      f'{_lote_prev} ({_dif:+d}d) -> shape possivelmente desalinhado')
+        _alvo = [d for d in _rem if d < _corte]
+        if not _alvo:
+            print(f'  [PRE-LOTE {tc}] lote {_corte} e hoje ou ja passou -> organico'); continue
+        _dow = _dow_factors_clean(tc)
+        _wf = (lambda iso: _dow.get(date.fromisoformat(iso).weekday(), 1.0)) if _dow else (lambda iso: 1.0)
+        _obs = _comp[-3:]
+        _lvl = sum(v / _wf(d) for d, v in _obs) / len(_obs)
+        _dom = lambda iso: int(iso[8:10])
+        _ds = [(d, v / _wf(d)) for d, v in _comp]
+        _r_obs = None
+        if len(_ds) >= 4:
+            _h = len(_ds) // 2
+            _A, _B = _ds[:_h], _ds[_h:]
+            _ma = sum(v for _, v in _A) / len(_A); _mb = sum(v for _, v in _B) / len(_B)
+            _ga = sum(_dom(d) for d, _ in _A) / len(_A); _gb = sum(_dom(d) for d, _ in _B) / len(_B)
+            if _ma > 0 and _gb > _ga:
+                _r_obs = (_mb / _ma) ** (1.0 / (_gb - _ga))
+        # Mesmos limites da cauda: a serie pre-lote e o rabo da coorte anterior, entao ela
+        # nao volta a subir sozinha; sem serie suficiente, fica PLANA (r=1) em vez de chutar.
+        _r = min(max(_r_obs, CAUDA_R_OBS_MIN), CAUDA_R_OBS_MAX) if _r_obs else 1.0
+        for i, d in enumerate(_alvo):
+            _apply_day_target(tc, d, _lvl * (_r ** (i + 1)) * _wf(d))
+        _soma = sum(proj_data[tc][sg].get(d, 0) for sg in proj_data[tc] for d in _alvo)
+        print(f'  [PRE-LOTE {tc}] lote previsto {_corte} (pico organico {_pico}) | '
+              f'nivel-base={int(_lvl):,}/d | r={_r:.4f}'.replace(',', '.')
+              + f' -> {len(_alvo)} dias ancorados = {int(_soma):,}'.replace(',', '.'))
+
+if _rem and not _sem_lote_no_mes:
     for tc in TC_KEYS:
         _comp = _complete_real_days(tc)
         _enc = (encendido.get(tc, {}).get(cur_key) or {}).get('dia')
@@ -523,6 +611,30 @@ if _rem:
             print('    DOW ' + ' '.join(f'{_WDN[w]}={_dow[w]:.2f}' for w in sorted(_dow)))
         else:
             print('    [WARN] sem fator de weekday (historico insuficiente) -> cauda sem perfil semanal')
+
+# ============================================================
+# 2k. DATA DUPLA (2026-09-04, pedido do usuario) — uplift de UM dia.
+#   Medido nas datas duplas de 2026 com o lote longe: media +12,6%, mediana +11,8%
+#   (num dia tipico de 2026 o mesmo indicador da +0,4%). Efeito real mas irregular:
+#   02/02 +11,8% · 04/04 +1,7% · 06/06 -0,2% · 07/07 +36,8% · 08/08 +12,9%.
+#   Vale por UM dia: ~1,3k cartoes num mes de ~400k, ou seja, NAO muda o fechamento.
+#   Aplicado so se o dia ainda for projecao (se ja virou realizado, nao se mexe).
+#   Desligar = esvaziar DATA_DUPLA_DIAS.
+# ============================================================
+_dd = DATA_DUPLA_DIAS.get(cur_key)
+if _dd and _dd >= TODAY:
+    for tc in TC_KEYS:
+        _antes = sum(proj_data[tc][sg].get(_dd, 0) for sg in proj_data[tc])
+        if _antes <= 0:
+            continue
+        for sg in proj_data[tc]:
+            if _dd in proj_data[tc][sg]:
+                proj_data[tc][sg][_dd] *= (1 + DATA_DUPLA_UPLIFT)
+        _dep = sum(proj_data[tc][sg].get(_dd, 0) for sg in proj_data[tc])
+        print(f'  [DATA DUPLA {tc}] {_dd}: {int(_antes):,} -> {int(_dep):,} '
+              f'(+{DATA_DUPLA_UPLIFT*100:.0f}%, +{int(_dep-_antes):,} cartoes)'.replace(',', '.'))
+elif _dd:
+    print(f'  [DATA DUPLA] {_dd} ja e realizado -> sem ajuste')
 
 # ============================================================
 # 2b (reposicionado). ESCALA PRA TARGET — ULTIMO ajuste sobre proj_data.
