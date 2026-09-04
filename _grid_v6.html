@@ -119,6 +119,27 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
 .data-table td:first-child{text-align:left;color:#8b949e;font-weight:600}
 .data-table tr:last-child td{border-bottom:none}
 .data-table tr.row-highlight td{color:#e6edf3;font-weight:700;border-top:1px solid #21262d}
+/* ── ABA ALERTAS (2026-09-04) ── */
+.al-resumo{display:flex;gap:20px;flex-wrap:wrap;align-items:center;background:#161b22;border:1px solid #21262d;border-radius:10px;padding:14px 20px;margin-bottom:18px}
+.al-resumo .al-num{font-size:26px;font-weight:800;line-height:1}
+.al-resumo .al-lab{font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px}
+.al-grupo{margin-bottom:22px}
+.al-grupo h3{font-size:12px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.al-card{background:#161b22;border:1px solid #21262d;border-left:3px solid #30363d;border-radius:8px;padding:12px 16px;margin-bottom:8px}
+.al-card.sev-alta{border-left-color:#FF5A5A}
+.al-card.sev-media{border-left-color:#F5C500}
+.al-card.sev-ok{border-left-color:#238636;opacity:.72}
+.al-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.al-chip{font-size:9px;font-weight:800;padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.5px}
+.al-chip.alta{background:rgba(255,90,90,.15);color:#FF5A5A}
+.al-chip.media{background:rgba(245,197,0,.15);color:#F5C500}
+.al-chip.ok{background:rgba(35,134,54,.15);color:#3DFF91}
+.al-tit{font-size:13px;font-weight:700;color:#e6edf3}
+.al-val{margin-left:auto;font-size:15px;font-weight:800}
+.al-val.pos{color:#3DFF91}.al-val.neg{color:#FF5A5A}
+.al-sub{font-size:11px;color:#8b949e;margin-top:5px;line-height:1.5}
+.al-sub b{color:#c9d1d9}
+.al-vazio{color:#8b949e;font-size:12px;padding:14px 0}
 /* Tabela vs Plano (2026-09-03): % acima/abaixo do plano + coluna do mês corrente (projetada) */
 .pct-good{color:#3DFF91;font-weight:700}
 .pct-bad{color:#FF5A5A;font-weight:700}
@@ -271,6 +292,7 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
   <button class="tab-nav-btn active" data-tab="emissoes">Emissões</button>
   <button class="tab-nav-btn" data-tab="encendidos">Encendidos</button>
   <button class="tab-nav-btn" data-tab="adoption">% Adoption</button>
+  <button class="tab-nav-btn" data-tab="alertas">⚠ Alertas</button>
 </div>
 
 <!-- ══ FILTER BAR ══ -->
@@ -499,6 +521,21 @@ body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#0d1117;color:
   </div>
 </div>
 
+<!-- ══ ALERTAS (2026-09-04) ══ -->
+<div id="tab-alertas" class="tab-pane">
+  <div class="container">
+    <div class="bq-unavail" id="al-bq-warn">⚠️ Grid SDK não disponível. Abra este arquivo em grid.adminml.com para ver os dados.</div>
+    <div class="section-hdr"><h2>Alertas — o que saiu do padrão</h2></div>
+    <div class="adoption-sub">
+      Compara o último mês fechado com o anterior. O limiar de cada regra sai do <b>desvio-padrão da própria métrica</b>
+      (médio = 1,5σ · alto = 2σ), recalculado a cada carga — não é número fixo. Assim uma métrica naturalmente volátil
+      não dispara à toa, e uma estável acusa movimento pequeno.
+    </div>
+    <div id="al-resumo" class="al-resumo"></div>
+    <div id="al-lista"></div>
+  </div>
+</div>
+
 <!-- ══ LOADING OVERLAY ══ -->
 <div id="loading-overlay">
   <div class="spinner"></div>
@@ -663,6 +700,9 @@ let _ds_adoption  = null;
 // Os datasets normais têm janela de 13 meses, onde "mesmo mês do ano anterior" só existe p/ o
 // último mês; sem esta série a linha de YoY nasceria com 1 ponto.
 let _ds_emi_hist  = null;
+// 2026-09-04: limite_enc tambem passou a ser publicado neste doc (push copia do doc de
+// Limite). Usado so pela aba de Alertas — limite medio e exposicao total.
+let _ds_limite_enc = null;
 // 2026-09-03: bundle da Projeção (mesmo do doc satélite) — usado só p/ o total PROJETADO do mês
 // corrente na tabela "vs Plano". `null` = não carregou; a tabela cai no realizado parcial.
 let _proj_kpis    = null;   // { 'TC Full': {grand_total, real_total, pct_real}, 'Micro TC': {...} }
@@ -988,7 +1028,7 @@ async function loadAllDatasets() {
   try {
     // `projecao` é NÃO-ESSENCIAL: se falhar, a tabela vs Plano usa o realizado parcial e o
     // resto da página segue igual. Por isso vai com .catch(() => null), fora do all-or-nothing.
-    const [enc, emi, diario, npropEnc, npropEmi, adoption, proj, emiHist] = await Promise.all([
+    const [enc, emi, diario, npropEnc, npropEmi, adoption, proj, emiHist, limEnc] = await Promise.all([
       Grid.dataset('mensal_encendidos').load(),
       Grid.dataset('mensal_emissoes').load(),
       Grid.dataset('diario').load(),
@@ -997,9 +1037,11 @@ async function loadAllDatasets() {
       Grid.dataset('adoption').load(),
       Grid.dataset('projecao').load().catch(() => null),
       Grid.dataset('emi_hist').load().catch(() => null),
+      Grid.dataset('limite_enc').load().catch(() => null),
     ]);
     lerBundleProjecao(proj);
     _ds_emi_hist = emiHist ? fromColumnar(emiHist) : null;
+    _ds_limite_enc = limEnc ? fromColumnar(limEnc) : null;
     _ds_enc       = fromColumnar(enc);
     _ds_emi       = fromColumnar(emi);
     _ds_diario    = fromColumnar(diario);
@@ -2186,17 +2228,267 @@ function showTab(tab) {
   if (pane) pane.classList.add('active');
   if (btn)  btn.classList.add('active');
 
-  // barra de filtros global não se aplica à aba Adoption (tem painel próprio)
+  // Barra de filtros global não se aplica à aba Adoption (tem painel próprio) nem à de
+  // Alertas: as regras avaliam o TOTAL de cada métrica, e um alerta que mudasse conforme
+  // o filtro deixaria de ser alerta — viraria mais um gráfico.
   const fb = document.getElementById('filter-bar-section');
-  fb.style.display = (tab === 'adoption') ? 'none' : '';
+  fb.style.display = (tab === 'adoption' || tab === 'alertas') ? 'none' : '';
   if (_ds_enc && _ds_emi) renderActiveTab();
   else if (!_loading) loadAllDatasets();
+}
+
+// ════════════════════════════════════════════════════════════════
+// MOTOR DE ALERTAS (2026-09-04)
+// ════════════════════════════════════════════════════════════════
+// O limiar NÃO é fixo: sai do desvio-padrão da própria série, recalculado a cada carga.
+// Um número escolhido hoje envelhece; σ acompanha a base crescendo. Dois tipos de série:
+//  · 'var' = variação mês a mês (centrada em ~0)  -> limiar = k·σ
+//  · 'mix' = distância de variação total do mix (SEMPRE ≥ 0, média bem acima de zero)
+//            -> limiar = média + k·σ. Usar k·σ aqui derruba o limiar abaixo da mediana e a
+//            regra dispara quase todo mês (medido: canal 10/12, NISE 6/12).
+// TVD = ½·Σ|share_t − share_t−1|: lê-se "quanto da massa trocou de categoria".
+const ALERTA_K_MEDIO = 1.5, ALERTA_K_ALTO = 2.0;
+const _alMedia = a => a.reduce((s, v) => s + v, 0) / (a.length || 1);
+const _alDp = a => { const m = _alMedia(a); return Math.sqrt(_alMedia(a.map(v => (v - m) ** 2))); };
+function _alGrupoRating(r) {
+  if (!r || r === 'Sem rating') return 'Sem rating';
+  const c = String(r)[0];
+  return (c === 'A' || c === 'B') ? 'AB' : (c === 'C' ? 'C' : 'D-J');
+}
+// {mes: total} a partir de linhas filtradas
+function _alSerie(rows, mesCol, valCol, filtro) {
+  const o = {};
+  (rows || []).forEach(r => { if (filtro && !filtro(r)) return; o[r[mesCol]] = (o[r[mesCol]] || 0) + n(r[valCol]); });
+  return o;
+}
+// {mes: {categoria: share%}}
+function _alShares(rows, mesCol, valCol, dimFn) {
+  const tot = {}, por = {};
+  (rows || []).forEach(r => {
+    const m = r[mesCol], v = n(r[valCol]), c = dimFn(r);
+    tot[m] = (tot[m] || 0) + v; (por[m] = por[m] || {}); por[m][c] = (por[m][c] || 0) + v;
+  });
+  const out = {};
+  Object.keys(tot).forEach(m => { if (tot[m] > 0) { out[m] = {}; Object.keys(por[m]).forEach(c => out[m][c] = por[m][c] / tot[m] * 100); } });
+  return out;
+}
+// Avalia uma regra e devolve o cartão (ou null se não houver série suficiente)
+function _alAvalia(def) {
+  const meses = Object.keys(def.serie).sort();
+  if (meses.length < 5) return null;              // < 4 variações: σ não significa nada
+  const deltas = [];
+  for (let i = 1; i < meses.length; i++) {
+    const a = meses[i - 1], b = meses[i];
+    if (def.tipo === 'mix') {
+      const sa = def.serie[a], sb = def.serie[b];
+      const cats = new Set([...Object.keys(sa), ...Object.keys(sb)]);
+      let tvd = 0, top = null, topv = 0;
+      cats.forEach(c => {
+        const d = (sb[c] || 0) - (sa[c] || 0);
+        tvd += Math.abs(d);
+        if (Math.abs(d) > Math.abs(topv)) { topv = d; top = c; }
+      });
+      deltas.push({ mes: b, v: tvd / 2, quem: top, quemV: topv });
+    } else {
+      const va = def.serie[a], vb = def.serie[b];
+      deltas.push({ mes: b, v: def.un === '%' ? (va ? (vb / va - 1) * 100 : null) : (vb - va) });
+    }
+  }
+  const vals = deltas.filter(d => d.v != null).map(d => d.v);
+  if (vals.length < 4) return null;
+  const sd = _alDp(vals);
+  const base = def.tipo === 'mix' ? _alMedia(vals) : 0;
+  const tm = base + ALERTA_K_MEDIO * sd, ta = base + ALERTA_K_ALTO * sd;
+  const ult = deltas[deltas.length - 1];
+  if (ult.v == null) return null;
+  const mag = def.tipo === 'mix' ? ult.v : Math.abs(ult.v);
+  const sev = mag >= ta ? 'alta' : (mag >= tm ? 'media' : 'ok');
+  return { def, sev, delta: ult, tm, ta, sd, n: vals.length };
+}
+function _alFmtV(def, v) {
+  const s = def.un === '%' ? (v >= 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + '%'
+                           : (def.tipo === 'mix' ? v.toFixed(1).replace('.', ',') + ' p.p.'
+                                                 : (v >= 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + ' p.p.');
+  return s;
+}
+// Última safra com a janela D+30 FECHADA para o mês inteiro.
+// Critério: ÚLTIMO DIA do mês + 30 dias <= data do dado. Cuidado que custou uma versão:
+// usar "hoje − 30 dias" pegava ago/26 como madura em 04/09, mas a coorte de ago foi acesa em
+// 15/08 e só completa D+30 em 14/09 — o alerta reportava uma queda de adoption que era só
+// coorte imatura. É exatamente a armadilha que o texto da aba diz evitar.
+function _alSafraMadura() {
+  const ref = (_proj_bundle && _proj_bundle.generated) ? new Date(_proj_bundle.generated + 'T00:00:00') : new Date();
+  let y = ref.getFullYear(), m = ref.getMonth();
+  for (let k = 0; k < 24; k++) {
+    const fim = new Date(y, m + 1, 0);                       // último dia do mês (y, m)
+    if (fim.getTime() + 30 * 864e5 <= ref.getTime()) return y + '-' + String(m + 1).padStart(2, '0');
+    m -= 1; if (m < 0) { m = 11; y -= 1; }
+  }
+  return null;
+}
+
+function construirAlertas() {
+  const defs = [];
+  const encR = _ds_enc || [], emiR = _ds_emi || [];
+
+  // ── ENCENDIDOS ──
+  defs.push({ area: 'Encendidos', tit: 'Volume de encendidos — TC Full', un: '%', tipo: 'var',
+    serie: _alSerie(encR, 'safra_enc', 'n_enc', r => r.FLAG_TC === '1. TC Full'),
+    nota: 'Tamanho do lote do mês contra o mês anterior.' });
+  defs.push({ area: 'Encendidos', tit: 'Volume de encendidos — Micro TC', un: '%', tipo: 'var',
+    serie: _alSerie(encR, 'safra_enc', 'n_enc', r => r.FLAG_TC === '2. Micro TC'), nota: '' });
+  {
+    const tot = _alSerie(encR, 'safra_enc', 'n_enc'), pri = _alSerie(encR, 'safra_enc', 'n_primo');
+    const s = {}; Object.keys(tot).forEach(m => { if (tot[m] > 0) s[m] = pri[m] / tot[m] * 100; });
+    defs.push({ area: 'Encendidos', tit: 'Share de 1º Encendido', un: 'p.p.', tipo: 'var', serie: s,
+      nota: 'Quanto do lote é gente nova x reencendido. Mexe direto na adoption esperada.' });
+  }
+  defs.push({ area: 'Encendidos', tit: 'Mix de super grupo', un: 'p.p.', tipo: 'mix',
+    serie: _alShares(encR, 'safra_enc', 'n_enc', r => r.super_grupo || 'null'), nota: '' });
+  defs.push({ area: 'Encendidos', tit: 'Mix de rating (AB / C / D-J / Sem rating)', un: 'p.p.', tipo: 'mix',
+    serie: _alShares(encR, 'safra_enc', 'n_enc', r => _alGrupoRating(r.rating_tc_grp)),
+    nota: 'Agrupado de propósito: migração A1→A2 é ruído de versão de modelo, não mudança de apetite.' });
+  defs.push({ area: 'Encendidos', tit: 'Mix de NISE', un: 'p.p.', tipo: 'mix',
+    serie: _alShares(encR, 'safra_enc', 'n_enc', r => r.FLAG_NISE || 'null'), nota: '' });
+
+  // ── EMISSÕES ──
+  defs.push({ area: 'Emissões', tit: 'Volume de emissões', un: '%', tipo: 'var',
+    serie: _alSerie(emiR, 'safra_conv', 'n_conv'),
+    nota: 'Muito volátil por natureza (o lote manda), por isso o limiar é alto. O sinal fino de emissão é o vs Plano.' });
+  defs.push({ area: 'Emissões', tit: 'Mix de canal de aquisição', un: 'p.p.', tipo: 'mix',
+    serie: _alShares(emiR, 'safra_conv', 'n_conv', r => r.canal_aquisicao || 'null'), nota: '' });
+  defs.push({ area: 'Emissões', tit: 'Mix de super grupo', un: 'p.p.', tipo: 'mix',
+    serie: _alShares(emiR, 'safra_conv', 'n_conv', r => r.super_grupo || 'null'), nota: '' });
+
+  // ── ADOPTION (janela FIXA D+30, só safras maduras) ──
+  if (_ds_adoption && _alSafraMadura()) {
+    const mat = _alSafraMadura();
+    const mk = (filtro) => {
+      const den = {}, num = {};
+      _ds_adoption.forEach(r => {
+        if (r.safra_enc > mat) return;
+        if (filtro && !filtro(r)) return;
+        den[r.safra_enc] = (den[r.safra_enc] || 0) + n(r.n_enc);
+        num[r.safra_enc] = (num[r.safra_enc] || 0) + n(r.cc30);
+      });
+      const s = {}; Object.keys(den).forEach(m => { if (den[m] > 0) s[m] = num[m] / den[m] * 100; });
+      return s;
+    };
+    defs.push({ area: 'Adoption', tit: 'Adoption D+30 — total', un: 'p.p.', tipo: 'var', serie: mk(null),
+      nota: 'Janela FIXA de 30 dias e só safras já maduras (última: ' + fmtSafra(mat) + '). Comparar safra nova "até hoje" faria toda safra recente parecer pior.' });
+    ['AB', 'C', 'D-J'].forEach(g => defs.push({ area: 'Adoption', tit: 'Adoption D+30 — rating ' + g,
+      un: 'p.p.', tipo: 'var', serie: mk(r => _alGrupoRating(r.rating_tc_grp) === g), nota: '' }));
+  }
+
+  // ── LIMITE ──
+  if (_ds_limite_enc) {
+    const q = _alSerie(_ds_limite_enc, 'safra', 'n'), s = _alSerie(_ds_limite_enc, 'safra', 'soma_limite');
+    const med = {}; Object.keys(q).forEach(m => { if (q[m] > 0) med[m] = s[m] / q[m]; });
+    defs.push({ area: 'Limite', tit: 'Limite médio', un: '%', tipo: 'var', serie: med,
+      nota: 'Histórico curto (poucas safras) — limiar ainda instável.' });
+    defs.push({ area: 'Limite', tit: 'Exposição total (soma de limite)', un: '%', tipo: 'var', serie: s, nota: '' });
+  }
+
+  const cards = defs.map(_alAvalia).filter(Boolean);
+
+  // ── REGRAS DETERMINÍSTICAS (regra de negócio, não estatística) ──
+  const det = [];
+  {
+    // mês fechado vs plano, e YTD vs plano (Total = Full + Micro)
+    const meses = Object.keys(_alSerie(emiR, 'safra_conv', 'n_conv')).sort();
+    const ult = meses[meses.length - 1];
+    const real = _alSerie(emiR, 'safra_conv', 'n_conv');
+    const p = planFor('Total', ult);
+    if (p && real[ult] != null) {
+      const r = real[ult] / p * 100;
+      det.push({ area: 'Emissões', tit: 'Mês fechado vs Plano · ' + fmtSafra(ult),
+        sev: r >= 100 ? 'ok' : (r >= 95 ? 'media' : 'alta'), txt: r.toFixed(1).replace('.', ',') + '%',
+        pos: r >= 100, nota: 'Realizado ' + fmt(real[ult]) + ' contra plano de ' + fmt(p) + '.' });
+      let nu = 0, de = 0;
+      for (let k = 1; k <= +ult.slice(5, 7); k++) {
+        const mk2 = ult.slice(0, 4) + '-' + String(k).padStart(2, '0');
+        const pp = planFor('Total', mk2);
+        if (pp && real[mk2] != null) { nu += real[mk2]; de += pp; }
+      }
+      if (de > 0) {
+        const ry = nu / de * 100;
+        det.push({ area: 'Emissões', tit: 'YTD vs Plano', sev: ry >= 100 ? 'ok' : (ry >= 95 ? 'media' : 'alta'),
+          txt: ry.toFixed(1).replace('.', ',') + '%', pos: ry >= 100,
+          nota: 'Acumulado do ano: ' + fmt(nu) + ' contra plano de ' + fmt(de) + '.' });
+      }
+    }
+  }
+  {
+    // lote do mês vigente ainda não rodou
+    const hoje = new Date();
+    const cur = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+    // ⚠️ Não dá p/ CONTAR os encendidos do mês vigente aqui: enquanto o lote não roda, o push
+    // corta o mês vigente de todos os datasets (pre-batch). A ausência do mês É o sinal — mas o
+    // texto não pode dizer "0 encendidos", que soa como se o lote tivesse rodado vazio.
+    const serieEnc = _alSerie(_ds_diario || [], 'safra_enc', 'n_enc');
+    const prev = Object.entries(serieEnc).filter(([m]) => m < cur).sort();
+    const ref = prev.length ? prev[prev.length - 1] : null;
+    if (ref && !serieEnc[cur]) {
+      const dia = hoje.getDate();
+      det.push({ area: 'Encendidos', tit: 'Lote de encendido do mês ainda não rodou',
+        sev: dia >= 20 ? 'alta' : (dia >= 16 ? 'media' : 'ok'),
+        txt: 'dia ' + dia, pos: false,
+        nota: 'O último lote registrado é o de <b>' + fmtSafra(ref[0]) + '</b> (' + fmt(ref[1]) + ' encendidos). '
+            + 'Enquanto o lote do mês não roda, as abas de Emissões e Encendidos seguem mostrando o mês fechado — '
+            + 'é o comportamento esperado, e vira alerta só se passar do dia 16.' });
+    }
+  }
+  return { cards, det };
+}
+
+function renderAlertas() {
+  const lista = document.getElementById('al-lista'), resumo = document.getElementById('al-resumo');
+  if (!lista || !_ds_enc) return;
+  const { cards, det } = construirAlertas();
+  const ordem = { alta: 0, media: 1, ok: 2 };
+  const todos = [
+    ...det.map(d => ({ area: d.area, sev: d.sev, tit: d.tit, val: d.txt, pos: d.pos, sub: d.nota })),
+    ...cards.map(c => {
+      const v = c.delta.v;
+      const sub = (c.def.tipo === 'mix'
+        ? 'Mudou <b>' + _alFmtV(c.def, v) + '</b> do mix (limiar ' + c.tm.toFixed(1).replace('.', ',')
+          + ' / ' + c.ta.toFixed(1).replace('.', ',') + '). Quem mais puxou: <b>' + c.delta.quem + ' '
+          + (c.delta.quemV >= 0 ? '+' : '') + c.delta.quemV.toFixed(1).replace('.', ',') + ' p.p.</b>'
+        : 'Variação de <b>' + _alFmtV(c.def, v) + '</b> (limiar ' + c.tm.toFixed(1).replace('.', ',')
+          + ' / ' + c.ta.toFixed(1).replace('.', ',') + ', σ ' + c.sd.toFixed(1).replace('.', ',')
+          + ' em ' + c.n + ' meses).') + (c.def.nota ? '<br>' + c.def.nota : '');
+      return { area: c.def.area, sev: c.sev, tit: c.def.tit + ' · ' + fmtSafra(c.delta.mes),
+               val: _alFmtV(c.def, v), pos: c.def.tipo === 'mix' ? null : v >= 0, sub };
+    })
+  ].sort((a, b) => ordem[a.sev] - ordem[b.sev]);
+
+  const nA = todos.filter(t => t.sev === 'alta').length, nM = todos.filter(t => t.sev === 'media').length;
+  resumo.innerHTML =
+    `<div><div class="al-lab">Alertas altos</div><div class="al-num" style="color:${nA ? '#FF5A5A' : '#8b949e'}">${nA}</div></div>`
+    + `<div><div class="al-lab">Médios</div><div class="al-num" style="color:${nM ? '#F5C500' : '#8b949e'}">${nM}</div></div>`
+    + `<div><div class="al-lab">Regras avaliadas</div><div class="al-num" style="color:#8b949e">${todos.length}</div></div>`
+    + `<div style="font-size:11px;color:#8b949e;max-width:520px">Sem alerta não quer dizer estável: quer dizer <b>dentro da variação normal daquela métrica</b>.</div>`;
+
+  const areas = ['Encendidos', 'Emissões', 'Adoption', 'Limite'];
+  lista.innerHTML = areas.map(a => {
+    const its = todos.filter(t => t.area === a);
+    if (!its.length) return '';
+    return `<div class="al-grupo"><h3>${a}</h3>` + its.map(t => {
+      const cls = t.pos == null ? '' : (t.pos ? 'pos' : 'neg');
+      const chip = t.sev === 'alta' ? 'alta' : (t.sev === 'media' ? 'média' : 'ok');
+      return `<div class="al-card sev-${t.sev}"><div class="al-top">`
+        + `<span class="al-chip ${t.sev}">${chip}</span><span class="al-tit">${t.tit}</span>`
+        + `<span class="al-val ${cls}">${t.val}</span></div>`
+        + `<div class="al-sub">${t.sub}</div></div>`;
+    }).join('') + '</div>';
+  }).join('') || '<div class="al-vazio">Sem dados para avaliar.</div>';
 }
 
 function renderActiveTab() {
   if (activeTab === 'emissoes')   renderEmissoes();
   if (activeTab === 'encendidos') renderEncendidos();
   if (activeTab === 'adoption')   renderAdoption();
+  if (activeTab === 'alertas')    renderAlertas();
 }
 
 function onRefreshClick() {
